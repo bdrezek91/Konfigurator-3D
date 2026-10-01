@@ -1,4 +1,5 @@
 import { DEFAULT_CONFIG, type PavilionConfig } from './types'
+import { PROJECT_GEOMETRIES } from './projectGeometries'
 
 export type PavilionPreset = {
   id: string
@@ -8,11 +9,24 @@ export type PavilionPreset = {
   config: PavilionConfig
 }
 
-const p = (project: string, overrides: Partial<PavilionConfig>): PavilionConfig => ({
-  ...DEFAULT_CONFIG,
-  project,
-  ...overrides,
-})
+const p = (project: string, overrides: Partial<PavilionConfig>): PavilionConfig => {
+  const geometry = PROJECT_GEOMETRIES[project]
+  const config: PavilionConfig = {
+    ...DEFAULT_CONFIG,
+    project,
+    geometry,
+    ...overrides,
+  }
+  if (geometry) {
+    config.aluDoorCount = geometry.openings.filter((x) => x.kind.startsWith('door-')).length
+    config.fixedGlazingCount = geometry.openings.filter((x) => x.kind === 'fixed-glass').length
+    config.aluWindowCount = geometry.openings.filter((x) => x.kind === 'alu-window').length
+    config.pvcWindowCount = geometry.openings.filter((x) => x.kind === 'pvc-window').length
+    config.rollers = geometry.openings.some((x) => x.roller)
+    config.rollerCount = geometry.openings.filter((x) => x.roller).length
+  }
+  return config
+}
 
 export const PRESETS: PavilionPreset[] = [
   {
@@ -23,9 +37,13 @@ export const PRESETS: PavilionPreset[] = [
     config: p('722/08/26', {
       length: 6.03, width: 2.96, construction: 'angle50',
       wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
-      facade: 'cassette-lamella', rollers: true, rollerCount: 2,
+      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
+      facade: 'cassette-lamella',
+      electrical: '1p230', doubleSockets: 4, singleSockets: 2, ledCeiling: 3, switches: 2,
+      distributionBoard: true, externalConnection: true, externalLights: 2,
       bathroom: true, toiletCompact: true, washbasin: true, shower: true,
       boilerLiters: 50, heater: true, waterConnection: true, sewerConnection: true,
+      partitionWall: true, internalDoorCount: 1,
       kitchen: true, kitchenLength: 1.20, kitchenWaterPoint: true,
       airConditioning: true, hvacPower: 3.4, hvacColor: 'white',
     }),
@@ -38,9 +56,11 @@ export const PRESETS: PavilionPreset[] = [
     config: p('81/08/26', {
       length: 9.03, width: 2.96, construction: 'full100',
       wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
       facade: 'lamella-winchester', facadeFront: true, facadeLeft: true, facadeRight: true,
-      glazing: 'double', aluDoorCount: 1, fixedGlazingCount: 3,
-      electrical: 'none', distributionBoard: false, externalConnection: false,
+      glazing: 'double',
+      electrical: 'none', doubleSockets: 0, singleSockets: 0, ledCeiling: 0, switches: 0,
+      distributionBoard: false, externalConnection: false, externalLights: 0,
       airConditioning: false, hvacPower: 0,
     }),
   },
@@ -51,11 +71,15 @@ export const PRESETS: PavilionPreset[] = [
     notes: 'Styropian ściana/dach, PIR100 podłoga, łazienka, aneks, klima 3.4.',
     config: p('24/08/26', {
       length: 8.03, width: 2.96, wallPanel: 'EPS100', roofPanel: 'EPS100',
-      floorPanel: 'PIR100', construction: 'angle50', facade: 'cassette-lamella',
-      aluDoorCount: 1, fixedGlazingCount: 2, pvcWindowCount: 1,
+      floorPanel: 'PIR100', construction: 'angle50',
+      wallProfile: 'ribbed', roofProfile: 'ribbed', interiorFinish: 'white', floorFinish: 'wood',
+      facade: 'cassette-lamella', exteriorColor: '#3a3f43',
+      electrical: '1p230', distributionBoard: true, externalConnection: true,
       bathroom: true, toiletCompact: true, washbasin: true, shower: true,
-      boilerLiters: 50, waterConnection: true, sewerConnection: true,
-      kitchen: true, kitchenWaterPoint: true, airConditioning: true, hvacPower: 3.4,
+      boilerLiters: 50, heater: false, waterConnection: true, sewerConnection: true,
+      partitionWall: true, internalDoorCount: 1,
+      kitchen: true, kitchenLength: 1.20, kitchenWaterPoint: true,
+      airConditioning: true, hvacPower: 3.4, hvacColor: 'white',
     }),
   },
   {
@@ -65,10 +89,12 @@ export const PRESETS: PavilionPreset[] = [
     notes: 'PIR100, kaseton kwadrat antracyt + Winchester, zestaw ALU 305×210, klima 3.4.',
     config: p('120/08/26', {
       length: 6.03, width: 2.96, construction: 'angle50',
+      wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
       facade: 'cassette-lamella', exteriorColor: '#3a3f43',
-      aluDoorCount: 1, fixedGlazingCount: 2, fixedGlazingWidth: 0.97, fixedGlazingHeight: 2.10,
       airConditioning: true, hvacPower: 3.4, hvacColor: 'white',
       electrical: '1p230', ledCeiling: 2, doubleSockets: 2, singleSockets: 1,
+      switches: 1, distributionBoard: true, externalConnection: true,
     }),
   },
   {
@@ -78,9 +104,12 @@ export const PRESETS: PavilionPreset[] = [
     notes: 'Styropian ściany/dach, PIR100 podłoga, grafit + Winchester, 2 witryny, klima.',
     config: p('82/08/26', {
       length: 4.03, width: 2.96, wallPanel: 'EPS100', roofPanel: 'EPS100',
-      floorPanel: 'PIR100', construction: 'angle50', facade: 'cassette-lamella',
-      fixedGlazingCount: 2, aluDoorCount: 1, airConditioning: true, hvacPower: 3.4,
-      electrical: '1p230',
+      floorPanel: 'PIR100', construction: 'angle50',
+      wallProfile: 'ribbed', roofProfile: 'ribbed', interiorFinish: 'white', floorFinish: 'concrete',
+      facade: 'cassette-lamella', exteriorColor: '#3a3f43',
+      electrical: '1p230', doubleSockets: 1, singleSockets: 0, ledCeiling: 1, switches: 1,
+      distributionBoard: true, externalConnection: true,
+      airConditioning: true, hvacPower: 3.4, hvacColor: 'white',
     }),
   },
   {
@@ -90,9 +119,12 @@ export const PRESETS: PavilionPreset[] = [
     notes: 'PIR100, czarny mat, brak klimy, drzwi ALU na ścianie bocznej.',
     config: p('09/09/26', {
       length: 8.03, width: 2.96, construction: 'angle50',
+      wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
       exteriorColor: '#121315', flashingColor: '#121315', facade: 'plain',
-      fixedGlazingCount: 0, aluDoorCount: 1, airConditioning: false, hvacPower: 0,
-      electrical: '1p230', interiorFinish: 'white',
+      electrical: '1p230', doubleSockets: 3, singleSockets: 0, ledCeiling: 3, switches: 1,
+      distributionBoard: true, externalConnection: true, externalLights: 0,
+      airConditioning: false, hvacPower: 0,
     }),
   },
   {
@@ -102,13 +134,16 @@ export const PRESETS: PavilionPreset[] = [
     notes: 'PIR100, czarny, Winchester na froncie/boku, łazienka, aneks LUX, 2 rolety, 2 klimy.',
     config: p('13/08/26', {
       length: 9.03, width: 2.96, exteriorColor: '#121315', flashingColor: '#121315',
-      construction: 'angle50', facade: 'cassette-lamella', facadeLeft: true,
-      rollers: true, rollerCount: 2, bathroom: true, toiletCompact: true,
-      washbasin: true, shower: true, boilerLiters: 50, waterConnection: true,
-      sewerConnection: true, kitchen: true, kitchenLength: 1.55,
-      induction: true, fridge: true, kitchenWaterPoint: true,
+      construction: 'angle50', wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      wallProfile: 'smooth', roofProfile: 'smooth', floorFinish: 'wood',
+      facade: 'cassette-lamella', facadeLeft: true,
+      electrical: '3p400', doubleSockets: 6, singleSockets: 2, ledCeiling: 4, switches: 4,
+      distributionBoard: true, externalConnection: true, externalLights: 3,
+      bathroom: true, toiletCompact: true, washbasin: true, shower: true,
+      boilerLiters: 50, heater: true, waterConnection: true, sewerConnection: true,
+      partitionWall: true, internalDoorCount: 2,
+      kitchen: true, kitchenLength: 1.55, induction: false, fridge: true, kitchenWaterPoint: true,
       airConditioning: true, hvacPower: 3.4, hvacColor: 'white',
-      externalLights: 2, internalDoorCount: 2, partitionWall: true,
     }),
   },
   {
@@ -118,12 +153,14 @@ export const PRESETS: PavilionPreset[] = [
     notes: 'PIR100, kaseton grafit + srebrny narożny, WC, aneks 144, rolety, klima.',
     config: p('94/08/26', {
       length: 7.03, width: 2.96, construction: 'angle50',
-      facade: 'cassette-graphite',
-      fixedGlazingCount: 2, aluDoorCount: 1, pvcWindowCount: 1,
-      rollers: true, rollerCount: 4, bathroom: true, toiletCompact: true,
-      washbasin: true, waterConnection: true, sewerConnection: true,
+      wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
+      exteriorColor: '#3a3f43', facade: 'cassette-graphite',
+      electrical: '1p230', distributionBoard: true, externalConnection: true,
+      bathroom: true, toiletCompact: true, washbasin: true,
+      waterConnection: true, sewerConnection: true, partitionWall: true, internalDoorCount: 1,
       kitchen: true, kitchenLength: 1.44, kitchenWaterPoint: true,
-      ventilationGrille: true, airConditioning: true, hvacPower: 3.4,
+      ventilationGrille: true, airConditioning: true, hvacPower: 3.4, hvacColor: 'white',
     }),
   },
   {
@@ -133,10 +170,12 @@ export const PRESETS: PavilionPreset[] = [
     notes: 'PIR100, kaseton Winchester/grafit, 2 witryny 97×200, drzwi 108×210, okno PVC.',
     config: p('120/07/26', {
       length: 6.01, width: 2.96, construction: 'angle50',
-      facade: 'cassette-lamella', fixedGlazingCount: 2,
-      aluDoorCount: 1, pvcWindowCount: 1, pvcWindowWidth: 0.97, pvcWindowHeight: 0.97,
-      electrical: '1p230', doubleSockets: 4, ledCeiling: 2,
-      airConditioning: true, hvacPower: 3.4, externalLights: 2,
+      wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
+      exteriorColor: '#3a3f43', facade: 'cassette-lamella',
+      electrical: '1p230', doubleSockets: 4, singleSockets: 0, ledCeiling: 2, switches: 1,
+      distributionBoard: true, externalConnection: true, externalLights: 2,
+      airConditioning: true, hvacPower: 3.4, hvacColor: 'white',
     }),
   },
   {
@@ -147,11 +186,11 @@ export const PRESETS: PavilionPreset[] = [
     config: p('49/08/26', {
       length: 9.03, width: 2.96, wallPanel: 'EPS100', roofPanel: 'EPS100',
       floorPanel: 'PIR100', construction: 'angle50', exteriorColor: '#3a3f43',
-      facade: 'cassette-lamella', fixedGlazingCount: 4, fixedGlazingWidth: 1.0,
-      fixedGlazingHeight: 2.10, aluDoorCount: 1, aluWindowCount: 1,
-      aluWindowWidth: 2.0, aluWindowHeight: 2.10, glazing: 'double',
-      electrical: '1p230', doubleSockets: 3, ledCeiling: 3,
-      externalLights: 3, airConditioning: true, hvacPower: 3.4,
+      wallProfile: 'ribbed', roofProfile: 'ribbed', interiorFinish: 'white', floorFinish: 'wood',
+      facade: 'cassette-lamella', glazing: 'double',
+      electrical: '1p230', doubleSockets: 3, singleSockets: 0, ledCeiling: 3, switches: 1,
+      distributionBoard: true, externalConnection: true, externalLights: 3,
+      airConditioning: true, hvacPower: 3.4, hvacColor: 'white',
     }),
   },
   {
@@ -161,13 +200,14 @@ export const PRESETS: PavilionPreset[] = [
     notes: 'PIR100, czarne wnętrze/obróbki, Winchester front, WC, aneks, klima grafit 3.5.',
     config: p('114/08/26', {
       length: 7.03, width: 2.96, construction: 'angle50',
-      facade: 'lamella-winchester', interiorFinish: 'concrete',
-      fixedGlazingCount: 2, aluDoorCount: 1, pvcWindowCount: 1,
-      pvcWindowWidth: 0.50, pvcWindowHeight: 0.50,
-      electrical: '1p230', doubleSockets: 2, singleSockets: 2,
-      ledCeiling: 2, bathroom: true, toiletCompact: true, washbasin: true,
-      waterConnection: true, sewerConnection: true, kitchen: true,
-      kitchenLength: 1.20, kitchenWaterPoint: true,
+      wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'concrete', floorFinish: 'concrete',
+      exteriorColor: '#121315', flashingColor: '#121315', facade: 'lamella-winchester',
+      electrical: '1p230', doubleSockets: 2, singleSockets: 2, ledCeiling: 3, switches: 2,
+      distributionBoard: true, externalConnection: true,
+      bathroom: true, toiletCompact: true, washbasin: true, shower: false,
+      waterConnection: true, sewerConnection: true, partitionWall: true, internalDoorCount: 1,
+      kitchen: true, kitchenLength: 1.20, kitchenWaterPoint: true,
       airConditioning: true, hvacPower: 3.5, hvacColor: 'graphite',
     }),
   },
@@ -178,11 +218,14 @@ export const PRESETS: PavilionPreset[] = [
     notes: 'PIR100, kaseton grafit + WĄŻ Winchester, WC 120×120, bez klimy.',
     config: p('109/08/26', {
       length: 6.03, width: 2.96, construction: 'angle50',
-      facade: 'cassette-lamella', fixedGlazingCount: 2, aluDoorCount: 1,
-      pvcWindowCount: 1, pvcWindowWidth: 0.50, pvcWindowHeight: 0.50,
-      bathroom: true, toiletCompact: true, washbasin: true,
+      wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
+      exteriorColor: '#3a3f43', facade: 'cassette-lamella',
+      electrical: '1p230', doubleSockets: 2, singleSockets: 1, ledCeiling: 3, switches: 2,
+      distributionBoard: true, externalConnection: true,
+      bathroom: true, toiletCompact: true, washbasin: true, shower: false,
       waterConnection: true, sewerConnection: true, partitionWall: true,
-      internalDoorCount: 1, kitchenWaterPoint: true,
+      internalDoorCount: 1, kitchen: false, kitchenWaterPoint: true,
       airConditioning: false, hvacPower: 0,
     }),
   },
@@ -193,12 +236,13 @@ export const PRESETS: PavilionPreset[] = [
     notes: 'PIR100, pełna 100×100, 9005 mat, kaseton + lamele czarne/palisander, klima 3.5.',
     config: p('28/03/26', {
       length: 9.03, width: 2.96, construction: 'full100',
+      wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'concrete', floorFinish: 'wood',
       exteriorColor: '#121315', flashingColor: '#121315',
-      interiorFinish: 'concrete', facade: 'cassette-lamella',
-      facadeFront: true, facadeLeft: true, fixedGlazingCount: 2,
-      aluDoorCount: 1, aluWindowCount: 1, aluWindowWidth: 0.97, aluWindowHeight: 2.10,
+      facade: 'cassette-lamella', facadeFront: true, facadeLeft: true,
       electrical: '1p230', doubleSockets: 4, singleSockets: 1,
-      ledCeiling: 4, externalLights: 4, airConditioning: true,
+      ledCeiling: 4, switches: 2, distributionBoard: true, externalConnection: true,
+      externalLights: 4, airConditioning: true,
       hvacPower: 3.5, hvacColor: 'graphite',
     }),
   },
@@ -209,12 +253,13 @@ export const PRESETS: PavilionPreset[] = [
     notes: 'PIR100, statyka, 3 szyby, kaseton czarny mat 4 strony, 400V, klima 3.4.',
     config: p('104/01/26', {
       length: 7.03, width: 2.96, construction: 'static100',
+      wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
       facade: 'cassette-black', facadeFront: true, facadeLeft: true,
       facadeRight: true, facadeBack: true, exteriorColor: '#121315',
       flashingColor: '#121315', glazing: 'triple',
-      aluDoorCount: 1, aluDoorWidth: 2.0, aluDoorHeight: 2.10,
-      aluWindowCount: 4, aluWindowWidth: 0.93, aluWindowHeight: 2.10,
-      electrical: '3p400', doubleSockets: 10, ledCeiling: 2,
+      electrical: '3p400', doubleSockets: 10, singleSockets: 0, ledCeiling: 2,
+      switches: 1, distributionBoard: true, externalConnection: true,
       externalLights: 2, airConditioning: true, hvacPower: 3.4,
       rollers: false, gutter: true,
     }),

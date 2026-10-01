@@ -55,11 +55,33 @@ export function buildBom(c: PavilionConfig): BomRow[] {
     { category: 'Podłoga', item: PANEL_LABELS[c.floorPanel], quantity: floorArea.toFixed(1) + ' m²', basis: 'szacunkowe' },
     { category: 'Podłoga', item: 'MFP/OSB ' + c.mfpThickness + ' mm', quantity: floorArea.toFixed(1) + ' m²', basis: 'szacunkowe' },
   ]
-  if (c.aluDoorCount > 0) rows.push({ category: 'Stolarka', item: 'Drzwi ALU ' + Math.round(c.aluDoorWidth * 100) + '×' + Math.round(c.aluDoorHeight * 100), quantity: c.aluDoorCount + ' szt.', basis: 'dokładne' })
-  if (c.fixedGlazingCount > 0) rows.push({ category: 'Stolarka', item: 'Szyba/FIX ' + Math.round(c.fixedGlazingWidth * 100) + '×' + Math.round(c.fixedGlazingHeight * 100), quantity: c.fixedGlazingCount + ' szt.', basis: 'dokładne' })
-  if (c.aluWindowCount > 0) rows.push({ category: 'Stolarka', item: 'Okno ALU ' + Math.round(c.aluWindowWidth * 100) + '×' + Math.round(c.aluWindowHeight * 100), quantity: c.aluWindowCount + ' szt.', basis: 'dokładne' })
-  if (c.pvcWindowCount > 0) rows.push({ category: 'Stolarka', item: 'Okno PVC ' + Math.round(c.pvcWindowWidth * 100) + '×' + Math.round(c.pvcWindowHeight * 100), quantity: c.pvcWindowCount + ' szt.', basis: 'dokładne' })
-  if (c.rollers && c.rollerCount > 0) rows.push({ category: 'Stolarka', item: 'Roleta elektryczna', quantity: c.rollerCount + ' szt.', basis: 'dokładne' })
+  if (c.geometry) {
+    const groups = new Map<string, { item: string; count: number }>()
+    for (const opening of c.geometry.openings) {
+      const type =
+        opening.kind === 'fixed-glass' ? 'Szyba/FIX' :
+        opening.kind === 'alu-window' ? 'Okno ALU' :
+        opening.kind === 'pvc-window' ? 'Okno PVC' :
+        opening.kind === 'door-double' ? 'Drzwi ALU podwójne' :
+        opening.kind === 'door-full' ? 'Drzwi ALU pełne' : 'Drzwi ALU przeszklone'
+      const item = type + ' ' + Math.round(opening.width * 100) + '×' + Math.round(opening.height * 100) + ' · ' + opening.wall
+      const key = opening.kind + ':' + opening.wall + ':' + opening.width + ':' + opening.height
+      const current = groups.get(key)
+      if (current) current.count += 1
+      else groups.set(key, { item, count: 1 })
+    }
+    for (const group of groups.values()) {
+      rows.push({ category: 'Stolarka', item: group.item, quantity: group.count + ' szt.', basis: 'dokładne' })
+    }
+    const rollerCount = c.geometry.openings.filter((x) => x.roller).length
+    if (rollerCount) rows.push({ category: 'Stolarka', item: 'Roleta elektryczna', quantity: rollerCount + ' szt.', basis: 'dokładne' })
+  } else {
+    if (c.aluDoorCount > 0) rows.push({ category: 'Stolarka', item: 'Drzwi ALU ' + Math.round(c.aluDoorWidth * 100) + '×' + Math.round(c.aluDoorHeight * 100), quantity: c.aluDoorCount + ' szt.', basis: 'dokładne' })
+    if (c.fixedGlazingCount > 0) rows.push({ category: 'Stolarka', item: 'Szyba/FIX ' + Math.round(c.fixedGlazingWidth * 100) + '×' + Math.round(c.fixedGlazingHeight * 100), quantity: c.fixedGlazingCount + ' szt.', basis: 'dokładne' })
+    if (c.aluWindowCount > 0) rows.push({ category: 'Stolarka', item: 'Okno ALU ' + Math.round(c.aluWindowWidth * 100) + '×' + Math.round(c.aluWindowHeight * 100), quantity: c.aluWindowCount + ' szt.', basis: 'dokładne' })
+    if (c.pvcWindowCount > 0) rows.push({ category: 'Stolarka', item: 'Okno PVC ' + Math.round(c.pvcWindowWidth * 100) + '×' + Math.round(c.pvcWindowHeight * 100), quantity: c.pvcWindowCount + ' szt.', basis: 'dokładne' })
+    if (c.rollers && c.rollerCount > 0) rows.push({ category: 'Stolarka', item: 'Roleta elektryczna', quantity: c.rollerCount + ' szt.', basis: 'dokładne' })
+  }
 
   if (c.electrical !== 'none') {
     rows.push({ category: 'Elektryka', item: c.electrical === '3p400' ? 'Instalacja 3-fazowa 400 V' : 'Instalacja 1-fazowa 230 V', quantity: '1 kpl.', basis: 'dokładne' })

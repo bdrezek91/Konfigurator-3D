@@ -68,10 +68,10 @@ function ConfigControls({ config, update }: { config: PavilionConfig; update: Se
         <div className="field-grid">
           <Num label="Długość" value={config.length} min={4} max={12} step={0.01} unit="m" onChange={(v) => update('length', v)} />
           <Num label="Szerokość" value={config.width} min={2.5} max={4} step={0.01} unit="m" onChange={(v) => update('width', v)} />
-          <Num label="Wysokość front" value={config.frontHeight} min={2.3} max={3.3} step={0.01} unit="m" onChange={(v) => update('frontHeight', v)} />
-          <Num label="Wysokość tył" value={config.backHeight} min={2.3} max={3.3} step={0.01} unit="m" onChange={(v) => update('backHeight', v)} />
+          <Num label="Wysokość wewn. przód" value={config.frontHeight} min={2.3} max={3.3} step={0.01} unit="m" onChange={(v) => update('frontHeight', v)} />
+          <Num label="Wysokość wewn. tył" value={config.backHeight} min={2.3} max={3.3} step={0.01} unit="m" onChange={(v) => update('backHeight', v)} />
         </div>
-        <Select label="Spadek dachu" value={config.roofSlope} onChange={(v) => update('roofSlope', v)} options={[
+        <Select label="Kierunek spadku" value={config.roofSlope} onChange={(v) => update('roofSlope', v)} options={[
           { value: 'back', label: 'Na tył' }, { value: 'front', label: 'Na front' }, { value: 'flat', label: 'Płaski' },
         ]} />
         <Select label="Konstrukcja" value={config.construction} onChange={(v) => update('construction', v)} options={
@@ -254,10 +254,9 @@ export default function App() {
   const bom = useMemo(() => buildBom(config), [config])
 
   const stats = useMemo(() => {
-    const avgHeight = (config.frontHeight + config.backHeight) / 2
     return {
       floor: config.length * config.width,
-      walls: 2 * (config.length + config.width) * avgHeight,
+      walls: 2 * (config.length + config.width) * (config.geometry?.externalHeight ?? 3.0),
       roof: config.length * Math.hypot(config.width, config.frontHeight - config.backHeight),
       roofDrop: Math.round(Math.abs(config.frontHeight - config.backHeight) * 1000),
       openings: config.aluDoorCount + config.fixedGlazingCount + config.aluWindowCount + config.pvcWindowCount,
@@ -265,7 +264,20 @@ export default function App() {
   }, [config])
 
   const update: Setter = (key, value) => {
-    setConfig((current) => ({ ...current, project: 'Własna konfiguracja', [key]: value }))
+    const geometryKeys: Array<keyof PavilionConfig> = [
+      'length', 'width',
+      'aluDoorCount', 'aluDoorWidth', 'aluDoorHeight',
+      'fixedGlazingCount', 'fixedGlazingWidth', 'fixedGlazingHeight',
+      'aluWindowCount', 'aluWindowWidth', 'aluWindowHeight',
+      'pvcWindowCount', 'pvcWindowWidth', 'pvcWindowHeight',
+      'rollers', 'rollerCount',
+    ]
+    setConfig((current) => ({
+      ...current,
+      project: 'Własna konfiguracja',
+      geometry: geometryKeys.includes(key) ? undefined : current.geometry,
+      [key]: value,
+    }))
   }
 
   const loadPreset = (id: string) => {
@@ -299,14 +311,14 @@ export default function App() {
       <section className="preset-bar">
         <label>
           <span>Projekt referencyjny</span>
-          <select value={config.project === 'Własna konfiguracja' ? '' : config.project} onChange={(e) => loadPreset(e.target.value)}>
+          <select value={PRESETS.find((p) => p.config.project === config.project)?.id ?? ''} onChange={(e) => e.target.value ? loadPreset(e.target.value) : setConfig(DEFAULT_CONFIG)}>
             <option value="">Własna konfiguracja</option>
             {PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}
           </select>
         </label>
         <div className="preset-meta">
           <strong>{config.project}</strong>
-          <small>{PRESETS.find((p) => p.id === config.project)?.notes ?? 'Konfiguracja własna — parametry zmieniane ręcznie.'}</small>
+          <small>{PRESETS.find((p) => p.config.project === config.project)?.notes ?? 'Konfiguracja własna — parametry zmieniane ręcznie.'}</small>
         </div>
         <button onClick={() => { setConfig(DEFAULT_CONFIG); setSceneKey((v) => v + 1) }}>Reset</button>
       </section>
@@ -320,7 +332,7 @@ export default function App() {
           <div className="viewer-card">
             <div className="viewer-toolbar">
               <div>
-                <strong>{config.length.toFixed(2)} × {config.width.toFixed(2)} m · {config.frontHeight.toFixed(2)}→{config.backHeight.toFixed(2)} m</strong>
+                <strong>{config.length.toFixed(2)} × {config.width.toFixed(2)} m · zew. {(config.geometry?.externalHeight ?? 3).toFixed(2)} m · wew. {config.frontHeight.toFixed(2)}→{config.backHeight.toFixed(2)} m</strong>
                 <small>obrót: LPM · zoom: kółko · podgląd wnętrza przełącza przezroczystość ścian</small>
               </div>
               <button onClick={() => setSceneKey((v) => v + 1)}>Reset widoku</button>
@@ -334,7 +346,7 @@ export default function App() {
             <article><span>Podłoga</span><strong>{stats.floor.toFixed(1)} m²</strong><small>rzut</small></article>
             <article><span>Ściany brutto</span><strong>{stats.walls.toFixed(1)} m²</strong><small>przed odjęciem otworów</small></article>
             <article><span>Dach</span><strong>{stats.roof.toFixed(1)} m²</strong><small>po spadku</small></article>
-            <article><span>Spadek</span><strong>{stats.roofDrop} mm</strong><small>różnica wysokości</small></article>
+            <article><span>Spadek wewn.</span><strong>{stats.roofDrop} mm</strong><small>różnica przód / tył</small></article>
             <article><span>Stolarka</span><strong>{stats.openings}</strong><small>elementów</small></article>
             <article><span>BOM</span><strong>{bom.length}</strong><small>pozycji</small></article>
           </div>

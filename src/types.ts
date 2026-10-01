@@ -15,6 +15,61 @@ export type ElectricalType = '1p230' | '3p400' | 'none'
 export type InteriorFinish = 'white' | 'concrete' | 'black' | 'oak' | 'walnut'
 export type FloorFinish = 'wood' | 'concrete' | 'other'
 export type HvacColor = 'white' | 'graphite' | 'black'
+export type WallSide = 'front' | 'back' | 'left' | 'right'
+export type OpeningKind = 'door-glazed' | 'door-full' | 'door-double' | 'fixed-glass' | 'alu-window' | 'pvc-window'
+export type DecorKind =
+  | 'cassette-square-graphite'
+  | 'cassette-rect-graphite'
+  | 'cassette-black'
+  | 'cassette-white'
+  | 'lamella-winchester'
+  | 'lamella-black'
+  | 'lamella-palisander'
+  | 'board-natural'
+  | 'silver-rect'
+  | 'steel-plate'
+  | 'led-strip'
+
+export type OpeningPlacement = {
+  id: string
+  wall: WallSide
+  center: number
+  width: number
+  height: number
+  sill?: number
+  kind: OpeningKind
+  glazing?: GlazingType
+  frameColor?: string
+  roller?: boolean
+  label?: string
+  sourceAccuracy?: 'dimensioned' | 'drawing-estimate'
+}
+
+export type DecorPlacement = {
+  id: string
+  wall: WallSide
+  center: number
+  width: number
+  yCenter: number
+  height: number
+  kind: DecorKind
+  sourceAccuracy?: 'dimensioned' | 'drawing-estimate'
+}
+
+export type LightPlacement = {
+  wall: WallSide
+  center: number
+  y: number
+}
+
+export type ProjectGeometry = {
+  externalHeight: number
+  openings: OpeningPlacement[]
+  decor: DecorPlacement[]
+  exteriorLights?: LightPlacement[]
+  notes?: string[]
+}
+
 export type PavilionConfig = {
   project: string
   length: number
@@ -85,6 +140,7 @@ export type PavilionConfig = {
   attic: boolean
   showStructure: boolean
   showInterior: boolean
+  geometry?: ProjectGeometry
 }
 
 export type ValidationItem = {
@@ -159,7 +215,7 @@ export const DEFAULT_CONFIG: PavilionConfig = {
   hvacColor: 'white',
   gutter: false,
   attic: false,
-  showStructure: true,
+  showStructure: false,
   showInterior: false,
 }
 
