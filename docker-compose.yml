@@ -1,0 +1,11 @@
+services:
+  web:
+    build: .
+    container_name: konfigurator3d-web
+    restart: unless-stopped
+    networks:
+      - multiplekser-shared
+
+networks:
+  multiplekser-shared:
+    external: true

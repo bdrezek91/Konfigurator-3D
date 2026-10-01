@@ -1,0 +1,222 @@
+import { DEFAULT_CONFIG, type PavilionConfig } from './types'
+
+export type PavilionPreset = {
+  id: string
+  label: string
+  source: string
+  notes: string
+  config: PavilionConfig
+}
+
+const p = (project: string, overrides: Partial<PavilionConfig>): PavilionConfig => ({
+  ...DEFAULT_CONFIG,
+  project,
+  ...overrides,
+})
+
+export const PRESETS: PavilionPreset[] = [
+  {
+    id: '722-08-26',
+    label: '722/08/26 · 6×3 · Ostrzeszów',
+    source: 'projekt 722/08/26',
+    notes: 'PIR100, kątownik, kaseton grafit + Winchester, łazienka, aneks, rolety, klima.',
+    config: p('722/08/26', {
+      length: 6.03, width: 2.96, construction: 'angle50',
+      wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      facade: 'cassette-lamella', rollers: true, rollerCount: 2,
+      bathroom: true, toiletCompact: true, washbasin: true, shower: true,
+      boilerLiters: 50, heater: true, waterConnection: true, sewerConnection: true,
+      kitchen: true, kitchenLength: 1.20, kitchenWaterPoint: true,
+      airConditioning: true, hvacPower: 3.4, hvacColor: 'white',
+    }),
+  },
+  {
+    id: '81-08-26',
+    label: '81/08/26 · 9×3 · Darek',
+    source: 'projekt 81/08/26',
+    notes: 'PIR100, pełna konstrukcja 100×100, lamele Winchester, bez elektryki.',
+    config: p('81/08/26', {
+      length: 9.03, width: 2.96, construction: 'full100',
+      wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      facade: 'lamella-winchester', facadeFront: true, facadeLeft: true, facadeRight: true,
+      glazing: 'double', aluDoorCount: 1, fixedGlazingCount: 3,
+      electrical: 'none', distributionBoard: false, externalConnection: false,
+      airConditioning: false, hvacPower: 0,
+    }),
+  },
+  {
+    id: '24-08-26',
+    label: '24/08/26 · 8×3 · Jacek · II gat.',
+    source: 'projekt 24/08/26',
+    notes: 'Styropian ściana/dach, PIR100 podłoga, łazienka, aneks, klima 3.4.',
+    config: p('24/08/26', {
+      length: 8.03, width: 2.96, wallPanel: 'EPS100', roofPanel: 'EPS100',
+      floorPanel: 'PIR100', construction: 'angle50', facade: 'cassette-lamella',
+      aluDoorCount: 1, fixedGlazingCount: 2, pvcWindowCount: 1,
+      bathroom: true, toiletCompact: true, washbasin: true, shower: true,
+      boilerLiters: 50, waterConnection: true, sewerConnection: true,
+      kitchen: true, kitchenWaterPoint: true, airConditioning: true, hvacPower: 3.4,
+    }),
+  },
+  {
+    id: '120-08-26',
+    label: '120/08/26 · 6×3 · D1 B2B',
+    source: 'projekt 120/08/26',
+    notes: 'PIR100, kaseton kwadrat antracyt + Winchester, zestaw ALU 305×210, klima 3.4.',
+    config: p('120/08/26', {
+      length: 6.03, width: 2.96, construction: 'angle50',
+      facade: 'cassette-lamella', exteriorColor: '#3a3f43',
+      aluDoorCount: 1, fixedGlazingCount: 2, fixedGlazingWidth: 0.97, fixedGlazingHeight: 2.10,
+      airConditioning: true, hvacPower: 3.4, hvacColor: 'white',
+      electrical: '1p230', ledCeiling: 2, doubleSockets: 2, singleSockets: 1,
+    }),
+  },
+  {
+    id: '82-08-26',
+    label: '82/08/26 · 4×3 · Karolina',
+    source: 'projekt 82/08/26',
+    notes: 'Styropian ściany/dach, PIR100 podłoga, grafit + Winchester, 2 witryny, klima.',
+    config: p('82/08/26', {
+      length: 4.03, width: 2.96, wallPanel: 'EPS100', roofPanel: 'EPS100',
+      floorPanel: 'PIR100', construction: 'angle50', facade: 'cassette-lamella',
+      fixedGlazingCount: 2, aluDoorCount: 1, airConditioning: true, hvacPower: 3.4,
+      electrical: '1p230',
+    }),
+  },
+  {
+    id: '09-09-26',
+    label: '09/09/26 · 8×3 · Paulina',
+    source: 'projekt 09/09/26',
+    notes: 'PIR100, czarny mat, brak klimy, drzwi ALU na ścianie bocznej.',
+    config: p('09/09/26', {
+      length: 8.03, width: 2.96, construction: 'angle50',
+      exteriorColor: '#121315', flashingColor: '#121315', facade: 'plain',
+      fixedGlazingCount: 0, aluDoorCount: 1, airConditioning: false, hvacPower: 0,
+      electrical: '1p230', interiorFinish: 'white',
+    }),
+  },
+  {
+    id: '13-08-26',
+    label: '13/08/26 · 9×3 · Monika',
+    source: 'projekt 13/08/26',
+    notes: 'PIR100, czarny, Winchester na froncie/boku, łazienka, aneks LUX, 2 rolety, 2 klimy.',
+    config: p('13/08/26', {
+      length: 9.03, width: 2.96, exteriorColor: '#121315', flashingColor: '#121315',
+      construction: 'angle50', facade: 'cassette-lamella', facadeLeft: true,
+      rollers: true, rollerCount: 2, bathroom: true, toiletCompact: true,
+      washbasin: true, shower: true, boilerLiters: 50, waterConnection: true,
+      sewerConnection: true, kitchen: true, kitchenLength: 1.55,
+      induction: true, fridge: true, kitchenWaterPoint: true,
+      airConditioning: true, hvacPower: 3.4, hvacColor: 'white',
+      externalLights: 2, internalDoorCount: 2, partitionWall: true,
+    }),
+  },
+  {
+    id: '94-08-26',
+    label: '94/08/26 · 7×3 · Karolina',
+    source: 'projekt 94/08/26',
+    notes: 'PIR100, kaseton grafit + srebrny narożny, WC, aneks 144, rolety, klima.',
+    config: p('94/08/26', {
+      length: 7.03, width: 2.96, construction: 'angle50',
+      facade: 'cassette-graphite',
+      fixedGlazingCount: 2, aluDoorCount: 1, pvcWindowCount: 1,
+      rollers: true, rollerCount: 4, bathroom: true, toiletCompact: true,
+      washbasin: true, waterConnection: true, sewerConnection: true,
+      kitchen: true, kitchenLength: 1.44, kitchenWaterPoint: true,
+      ventilationGrille: true, airConditioning: true, hvacPower: 3.4,
+    }),
+  },
+  {
+    id: '120-07-26',
+    label: '120/07/26 · 6×3 · Patrycja',
+    source: 'projekt 120/07/26',
+    notes: 'PIR100, kaseton Winchester/grafit, 2 witryny 97×200, drzwi 108×210, okno PVC.',
+    config: p('120/07/26', {
+      length: 6.01, width: 2.96, construction: 'angle50',
+      facade: 'cassette-lamella', fixedGlazingCount: 2,
+      aluDoorCount: 1, pvcWindowCount: 1, pvcWindowWidth: 0.97, pvcWindowHeight: 0.97,
+      electrical: '1p230', doubleSockets: 4, ledCeiling: 2,
+      airConditioning: true, hvacPower: 3.4, externalLights: 2,
+    }),
+  },
+  {
+    id: '49-08-26',
+    label: '49/08/26 · 9×3 · Karolina · Anglia',
+    source: 'projekt 49/08/26',
+    notes: 'EPS100 ściany/dach, PIR100 podłoga, 500×210 front ALU, 200×210 bok, 3 LED zewn.',
+    config: p('49/08/26', {
+      length: 9.03, width: 2.96, wallPanel: 'EPS100', roofPanel: 'EPS100',
+      floorPanel: 'PIR100', construction: 'angle50', exteriorColor: '#3a3f43',
+      facade: 'cassette-lamella', fixedGlazingCount: 4, fixedGlazingWidth: 1.0,
+      fixedGlazingHeight: 2.10, aluDoorCount: 1, aluWindowCount: 1,
+      aluWindowWidth: 2.0, aluWindowHeight: 2.10, glazing: 'double',
+      electrical: '1p230', doubleSockets: 3, ledCeiling: 3,
+      externalLights: 3, airConditioning: true, hvacPower: 3.4,
+    }),
+  },
+  {
+    id: '114-08-26',
+    label: '114/08/26 · 7×3 · Iza · leasing',
+    source: 'projekt 114/08/26',
+    notes: 'PIR100, czarne wnętrze/obróbki, Winchester front, WC, aneks, klima grafit 3.5.',
+    config: p('114/08/26', {
+      length: 7.03, width: 2.96, construction: 'angle50',
+      facade: 'lamella-winchester', interiorFinish: 'concrete',
+      fixedGlazingCount: 2, aluDoorCount: 1, pvcWindowCount: 1,
+      pvcWindowWidth: 0.50, pvcWindowHeight: 0.50,
+      electrical: '1p230', doubleSockets: 2, singleSockets: 2,
+      ledCeiling: 2, bathroom: true, toiletCompact: true, washbasin: true,
+      waterConnection: true, sewerConnection: true, kitchen: true,
+      kitchenLength: 1.20, kitchenWaterPoint: true,
+      airConditioning: true, hvacPower: 3.5, hvacColor: 'graphite',
+    }),
+  },
+  {
+    id: '109-08-26',
+    label: '109/08/26 · 6×3 · Tomek',
+    source: 'projekt 109/08/26',
+    notes: 'PIR100, kaseton grafit + WĄŻ Winchester, WC 120×120, bez klimy.',
+    config: p('109/08/26', {
+      length: 6.03, width: 2.96, construction: 'angle50',
+      facade: 'cassette-lamella', fixedGlazingCount: 2, aluDoorCount: 1,
+      pvcWindowCount: 1, pvcWindowWidth: 0.50, pvcWindowHeight: 0.50,
+      bathroom: true, toiletCompact: true, washbasin: true,
+      waterConnection: true, sewerConnection: true, partitionWall: true,
+      internalDoorCount: 1, kitchenWaterPoint: true,
+      airConditioning: false, hvacPower: 0,
+    }),
+  },
+  {
+    id: '28-03-26',
+    label: '28/03/26 · 9×3 · Tomek',
+    source: 'projekt 28/03/26',
+    notes: 'PIR100, pełna 100×100, 9005 mat, kaseton + lamele czarne/palisander, klima 3.5.',
+    config: p('28/03/26', {
+      length: 9.03, width: 2.96, construction: 'full100',
+      exteriorColor: '#121315', flashingColor: '#121315',
+      interiorFinish: 'concrete', facade: 'cassette-lamella',
+      facadeFront: true, facadeLeft: true, fixedGlazingCount: 2,
+      aluDoorCount: 1, aluWindowCount: 1, aluWindowWidth: 0.97, aluWindowHeight: 2.10,
+      electrical: '1p230', doubleSockets: 4, singleSockets: 1,
+      ledCeiling: 4, externalLights: 4, airConditioning: true,
+      hvacPower: 3.5, hvacColor: 'graphite',
+    }),
+  },
+  {
+    id: '104-01-26',
+    label: '104/01/26 · 7×3 · Gosia',
+    source: 'projekt 104/01/26',
+    notes: 'PIR100, statyka, 3 szyby, kaseton czarny mat 4 strony, 400V, klima 3.4.',
+    config: p('104/01/26', {
+      length: 7.03, width: 2.96, construction: 'static100',
+      facade: 'cassette-black', facadeFront: true, facadeLeft: true,
+      facadeRight: true, facadeBack: true, exteriorColor: '#121315',
+      flashingColor: '#121315', glazing: 'triple',
+      aluDoorCount: 1, aluDoorWidth: 2.0, aluDoorHeight: 2.10,
+      aluWindowCount: 4, aluWindowWidth: 0.93, aluWindowHeight: 2.10,
+      electrical: '3p400', doubleSockets: 10, ledCeiling: 2,
+      externalLights: 2, airConditioning: true, hvacPower: 3.4,
+      rollers: false, gutter: true,
+    }),
+  },
+]
