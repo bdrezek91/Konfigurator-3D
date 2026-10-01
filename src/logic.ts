@@ -1,5 +1,5 @@
 import type { PavilionConfig, ValidationItem } from './types'
-import { CONSTRUCTION_LABELS, PANEL_LABELS } from './types'
+import { CONSTRUCTION_LABELS, PANEL_LABELS, PANEL_THICKNESS_M, SURFACE_PROFILE_LABELS } from './types'
 
 export type BomRow = {
   category: string
@@ -38,20 +38,46 @@ export function validateConfig(c: PavilionConfig): ValidationItem[] {
     out.push({ level: 'warning', message: 'Pawilon nie ma żadnej stolarki zewnętrznej.' })
   }
 
+  if (c.geometry) {
+    const floorT = PANEL_THICKNESS_M[c.floorPanel]
+    for (const opening of c.geometry.openings) {
+      const span = opening.wall === 'front' || opening.wall === 'back' ? c.length : c.width
+      const left = opening.center - opening.width / 2
+      const right = opening.center + opening.width / 2
+      if (left < -span / 2 + 0.08 || right > span / 2 - 0.08) {
+        out.push({ level: 'error', message: 'Stolarka ' + opening.id + ' wychodzi poza obrys ściany ' + opening.wall + '.' })
+      }
+      const sill = opening.sill ?? (opening.kind.startsWith('door-') ? 0 : 0.08)
+      const available = floorT + Math.min(c.frontHeight, c.backHeight) + PANEL_THICKNESS_M[c.roofPanel]
+      if (floorT + sill + opening.height > available - 0.08) {
+        out.push({ level: 'warning', message: 'Stolarka ' + opening.id + ' jest bardzo blisko górnej krawędzi ściany.' })
+      }
+    }
+  }
+
+  if (c.roofProfile !== 'trapezoid') {
+    out.push({ level: 'warning', message: 'Dach ustawiono bez typowej zewnętrznej profilacji trapezowej T.' })
+  }
+
   if (out.length === 0) out.push({ level: 'ok', message: 'Brak oczywistych konfliktów w konfiguracji.' })
   else if (!out.some((item) => item.level === 'error')) out.unshift({ level: 'ok', message: 'Konfiguracja nie zawiera błędów blokujących.' })
   return out
 }
 
 export function buildBom(c: PavilionConfig): BomRow[] {
-  const avgHeight = (c.frontHeight + c.backHeight) / 2
-  const wallArea = 2 * (c.length + c.width) * avgHeight
+  const floorT = PANEL_THICKNESS_M[c.floorPanel]
+  const roofT = PANEL_THICKNESS_M[c.roofPanel]
+  const outerFront = floorT + c.frontHeight + roofT
+  const outerBack = floorT + c.backHeight + roofT
+  const wallArea = (c.length + c.width) * (outerFront + outerBack)
   const floorArea = c.length * c.width
-  const roofArea = c.length * Math.hypot(c.width, c.frontHeight - c.backHeight)
+  const roofArea = c.length * Math.hypot(c.width, outerFront - outerBack)
+  const roofModules1050 = Math.ceil(c.length / 1.05)
   const rows: BomRow[] = [
     { category: 'Konstrukcja', item: CONSTRUCTION_LABELS[c.construction], quantity: '1 kpl.', basis: 'dokładne' },
-    { category: 'Ściany', item: PANEL_LABELS[c.wallPanel], quantity: wallArea.toFixed(1) + ' m² brutto', basis: 'szacunkowe' },
-    { category: 'Dach', item: PANEL_LABELS[c.roofPanel], quantity: roofArea.toFixed(1) + ' m²', basis: 'szacunkowe' },
+    { category: 'Ściany', item: PANEL_LABELS[c.wallPanel] + ' · ' + SURFACE_PROFILE_LABELS[c.wallProfile], quantity: wallArea.toFixed(1) + ' m² brutto', basis: 'szacunkowe' },
+    { category: 'Dach', item: PANEL_LABELS[c.roofPanel] + ' · ' + SURFACE_PROFILE_LABELS[c.roofProfile], quantity: roofArea.toFixed(1) + ' m²', basis: 'szacunkowe' },
+    { category: 'Dach', item: 'Moduły dachowe 1050 mm — orientacyjnie', quantity: roofModules1050 + ' szt.', basis: 'szacunkowe' },
     { category: 'Podłoga', item: PANEL_LABELS[c.floorPanel], quantity: floorArea.toFixed(1) + ' m²', basis: 'szacunkowe' },
     { category: 'Podłoga', item: 'MFP/OSB ' + c.mfpThickness + ' mm', quantity: floorArea.toFixed(1) + ' m²', basis: 'szacunkowe' },
   ]

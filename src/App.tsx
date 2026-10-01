@@ -6,7 +6,9 @@ import {
   CONSTRUCTION_LABELS,
   DEFAULT_CONFIG,
   PANEL_LABELS,
+  PANEL_THICKNESS_M,
   RAL_COLORS,
+  SURFACE_PROFILE_LABELS,
   type PavilionConfig,
 } from './types'
 import './App.css'
@@ -94,11 +96,14 @@ function ConfigControls({ config, update }: { config: PavilionConfig; update: Se
           Object.entries(PANEL_LABELS).map(([value, label]) => ({ value: value as PavilionConfig['floorPanel'], label }))
         } />
         <div className="field-grid">
-          <Select label="Profil ścian" value={config.wallProfile} onChange={(v) => update('wallProfile', v)} options={[
-            { value: 'smooth', label: 'Gładkie' }, { value: 'ribbed', label: 'Ryflowane' },
-          ]} />
-          <Select label="Profil dachu" value={config.roofProfile} onChange={(v) => update('roofProfile', v)} options={[
-            { value: 'smooth', label: 'Gładkie' }, { value: 'ribbed', label: 'Ryflowane' },
+          <Select label="Profilacja ściany" value={config.wallProfile} onChange={(v) => update('wallProfile', v)} options={
+            Object.entries(SURFACE_PROFILE_LABELS)
+              .filter(([value]) => value !== 'trapezoid')
+              .map(([value, label]) => ({ value: value as PavilionConfig['wallProfile'], label }))
+          } />
+          <Select label="Profilacja dachu" value={config.roofProfile} onChange={(v) => update('roofProfile', v)} options={[
+            { value: 'trapezoid', label: 'Trapez dachowy (T)' },
+            { value: 'smooth', label: 'Gładka — tylko wariant niestandardowy' },
           ]} />
           <Select label="Wnętrze" value={config.interiorFinish} onChange={(v) => update('interiorFinish', v)} options={[
             { value: 'white', label: 'Białe' }, { value: 'concrete', label: 'Beton' }, { value: 'black', label: 'Czarne' },
@@ -246,19 +251,31 @@ function ConfigControls({ config, update }: { config: PavilionConfig; update: Se
   )
 }
 
+function initialConfig(): PavilionConfig {
+  const presetId = new URLSearchParams(window.location.search).get('preset')
+  const preset = PRESETS.find((item) => item.id === presetId)
+  return preset ? { ...preset.config } : { ...DEFAULT_CONFIG }
+}
+
 export default function App() {
-  const [config, setConfig] = useState<PavilionConfig>(DEFAULT_CONFIG)
+  const [config, setConfig] = useState<PavilionConfig>(initialConfig)
   const [sceneKey, setSceneKey] = useState(0)
 
   const validation = useMemo(() => validateConfig(config), [config])
   const bom = useMemo(() => buildBom(config), [config])
 
   const stats = useMemo(() => {
+    const floorT = PANEL_THICKNESS_M[config.floorPanel]
+    const roofT = PANEL_THICKNESS_M[config.roofPanel]
+    const outerFront = floorT + config.frontHeight + roofT
+    const outerBack = floorT + config.backHeight + roofT
     return {
       floor: config.length * config.width,
-      walls: 2 * (config.length + config.width) * (config.geometry?.externalHeight ?? 3.0),
-      roof: config.length * Math.hypot(config.width, config.frontHeight - config.backHeight),
+      walls: (config.length + config.width) * (outerFront + outerBack),
+      roof: config.length * Math.hypot(config.width, outerFront - outerBack),
       roofDrop: Math.round(Math.abs(config.frontHeight - config.backHeight) * 1000),
+      outerFront,
+      outerBack,
       openings: config.aluDoorCount + config.fixedGlazingCount + config.aluWindowCount + config.pvcWindowCount,
     }
   }, [config])
@@ -271,6 +288,7 @@ export default function App() {
       'aluWindowCount', 'aluWindowWidth', 'aluWindowHeight',
       'pvcWindowCount', 'pvcWindowWidth', 'pvcWindowHeight',
       'rollers', 'rollerCount',
+      'facade', 'facadeFront', 'facadeLeft', 'facadeRight', 'facadeBack',
     ]
     setConfig((current) => ({
       ...current,
@@ -305,7 +323,7 @@ export default function App() {
           <div className="brand-row"><span className="brand-mark">D</span><strong>DAMPOL 3D</strong></div>
           <p>Konfigurator techniczno-sprzedażowy · 14 projektów referencyjnych</p>
         </div>
-        <span className="status-pill">V3</span>
+        <span className="status-pill">V4</span>
       </header>
 
       <section className="preset-bar">
@@ -332,7 +350,7 @@ export default function App() {
           <div className="viewer-card">
             <div className="viewer-toolbar">
               <div>
-                <strong>{config.length.toFixed(2)} × {config.width.toFixed(2)} m · zew. {(config.geometry?.externalHeight ?? 3).toFixed(2)} m · wew. {config.frontHeight.toFixed(2)}→{config.backHeight.toFixed(2)} m</strong>
+                <strong>{config.length.toFixed(2)} × {config.width.toFixed(2)} m · zew. {stats.outerFront.toFixed(2)}→{stats.outerBack.toFixed(2)} m · wew. {config.frontHeight.toFixed(2)}→{config.backHeight.toFixed(2)} m</strong>
                 <small>obrót: LPM · zoom: kółko · podgląd wnętrza przełącza przezroczystość ścian</small>
               </div>
               <button onClick={() => setSceneKey((v) => v + 1)}>Reset widoku</button>

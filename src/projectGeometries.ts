@@ -9,7 +9,7 @@ const o = (
   kind: OpeningPlacement['kind'],
   extra: Partial<OpeningPlacement> = {},
 ): OpeningPlacement => ({
-  id, wall, center, width, height, sill: 0.08, kind,
+  id, wall, center, width, height, sill: kind.startsWith('door-') ? 0 : 0.08, kind,
   glazing: 'double', frameColor: '#17191b', sourceAccuracy: 'drawing-estimate', ...extra,
 })
 
@@ -21,7 +21,8 @@ const d = (
   yCenter: number,
   height: number,
   kind: DecorPlacement['kind'],
-): DecorPlacement => ({ id, wall, center, width, yCenter, height, kind, sourceAccuracy: 'drawing-estimate' })
+  extra: Partial<DecorPlacement> = {},
+): DecorPlacement => ({ id, wall, center, width, yCenter, height, kind, sourceAccuracy: 'drawing-estimate', ...extra })
 
 const light = (wall: WallSide, center: number, y = 2.52): LightPlacement => ({ wall, center, y })
 
@@ -30,7 +31,7 @@ const g = (
   decor: DecorPlacement[] = [],
   exteriorLights: LightPlacement[] = [],
   notes: string[] = [],
-): ProjectGeometry => ({ externalHeight: 3.0, openings, decor, exteriorLights, notes })
+): ProjectGeometry => ({ externalHeight: 2.86, openings, decor, exteriorLights, notes })
 
 export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
   '722/08/26': g(
@@ -40,11 +41,11 @@ export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
       o('WC','back',2.25,0.50,0.50,'pvc-window',{sill:1.45,frameColor:'#5b6266'}),
     ],
     [
-      d('top','front',0,6.03,2.72,0.42,'cassette-rect-graphite'),
-      d('lam-l','front',-2.35,0.95,1.45,2.80,'lamella-winchester'),
-      d('lam-r','front',2.35,0.95,1.45,2.80,'lamella-winchester'),
-      d('left-strip','left',0.95,0.70,1.45,2.80,'lamella-winchester'),
-      d('right-strip','right',-0.95,0.70,1.45,2.80,'lamella-winchester'),
+      d('top','front',0,6.03,2.64,0.42,'cassette-rect-graphite'),
+      d('win-l','front',-2.38,1.05,1.31,2.28,'cassette-winchester'),
+      d('win-r','front',2.38,1.05,1.31,2.28,'cassette-winchester'),
+      d('left-edge','left',1.10,0.72,1.31,2.28,'cassette-winchester'),
+      d('right-edge','right',-1.10,0.72,1.31,2.28,'cassette-winchester'),
     ],
     [light('front',-2.45), light('front',2.45)],
     ['Front: 1 szyba 97x200 + drzwi 108x210; pozycje osiowe odtworzone z elewacji, bez pełnego wymiarowania.'],
@@ -103,9 +104,9 @@ export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
       o('F2','front',1.00,0.97,2.00,'fixed-glass'),
     ],
     [
-      d('top','front',0,4.03,2.72,0.42,'cassette-square-graphite'),
-      d('lam-l','front',-1.62,0.52,1.45,2.80,'lamella-winchester'),
-      d('lam-r','front',1.62,0.52,1.45,2.80,'lamella-winchester'),
+      d('top','front',0,4.03,2.64,0.42,'cassette-square-graphite'),
+      d('snake-l','front',-1.64,0.50,1.31,2.28,'snake-winchester'),
+      d('snake-r','front',1.64,0.50,1.31,2.28,'snake-winchester'),
     ],
     [],
     ['Położenie trzech modułów frontowych odtworzone z wizualizacji; brak pełnego wymiarowania osi.'],
@@ -128,11 +129,13 @@ export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
       o('W4','right',0,0.50,0.50,'pvc-window',{sill:1.45,frameColor:'#111315'}),
     ],
     [
-      d('front-l','front',-3.15,2.10,1.45,2.80,'lamella-winchester'),
-      d('front-r','front',3.15,2.10,1.45,2.80,'lamella-winchester'),
-      d('left-top','left',0,2.96,2.72,0.42,'lamella-winchester'),
+      d('front-wedge','front',-2.25,4.50,1.31,2.28,'lamella-winchester',{shape:'wedge-left'}),
+      d('front-top','front',1.85,5.30,2.64,0.34,'lamella-winchester'),
+      d('left-top','left',0,2.96,2.64,0.34,'lamella-winchester'),
+      d('led-front','front',0,8.60,2.43,0.04,'led-strip'),
+      d('led-left','left',0,2.60,2.43,0.04,'led-strip'),
     ],
-    [light('front',-2.8), light('front',2.8), light('left',0)],
+    [],
     ['Stolarka frontowa jest zestawem ok. 300x210; układ modułów odtworzony z elewacji.'],
   ),
 
@@ -162,10 +165,17 @@ export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
       o('W2','left',0,0.97,0.97,'pvc-window',{sill:1.08,frameColor:'#5a6165'}),
     ],
     [
-      d('top','front',0,6.01,2.72,0.42,'cassette-square-graphite'),
-      d('lam-l','front',-2.35,0.95,1.45,2.80,'lamella-winchester'),
-      d('lam-r','front',2.35,0.95,1.45,2.80,'lamella-winchester'),
-      d('right-wrap','right',0,2.96,1.45,2.80,'cassette-square-graphite'),
+      d('top','front',0,6.01,2.64,0.42,'cassette-winchester'),
+      d('edge-l','front',-2.72,0.55,1.31,2.28,'cassette-winchester'),
+      d('edge-r','front',2.72,0.55,1.31,2.28,'cassette-winchester'),
+      d('grafit-l','front',-2.12,0.52,1.31,2.28,'lamella-graphite'),
+      d('grafit-r','front',2.12,0.52,1.31,2.28,'lamella-graphite'),
+      d('left-top','left',0,2.96,2.64,0.42,'cassette-winchester'),
+      d('left-edge-a','left',-1.18,0.55,1.31,2.28,'cassette-winchester'),
+      d('left-edge-b','left',1.18,0.55,1.31,2.28,'cassette-winchester'),
+      d('right-top','right',0,2.96,2.64,0.42,'cassette-winchester'),
+      d('right-edge-a','right',-1.18,0.55,1.31,2.28,'cassette-winchester'),
+      d('right-edge-b','right',1.18,0.55,1.31,2.28,'cassette-winchester'),
     ],
     [light('front',-2.45), light('front',2.45)],
     ['Front: 2 szyby 97x200 + drzwi 108x210; lewy bok: PVC 97x97.'],
@@ -180,13 +190,15 @@ export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
       o('SIDE','right',0,2.00,2.10,'fixed-glass'),
     ],
     [
-      d('top','front',0,9.03,2.72,0.42,'cassette-square-graphite'),
-      d('front-black-l','front',-3.55,1.20,1.45,2.80,'lamella-black'),
-      d('front-black-r','front',3.55,1.20,1.45,2.80,'lamella-black'),
-      d('front-pal-l','front',-2.75,0.55,1.45,2.80,'lamella-palisander'),
-      d('front-pal-r','front',2.75,0.55,1.45,2.80,'lamella-palisander'),
-      d('left-decor','left',0,2.96,1.45,2.80,'lamella-black'),
-      d('right-decor','right',0,2.96,1.45,2.80,'lamella-black'),
+      d('top','front',0,9.03,2.64,0.42,'cassette-black'),
+      d('front-black-l','front',-4.05,0.55,1.31,2.28,'lamella-black'),
+      d('front-pal-l','front',-3.55,0.34,1.31,2.28,'lamella-palisander'),
+      d('front-pal-r','front',3.55,0.34,1.31,2.28,'lamella-palisander'),
+      d('front-black-r','front',4.05,0.55,1.31,2.28,'lamella-black'),
+      d('right-black-l','right',-1.18,0.42,1.31,2.28,'lamella-black'),
+      d('right-pal-l','right',-0.82,0.24,1.31,2.28,'lamella-palisander'),
+      d('right-pal-r','right',0.82,0.24,1.31,2.28,'lamella-palisander'),
+      d('right-black-r','right',1.18,0.42,1.31,2.28,'lamella-black'),
     ],
     [light('front',-3.6), light('front',0), light('front',3.6)],
     ['Front glazing 500x210: drzwi + 2 FIX + 2 RU. Bok: stałe ALU 200x210.'],
@@ -201,8 +213,8 @@ export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
       o('WC','right',0.35,0.50,0.50,'pvc-window',{sill:1.45,frameColor:'#111315',sourceAccuracy:'dimensioned'}),
     ],
     [
-      d('front-win','front',-2.40,2.10,1.45,2.80,'lamella-winchester'),
-      d('front-top','front',0,7.03,2.72,0.42,'lamella-winchester'),
+      d('front-wedge','front',-2.35,3.90,1.31,2.28,'lamella-winchester',{shape:'wedge-left'}),
+      d('front-top','front',0,7.03,2.64,0.34,'lamella-winchester'),
     ],
     [],
     ['Projekt: lamele Winchester tylko na froncie; toaleta z oknem 50x50.'],
@@ -216,9 +228,8 @@ export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
       o('WC','back',2.15,0.50,0.50,'pvc-window',{sill:1.45}),
     ],
     [
-      d('top','front',0,6.03,2.72,0.42,'cassette-square-graphite'),
-      d('snake-l','front',-2.30,0.90,1.45,2.80,'lamella-winchester'),
-      d('snake-r','front',2.30,0.90,1.45,2.80,'lamella-winchester'),
+      d('top','front',0,6.03,2.64,0.42,'cassette-square-graphite'),
+      d('snake','front',-2.05,1.85,1.31,2.28,'snake-winchester'),
     ],
     [],
     ['WC 120x120 z oknem 50x50; dodatkowy punkt wodny pod przyszły aneks.'],
@@ -233,11 +244,16 @@ export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
       o('Wside','left',0,0.97,2.10,'alu-window'),
     ],
     [
-      d('top','front',0,9.03,2.72,0.42,'cassette-black'),
-      d('black-l','front',-3.55,1.05,1.45,2.80,'lamella-black'),
-      d('pal-mid','front',1.25,1.55,1.45,2.80,'lamella-palisander'),
-      d('black-r','front',3.75,0.65,1.45,2.80,'lamella-black'),
-      d('left-black','left',0,2.96,1.45,2.80,'lamella-black'),
+      d('top','front',0,9.03,2.64,0.42,'cassette-black'),
+      d('front-pal-l','front',-4.05,0.34,1.31,2.28,'lamella-palisander'),
+      d('front-black-l','front',-3.62,0.52,1.31,2.28,'lamella-black'),
+      d('front-black-mid','front',0.95,0.42,1.31,2.28,'lamella-black'),
+      d('front-pal-mid','front',1.55,0.72,1.31,2.28,'lamella-palisander'),
+      d('front-black-r','front',3.72,0.55,1.31,2.28,'lamella-black'),
+      d('left-black-a','left',-1.18,0.42,1.31,2.28,'lamella-black'),
+      d('left-pal-a','left',-0.82,0.24,1.31,2.28,'lamella-palisander'),
+      d('left-pal-b','left',0.82,0.24,1.31,2.28,'lamella-palisander'),
+      d('left-black-b','left',1.18,0.42,1.31,2.28,'lamella-black'),
     ],
     [light('front',-3.6), light('front',-1.2), light('front',1.2), light('left',0)],
     ['Rysunek wskazuje zestaw ALU 350x210 oraz dodatkowe drzwi 108x210; pozycje osiowe odtworzone z elewacji.'],

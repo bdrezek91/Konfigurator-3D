@@ -1,12 +1,14 @@
 import { Canvas } from '@react-three/fiber'
 import { ContactShadows, Environment, OrbitControls } from '@react-three/drei'
+import { Path, Shape } from 'three'
 import type { ReactNode } from 'react'
-import type {
-  DecorPlacement,
-  OpeningPlacement,
-  PavilionConfig,
-  ProjectGeometry,
-  WallSide,
+import {
+  PANEL_THICKNESS_M,
+  type DecorPlacement,
+  type OpeningPlacement,
+  type PavilionConfig,
+  type ProjectGeometry,
+  type WallSide,
 } from './types'
 
 type Props = { config: PavilionConfig }
@@ -42,6 +44,16 @@ function Box({
   )
 }
 
+function envelope(config: PavilionConfig) {
+  const floorT = PANEL_THICKNESS_M[config.floorPanel]
+  const roofT = PANEL_THICKNESS_M[config.roofPanel]
+  const outerFront = floorT + config.frontHeight + roofT
+  const outerBack = floorT + config.backHeight + roofT
+  const slope = Math.atan2(outerFront - outerBack, config.width)
+  const roofDepth = Math.hypot(config.width, outerFront - outerBack)
+  return { floorT, roofT, outerFront, outerBack, slope, roofDepth }
+}
+
 function wallTransform(side: WallSide, config: PavilionConfig): {
   span: number
   position: [number, number, number]
@@ -53,164 +65,451 @@ function wallTransform(side: WallSide, config: PavilionConfig): {
   return { span: config.width, position: [config.length / 2, 0, 0], rotation: [0, Math.PI / 2, 0] }
 }
 
-function OpeningFrame({ opening, depth = 0.13 }: { opening: OpeningPlacement; depth?: number }) {
-  const sill = opening.sill ?? 0.08
-  const y = sill + opening.height / 2
-  const frame = opening.frameColor ?? '#17191b'
+function wallTopHeights(side: WallSide, config: PavilionConfig): [number, number] {
+  const { outerFront, outerBack } = envelope(config)
+  if (side === 'front') return [outerFront, outerFront]
+  if (side === 'back') return [outerBack, outerBack]
+  if (side === 'left') return [outerBack, outerFront]
+  return [outerFront, outerBack]
+}
+
+function wallTopAt(side: WallSide, localX: number, span: number, config: PavilionConfig) {
+  const [left, right] = wallTopHeights(side, config)
+  const t = Math.max(0, Math.min(1, (localX + span / 2) / Math.max(span, 0.001)))
+  return left + (right - left) * t
+}
+
+function openingSill(opening: OpeningPlacement) {
+  if (opening.sill != null) return opening.sill
+  return opening.kind.startsWith('door-') ? 0 : 0.08
+}
+
+function OpeningFrame({
+  opening,
+  floorOffset,
+  depth = 0.10,
+}: {
+  opening: OpeningPlacement
+  floorOffset: number
+  depth?: number
+}) {
+  const sill = openingSill(opening)
+  const y = floorOffset + sill + opening.height / 2
+  const frame = opening.frameColor ?? '#15181a'
   const isDoor = opening.kind.startsWith('door-')
 
   if (opening.kind === 'door-full') {
     return (
-      <group position={[opening.center, y, depth / 2 + 0.015]}>
-        <Box size={[opening.width + 0.07, opening.height + 0.07, 0.08]} position={[0, 0, 0]} color={frame} />
-        <Box size={[opening.width - 0.07, opening.height - 0.07, 0.055]} position={[0, 0, 0.05]} color={frame} roughness={0.38} />
+      <group position={[opening.center, y, depth / 2 + 0.035]}>
+        <Box size={[opening.width + 0.075, opening.height + 0.075, 0.075]} position={[0, 0, 0]} color={frame} metalness={0.16} roughness={0.40} />
+        <Box size={[opening.width - 0.06, opening.height - 0.06, 0.055]} position={[0, 0, 0.045]} color={frame} metalness={0.10} roughness={0.36} />
+        <Box size={[0.024, 0.58, 0.035]} position={[opening.width * 0.30, 0, 0.085]} color="#c4c7c7" metalness={0.75} roughness={0.20} />
       </group>
     )
   }
 
   return (
-    <group position={[opening.center, y, depth / 2 - 0.015]}>
-      <Box size={[opening.width + 0.075, opening.height + 0.075, 0.07]} position={[0, 0, 0]} color={frame} metalness={0.18} />
-      <mesh position={[0, 0, 0.035]} castShadow>
-        <boxGeometry args={[opening.width, opening.height, 0.045]} />
+    <group position={[opening.center, y, depth / 2 + 0.025]}>
+      <Box size={[opening.width + 0.075, opening.height + 0.075, 0.070]} position={[0, 0, 0]} color={frame} metalness={0.18} roughness={0.35} />
+      <mesh position={[0, 0, 0.048]} castShadow>
+        <boxGeometry args={[opening.width, opening.height, 0.032]} />
         <meshPhysicalMaterial
-          color="#526a74"
+          color="#142a34"
           transparent
-          opacity={0.36}
-          roughness={0.08}
-          metalness={0.06}
-          transmission={0.36}
+          opacity={0.58}
+          roughness={0.07}
+          metalness={0.14}
+          transmission={0.20}
         />
       </mesh>
-      {opening.kind === 'door-double' && <Box size={[0.035, opening.height, 0.075]} position={[0, 0, 0.075]} color={frame} />}
-      {opening.kind === 'alu-window' && <Box size={[0.028, opening.height, 0.07]} position={[opening.width * 0.18, 0, 0.075]} color={frame} />}
-      {opening.kind === 'pvc-window' && <Box size={[0.025, opening.height, 0.07]} position={[0, 0, 0.075]} color={frame} />}
+      {opening.kind === 'door-double' && <Box size={[0.032, opening.height, 0.078]} position={[0, 0, 0.075]} color={frame} />}
+      {opening.kind === 'alu-window' && <Box size={[0.026, opening.height, 0.072]} position={[opening.width * 0.18, 0, 0.075]} color={frame} />}
+      {opening.kind === 'pvc-window' && (
+        <>
+          <Box size={[0.026, opening.height, 0.072]} position={[0, 0, 0.075]} color={frame} />
+          <Box size={[opening.width, 0.026, 0.072]} position={[0, 0, 0.075]} color={frame} />
+        </>
+      )}
       {isDoor && opening.kind !== 'door-double' && (
-        <Box size={[0.035, 0.035, 0.085]} position={[opening.width * 0.30, 0, 0.085]} color="#d6d4cb" metalness={0.75} />
+        <Box size={[0.024, 0.58, 0.035]} position={[opening.width * 0.30, 0, 0.090]} color="#c4c7c7" metalness={0.78} roughness={0.18} />
+      )}
+      {opening.roller && (
+        <Box
+          size={[opening.width + 0.10, 0.13, 0.13]}
+          position={[0, opening.height / 2 + 0.085, 0.02]}
+          color="#1a1d1f"
+          metalness={0.18}
+          roughness={0.45}
+        />
       )}
     </group>
   )
 }
 
-function wallPieces(span: number, height: number, depth: number, openings: OpeningPlacement[], color: string, opacity: number) {
-  const pieces: ReactNode[] = []
-  const sorted = [...openings]
-    .map((x) => ({
-      ...x,
-      start: Math.max(-span / 2, x.center - x.width / 2),
-      end: Math.min(span / 2, x.center + x.width / 2),
-    }))
-    .filter((x) => x.end > -span / 2 && x.start < span / 2)
-    .sort((a, b) => a.start - b.start)
+function makeWallShape(
+  side: WallSide,
+  config: PavilionConfig,
+  span: number,
+  openings: OpeningPlacement[],
+) {
+  const { floorT } = envelope(config)
+  const [topLeft, topRight] = wallTopHeights(side, config)
+  const shape = new Shape()
+  shape.moveTo(-span / 2, 0)
+  shape.lineTo(span / 2, 0)
+  shape.lineTo(span / 2, topRight)
+  shape.lineTo(-span / 2, topLeft)
+  shape.closePath()
 
-  let cursor = -span / 2
-  sorted.forEach((opening, index) => {
-    if (opening.start > cursor) {
-      const width = opening.start - cursor
-      pieces.push(
-        <Box key={'solid-' + index} size={[width, height, depth]} position={[cursor + width / 2, height / 2, 0]} color={color} opacity={opacity} />,
-      )
-    }
-    const sill = Math.max(0, opening.sill ?? 0.08)
-    if (sill > 0.01) {
-      pieces.push(
-        <Box key={'bottom-' + index} size={[opening.end - opening.start, sill, depth]} position={[(opening.start + opening.end) / 2, sill / 2, 0]} color={color} opacity={opacity} />,
-      )
-    }
-    const topStart = sill + opening.height
-    if (topStart < height) {
-      pieces.push(
-        <Box key={'top-' + index} size={[opening.end - opening.start, height - topStart, depth]} position={[(opening.start + opening.end) / 2, topStart + (height - topStart) / 2, 0]} color={color} opacity={opacity} />,
-      )
-    }
-    cursor = Math.max(cursor, opening.end)
-  })
-  if (cursor < span / 2) {
-    const width = span / 2 - cursor
-    pieces.push(
-      <Box key="solid-end" size={[width, height, depth]} position={[cursor + width / 2, height / 2, 0]} color={color} opacity={opacity} />,
-    )
+  for (const opening of openings) {
+    const x1 = Math.max(-span / 2 + 0.001, opening.center - opening.width / 2)
+    const x2 = Math.min(span / 2 - 0.001, opening.center + opening.width / 2)
+    const y1 = floorT + openingSill(opening)
+    const y2 = y1 + opening.height
+    if (x2 <= x1 || y2 <= y1) continue
+    const hole = new Path()
+    hole.moveTo(x1, y1)
+    hole.lineTo(x1, y2)
+    hole.lineTo(x2, y2)
+    hole.lineTo(x2, y1)
+    hole.closePath()
+    shape.holes.push(hole)
   }
-  return pieces
+  return shape
 }
 
-function overlapsOpening(x: number, y: number, w: number, h: number, openings: OpeningPlacement[]) {
+function overlapsOpening(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  openings: OpeningPlacement[],
+  floorOffset: number,
+) {
   return openings.some((o) => {
-    const sill = o.sill ?? 0.08
+    const sill = floorOffset + openingSill(o)
     return Math.abs(x - o.center) < (w + o.width) / 2 && Math.abs(y - (sill + o.height / 2)) < (h + o.height) / 2
   })
 }
 
-function DecorLocal({ decor, openings, wallDepth }: {
-  decor: DecorPlacement[]
+function PanelProfileLocal({
+  side,
+  span,
+  config,
+  openings,
+  wallDepth,
+}: {
+  side: WallSide
+  span: number
+  config: PavilionConfig
   openings: OpeningPlacement[]
   wallDepth: number
 }) {
   const out: ReactNode[] = []
+  const { floorT } = envelope(config)
+  const z = wallDepth / 2 + 0.008
+
+  // Widoczne zamki/podziały płyt ~1 m.
+  const moduleWidth = 1.0
+  for (let x = -span / 2 + moduleWidth; x < span / 2 - 0.02; x += moduleWidth) {
+    const top = wallTopAt(side, x, span, config)
+    const h = Math.max(0.2, top - 0.08)
+    if (!overlapsOpening(x, h / 2, 0.012, h, openings, floorT)) {
+      out.push(
+        <Box
+          key={'joint-' + x.toFixed(2)}
+          size={[0.010, h, 0.010]}
+          position={[x, h / 2, z]}
+          color="#202427"
+          roughness={0.58}
+        />,
+      )
+    }
+  }
+
+  if (config.wallProfile === 'smooth') return <>{out}</>
+
+  const profile =
+    config.wallProfile === 'linear' || config.wallProfile === 'ribbed'
+      ? { step: 0.18, width: 0.008, depth: 0.010, color: '#252a2d' }
+      : config.wallProfile === 'microline'
+        ? { step: 0.055, width: 0.004, depth: 0.005, color: '#34393c' }
+        : config.wallProfile === 'microrib'
+          ? { step: 0.035, width: 0.003, depth: 0.004, color: '#3a3f42' }
+          : config.wallProfile === 'microwave'
+            ? { step: 0.070, width: 0.010, depth: 0.006, color: '#34393c' }
+            : config.wallProfile === 'carbon'
+              ? { step: 0.045, width: 0.006, depth: 0.005, color: '#2f3437' }
+              : null
+
+  if (!profile) return <>{out}</>
+
+  for (let x = -span / 2 + profile.step; x < span / 2; x += profile.step) {
+    const top = wallTopAt(side, x, span, config)
+    const h = Math.max(0.15, top - 0.10)
+    if (!overlapsOpening(x, h / 2, profile.width, h, openings, floorT)) {
+      out.push(
+        <Box
+          key={'profile-' + x.toFixed(3)}
+          size={[profile.width, h, profile.depth]}
+          position={[x, h / 2, z + 0.008]}
+          color={profile.color}
+          roughness={0.64}
+        />,
+      )
+    }
+  }
+
+  return <>{out}</>
+}
+
+function DecorLocal({
+  decor,
+  openings,
+  wallDepth,
+  floorOffset,
+}: {
+  decor: DecorPlacement[]
+  openings: OpeningPlacement[]
+  wallDepth: number
+  floorOffset: number
+}) {
+  const out: ReactNode[] = []
 
   decor.forEach((segment) => {
-    const z = wallDepth / 2 + 0.05
+    const fullWallCassette = segment.kind === 'cassette-black' && segment.height >= 2.8
+    const isBody = !fullWallCassette && segment.height > 1.0 && segment.yCenter < 2.2
+    const effectiveHeight = fullWallCassette ? 2.76 : isBody ? Math.min(segment.height, 2.26) : segment.height
+    const effectiveY = fullWallCassette ? 1.39 : isBody ? 1.31 : Math.min(segment.yCenter, 2.82 - effectiveHeight / 2)
+    const z = wallDepth / 2 + 0.070
     const x0 = segment.center - segment.width / 2
-    const y0 = segment.yCenter - segment.height / 2
+    const y0 = effectiveY - effectiveHeight / 2
 
     if (segment.kind.startsWith('lamella-')) {
-      const color = segment.kind === 'lamella-black' ? '#17191b' : segment.kind === 'lamella-palisander' ? '#5f3f2b' : '#a57245'
+      const color =
+        segment.kind === 'lamella-black' ? '#141618' :
+        segment.kind === 'lamella-graphite' ? '#34393d' :
+        segment.kind === 'lamella-palisander' ? '#5f3f2b' : '#a57245'
       const step = 0.072
       const slatWidth = 0.032
+
+      if (!segment.shape || segment.shape === 'rect') {
+        out.push(
+          <Box
+            key={segment.id + '-base'}
+            size={[segment.width, effectiveHeight, 0.040]}
+            position={[segment.center, effectiveY, z - 0.015]}
+            color="#111315"
+            roughness={0.62}
+          />,
+        )
+      }
+
+      for (let x = x0 + slatWidth / 2; x <= x0 + segment.width; x += step) {
+        const t = Math.max(0, Math.min(1, (x - x0) / Math.max(segment.width, 0.001)))
+        const fraction =
+          segment.shape === 'wedge-left' ? Math.max(0.04, 1 - t) :
+          segment.shape === 'wedge-right' ? Math.max(0.04, t) : 1
+        const localH = effectiveHeight * fraction
+        const localY = y0 + localH / 2
+        if (!overlapsOpening(x, localY, slatWidth, localH, openings, floorOffset)) {
+          out.push(
+            <Box
+              key={segment.id + '-l-' + x.toFixed(2)}
+              size={[slatWidth, localH, 0.052]}
+              position={[x, localY, z + 0.010]}
+              color={color}
+              roughness={0.78}
+            />,
+          )
+        }
+      }
+      return
+    }
+
+    if (segment.kind === 'snake-winchester') {
       out.push(
         <Box
           key={segment.id + '-base'}
-          size={[segment.width, segment.height, 0.045]}
-          position={[segment.center, segment.yCenter, z - 0.015]}
-          color="#111315"
-          roughness={0.62}
+          size={[segment.width, effectiveHeight, 0.040]}
+          position={[segment.center, effectiveY, z - 0.015]}
+          color="#17191b"
+          roughness={0.58}
         />,
       )
-      for (let x = x0 + slatWidth / 2; x <= x0 + segment.width; x += step) {
-        if (!overlapsOpening(x, segment.yCenter, slatWidth, segment.height, openings)) {
-          out.push(<Box key={segment.id + '-l-' + x.toFixed(2)} size={[slatWidth, segment.height, 0.055]} position={[x, segment.yCenter, z + 0.012]} color={color} roughness={0.78} />)
+      const barW = segment.width < 0.8 ? 0.072 : 0.115
+      const gap = segment.width < 0.8 ? 0.035 : 0.055
+      let i = 0
+      for (let x = x0 + barW / 2; x <= x0 + segment.width; x += barW + gap) {
+        if (!overlapsOpening(x, effectiveY, barW, effectiveHeight, openings, floorOffset)) {
+          out.push(
+            <Box
+              key={segment.id + '-s-' + i}
+              size={[barW, effectiveHeight, 0.058]}
+              position={[x, effectiveY, z + 0.010]}
+              color="#a36f45"
+              roughness={0.80}
+            />,
+          )
         }
+        i++
       }
       return
     }
 
     if (segment.kind === 'board-natural') {
       const boardH = 0.16
-      for (let y = y0 + boardH / 2; y < y0 + segment.height; y += boardH + 0.018) {
-        if (!overlapsOpening(segment.center, y, segment.width, boardH, openings)) {
-          out.push(<Box key={segment.id + '-b-' + y.toFixed(2)} size={[segment.width, boardH, 0.065]} position={[segment.center, y, z]} color="#9a704e" roughness={0.82} />)
+      for (let y = y0 + boardH / 2; y < y0 + effectiveHeight; y += boardH + 0.018) {
+        if (!overlapsOpening(segment.center, y, segment.width, boardH, openings, floorOffset)) {
+          out.push(
+            <Box
+              key={segment.id + '-b-' + y.toFixed(2)}
+              size={[segment.width, boardH, 0.060]}
+              position={[segment.center, y, z]}
+              color="#9a704e"
+              roughness={0.82}
+            />,
+          )
         }
       }
       return
     }
 
-    const tile = segment.kind === 'cassette-black' ? 0.68 : segment.kind === 'cassette-square-graphite' ? 0.62 : 0
-    if (tile > 0) {
-      const color = segment.kind === 'cassette-black' ? '#17191b' : '#343a3f'
-      for (let x = x0 + tile / 2; x < x0 + segment.width; x += tile + 0.025) {
-        for (let y = y0 + tile / 2; y < y0 + segment.height; y += tile + 0.025) {
-          if (!overlapsOpening(x, y, tile, tile, openings)) {
-            out.push(<Box key={segment.id + '-c-' + x.toFixed(2) + '-' + y.toFixed(2)} size={[Math.min(tile, x0 + segment.width - x + tile / 2), Math.min(tile, y0 + segment.height - y + tile / 2), 0.065]} position={[x, y, z]} color={color} roughness={0.48} />)
+    const cassette = [
+      'cassette-black',
+      'cassette-square-graphite',
+      'cassette-rect-graphite',
+      'cassette-white',
+      'cassette-winchester',
+      'silver-rect',
+    ].includes(segment.kind)
+
+    if (cassette) {
+      const isSquare = segment.kind === 'cassette-black' || segment.kind === 'cassette-square-graphite'
+      const cellW = isSquare ? 0.66 : segment.kind === 'cassette-winchester' ? 0.72 : 0.70
+      const cellH = isSquare ? 0.66 : Math.min(0.40, effectiveHeight - 0.02)
+      const color =
+        segment.kind === 'cassette-black' ? '#17191b' :
+        segment.kind === 'cassette-white' ? '#e8e8e1' :
+        segment.kind === 'cassette-winchester' ? '#9c7049' :
+        segment.kind === 'silver-rect' ? '#aeb3b5' : '#343a3f'
+      const metalness = segment.kind === 'silver-rect' ? 0.32 : 0.10
+
+      for (let x = x0 + cellW / 2; x < x0 + segment.width; x += cellW + 0.025) {
+        for (let y = y0 + cellH / 2; y < y0 + effectiveHeight; y += cellH + 0.025) {
+          const cw = Math.min(cellW, x0 + segment.width - x + cellW / 2)
+          const ch = Math.min(cellH, y0 + effectiveHeight - y + cellH / 2)
+          if (cw > 0.08 && ch > 0.08 && !overlapsOpening(x, y, cw, ch, openings, floorOffset)) {
+            out.push(
+              <Box
+                key={segment.id + '-c-' + x.toFixed(2) + '-' + y.toFixed(2)}
+                size={[cw, ch, 0.066]}
+                position={[x, y, z]}
+                color={color}
+                metalness={metalness}
+                roughness={segment.kind === 'cassette-winchester' ? 0.78 : 0.48}
+              />,
+            )
           }
         }
       }
       return
     }
 
-    const color =
-      segment.kind === 'silver-rect' ? '#aeb3b5' :
-      segment.kind === 'cassette-white' ? '#e8e8e1' :
-      segment.kind === 'steel-plate' ? '#23272a' : '#3b4145'
+    if (segment.kind === 'led-strip') {
+      out.push(
+        <Box
+          key={segment.id}
+          size={[segment.width, 0.028, 0.030]}
+          position={[segment.center, effectiveY, z + 0.030]}
+          color="#ffe29a"
+          roughness={0.16}
+        />,
+      )
+      return
+    }
 
-    if (!overlapsOpening(segment.center, segment.yCenter, segment.width, segment.height, openings)) {
-      out.push(<Box key={segment.id} size={[segment.width, segment.height, 0.065]} position={[segment.center, segment.yCenter, z]} color={color} metalness={segment.kind === 'silver-rect' ? 0.35 : 0.08} roughness={0.55} />)
+    const color = segment.kind === 'steel-plate' ? '#23272a' : '#3b4145'
+    if (!overlapsOpening(segment.center, effectiveY, segment.width, effectiveHeight, openings, floorOffset)) {
+      out.push(
+        <Box
+          key={segment.id}
+          size={[segment.width, effectiveHeight, 0.060]}
+          position={[segment.center, effectiveY, z]}
+          color={color}
+          metalness={0.08}
+          roughness={0.55}
+        />,
+      )
     }
   })
 
   return <>{out}</>
 }
 
-function Wall({ side, config, geometry, opacity }: {
+function DampolFrameLocal({
+  side,
+  span,
+  config,
+  wallDepth,
+}: {
+  side: WallSide
+  span: number
+  config: PavilionConfig
+  wallDepth: number
+}) {
+  const { roofT, floorT } = envelope(config)
+  const [topLeft, topRight] = wallTopHeights(side, config)
+  const topBand = Math.max(0.20, roofT + 0.15)
+  const bottomBand = Math.max(0.13, floorT + 0.035)
+  const sidePost = side === 'front' ? 0.14 : 0.12
+  const z = wallDepth / 2 + 0.030
+  const delta = topRight - topLeft
+  const angle = Math.atan2(delta, span)
+  const railLength = Math.hypot(span, delta)
+  const railY = (topLeft + topRight) / 2 - topBand / 2
+
+  return (
+    <group>
+      <Box
+        size={[railLength, topBand, 0.075]}
+        position={[0, railY, z]}
+        rotation={[0, 0, angle]}
+        color={config.flashingColor}
+        metalness={0.18}
+        roughness={0.46}
+      />
+      <Box
+        size={[span, bottomBand, 0.075]}
+        position={[0, bottomBand / 2, z]}
+        color="#15181a"
+        metalness={0.18}
+        roughness={0.45}
+      />
+      <Box
+        size={[sidePost, topLeft, 0.075]}
+        position={[-span / 2 + sidePost / 2, topLeft / 2, z]}
+        color={config.flashingColor}
+        metalness={0.18}
+        roughness={0.46}
+      />
+      <Box
+        size={[sidePost, topRight, 0.075]}
+        position={[span / 2 - sidePost / 2, topRight / 2, z]}
+        color={config.flashingColor}
+        metalness={0.18}
+        roughness={0.46}
+      />
+    </group>
+  )
+}
+
+function Wall({
+  side,
+  config,
+  geometry,
+  opacity,
+}: {
   side: WallSide
   config: PavilionConfig
   geometry: ProjectGeometry
@@ -220,95 +519,275 @@ function Wall({ side, config, geometry, opacity }: {
   const openings = geometry.openings.filter((x) => x.wall === side)
   const decor = geometry.decor.filter((x) => x.wall === side)
   const lights = geometry.exteriorLights?.filter((x) => x.wall === side) ?? []
-  const depth = 0.10
-  const wallColor = config.exteriorColor
-
-  const useRibs =
-    config.facade === 'plain' &&
-    (config.exteriorColor === '#121315' || config.exteriorColor === '#3a3f43') &&
-    decor.length === 0
+  const { floorT } = envelope(config)
+  const depth = PANEL_THICKNESS_M[config.wallPanel]
+  const shape = makeWallShape(side, config, transform.span, openings)
 
   return (
     <group position={transform.position} rotation={transform.rotation}>
-      {wallPieces(transform.span, geometry.externalHeight, depth, openings, wallColor, opacity)}
-      {useRibs && <RibbedSkinLocal span={transform.span} height={geometry.externalHeight} openings={openings} wallDepth={depth} />}
-      {openings.map((opening) => <OpeningFrame key={opening.id} opening={opening} depth={depth} />)}
-      <DecorLocal decor={decor} openings={openings} wallDepth={depth} />
-      <DampolFrameLocal
-        span={transform.span}
-        height={geometry.externalHeight}
+      <mesh position={[0, 0, -depth / 2]} castShadow receiveShadow>
+        <extrudeGeometry args={[shape, { depth, bevelEnabled: false, steps: 1 }]} />
+        <meshStandardMaterial
+          color={config.exteriorColor}
+          metalness={0.06}
+          roughness={0.63}
+          transparent={opacity < 1}
+          opacity={opacity}
+        />
+      </mesh>
+
+      <PanelProfileLocal
         side={side}
+        span={transform.span}
+        config={config}
+        openings={openings}
         wallDepth={depth}
-        color={config.flashingColor === '#f2f0e7' ? '#24282b' : config.flashingColor}
       />
+
+      <DampolFrameLocal side={side} span={transform.span} config={config} wallDepth={depth} />
+
+      <DecorLocal
+        decor={decor}
+        openings={openings}
+        wallDepth={depth}
+        floorOffset={floorT}
+      />
+
+      {openings.map((opening) => (
+        <OpeningFrame
+          key={opening.id}
+          opening={opening}
+          floorOffset={floorT}
+          depth={depth}
+        />
+      ))}
+
       {lights.map((lamp, i) => (
         <group key={'light-' + i} position={[lamp.center, lamp.y, depth / 2 + 0.12]}>
-          <Box size={[0.16, 0.24, 0.08]} position={[0, 0, 0]} color="#222629" />
-          <Box size={[0.08, 0.13, 0.025]} position={[0, 0, 0.055]} color="#f4e8a9" roughness={0.3} />
+          <Box size={[0.16, 0.24, 0.08]} position={[0, 0, 0]} color="#202426" metalness={0.12} roughness={0.42} />
+          <Box size={[0.08, 0.13, 0.025]} position={[0, 0, 0.055]} color="#f4e6a8" roughness={0.24} />
         </group>
       ))}
     </group>
   )
 }
 
-function Structure({ config, height }: { config: PavilionConfig; height: number }) {
-  const size = config.construction === 'angle50' ? 0.05 : config.construction === 'truss' ? 0.06 : 0.10
-  const color = config.project === '81/08/26' ? '#e8e8e2' : '#16191b'
-  const x = config.length / 2 - 0.055
-  const z = config.width / 2 - 0.055
-  const topY = height - 0.10
+function RoofRib({
+  x,
+  depth,
+  y,
+}: {
+  x: number
+  depth: number
+  y: number
+}) {
+  const shape = new Shape()
+  shape.moveTo(-0.060, 0)
+  shape.lineTo(-0.032, 0.045)
+  shape.lineTo(0.032, 0.045)
+  shape.lineTo(0.060, 0)
+  shape.closePath()
+
+  return (
+    <mesh position={[x, y, -depth / 2]} castShadow receiveShadow>
+      <extrudeGeometry args={[shape, { depth, bevelEnabled: false, steps: 1 }]} />
+      <meshStandardMaterial color="#373c40" metalness={0.14} roughness={0.48} />
+    </mesh>
+  )
+}
+
+function RoofSystem({ config }: Props) {
+  const { roofT, outerFront, outerBack, slope, roofDepth } = envelope(config)
+  const centerY = (outerFront + outerBack) / 2 - roofT / 2
+  const roofColor = config.flashingColor
+  const ribSpacing = 0.35
+  const ribs: ReactNode[] = []
+  for (let x = -config.length / 2 + 0.18; x < config.length / 2; x += ribSpacing) {
+    ribs.push(<RoofRib key={'roof-rib-' + x.toFixed(2)} x={x} depth={roofDepth + 0.04} y={roofT / 2} />)
+  }
+
+  const joints: ReactNode[] = []
+  for (let x = -config.length / 2 + 1.05; x < config.length / 2; x += 1.05) {
+    joints.push(
+      <Box
+        key={'roof-joint-' + x.toFixed(2)}
+        size={[0.010, 0.010, roofDepth + 0.05]}
+        position={[x, roofT / 2 + 0.006, 0]}
+        color="#181b1d"
+        roughness={0.45}
+      />,
+    )
+  }
+
+  return (
+    <group position={[0, centerY, 0]} rotation={[-slope, 0, 0]}>
+      <Box
+        size={[config.length + 0.06, roofT, roofDepth + 0.06]}
+        position={[0, 0, 0]}
+        color={roofColor}
+        metalness={0.10}
+        roughness={0.58}
+      />
+      {config.roofProfile === 'trapezoid' && ribs}
+      {joints}
+      <Box
+        size={[config.length + 0.10, 0.045, 0.055]}
+        position={[0, roofT / 2 + 0.020, roofDepth / 2 + 0.020]}
+        color={roofColor}
+        metalness={0.18}
+        roughness={0.44}
+      />
+      <Box
+        size={[config.length + 0.10, 0.045, 0.055]}
+        position={[0, roofT / 2 + 0.020, -roofDepth / 2 - 0.020]}
+        color={roofColor}
+        metalness={0.18}
+        roughness={0.44}
+      />
+    </group>
+  )
+}
+
+function FloorSystem({ config }: Props) {
+  const { floorT } = envelope(config)
+  const finishColor =
+    config.floorFinish === 'concrete' ? '#9f9c95' :
+    config.floorFinish === 'wood' ? '#8a6b4c' : '#666b6d'
+
   return (
     <group>
-      {[-1, 1].flatMap((sx) => [-1, 1].map((sz) => (
-        <Box key={'p'+sx+sz} size={[size, height - 0.18, size]} position={[sx * x, height / 2, sz * z]} color={color} metalness={0.35} />
-      )))}
-      <Box size={[config.length - 0.12, size, size]} position={[0, 0.13, z]} color={color} metalness={0.35} />
-      <Box size={[config.length - 0.12, size, size]} position={[0, 0.13, -z]} color={color} metalness={0.35} />
-      <Box size={[size, size, config.width - 0.12]} position={[x, 0.13, 0]} color={color} metalness={0.35} />
-      <Box size={[size, size, config.width - 0.12]} position={[-x, 0.13, 0]} color={color} metalness={0.35} />
-      <Box size={[config.length - 0.12, size, size]} position={[0, topY, z]} color={color} metalness={0.35} />
-      <Box size={[config.length - 0.12, size, size]} position={[0, topY, -z]} color={color} metalness={0.35} />
-      <Box size={[size, size, config.width - 0.12]} position={[x, topY, 0]} color={color} metalness={0.35} />
-      <Box size={[size, size, config.width - 0.12]} position={[-x, topY, 0]} color={color} metalness={0.35} />
+      <Box
+        size={[config.length, floorT, config.width]}
+        position={[0, floorT / 2, 0]}
+        color="#34383b"
+        metalness={0.08}
+        roughness={0.68}
+      />
+      <Box
+        size={[config.length - 0.10, 0.014, config.width - 0.10]}
+        position={[0, floorT + 0.007, 0]}
+        color={finishColor}
+        roughness={config.floorFinish === 'wood' ? 0.78 : 0.88}
+      />
+    </group>
+  )
+}
+
+function Structure({ config }: Props) {
+  const { outerFront, outerBack, slope, roofDepth } = envelope(config)
+  const size = config.construction === 'angle50' ? 0.05 : config.construction === 'truss' ? 0.06 : 0.10
+  const color = config.project === '81/08/26' ? '#e7e7e1' : '#141719'
+  const x = config.length / 2 - 0.055
+  const z = config.width / 2 - 0.055
+  const avgTop = (outerFront + outerBack) / 2
+
+  return (
+    <group>
+      <Box size={[size, outerFront, size]} position={[-x, outerFront / 2, z]} color={color} metalness={0.36} roughness={0.42} />
+      <Box size={[size, outerFront, size]} position={[x, outerFront / 2, z]} color={color} metalness={0.36} roughness={0.42} />
+      <Box size={[size, outerBack, size]} position={[-x, outerBack / 2, -z]} color={color} metalness={0.36} roughness={0.42} />
+      <Box size={[size, outerBack, size]} position={[x, outerBack / 2, -z]} color={color} metalness={0.36} roughness={0.42} />
+
+      <Box size={[config.length - 0.10, size, size]} position={[0, 0.09, z]} color={color} metalness={0.36} roughness={0.42} />
+      <Box size={[config.length - 0.10, size, size]} position={[0, 0.09, -z]} color={color} metalness={0.36} roughness={0.42} />
+      <Box size={[size, size, config.width - 0.10]} position={[x, 0.09, 0]} color={color} metalness={0.36} roughness={0.42} />
+      <Box size={[size, size, config.width - 0.10]} position={[-x, 0.09, 0]} color={color} metalness={0.36} roughness={0.42} />
+
+      <Box size={[config.length - 0.10, size, size]} position={[0, outerFront - 0.06, z]} color={color} metalness={0.36} roughness={0.42} />
+      <Box size={[config.length - 0.10, size, size]} position={[0, outerBack - 0.06, -z]} color={color} metalness={0.36} roughness={0.42} />
+      <Box
+        size={[size, size, roofDepth - 0.10]}
+        position={[x, avgTop - 0.06, 0]}
+        rotation={[-slope, 0, 0]}
+        color={color}
+        metalness={0.36}
+        roughness={0.42}
+      />
+      <Box
+        size={[size, size, roofDepth - 0.10]}
+        position={[-x, avgTop - 0.06, 0]}
+        rotation={[-slope, 0, 0]}
+        color={color}
+        metalness={0.36}
+        roughness={0.42}
+      />
     </group>
   )
 }
 
 function SlopedCeiling({ config }: Props) {
-  const delta = config.frontHeight - config.backHeight
-  const angle = Math.atan2(delta, config.width)
-  const depth = Math.hypot(config.width, delta)
-  const y = (config.frontHeight + config.backHeight) / 2
+  const { floorT, slope, roofDepth } = envelope(config)
+  const y = floorT + (config.frontHeight + config.backHeight) / 2
+  const color =
+    config.interiorFinish === 'black' ? '#292c2e' :
+    config.interiorFinish === 'concrete' ? '#b7b4ad' :
+    config.interiorFinish === 'oak' ? '#9b7651' :
+    config.interiorFinish === 'walnut' ? '#654936' : '#ecebe5'
+
   return (
     <Box
-      size={[config.length - 0.18, 0.045, depth - 0.15]}
+      size={[config.length - 0.18, 0.028, roofDepth - 0.15]}
       position={[0, y, 0]}
-      rotation={[-angle, 0, 0]}
-      color={config.interiorFinish === 'black' ? '#292c2e' : config.interiorFinish === 'concrete' ? '#b7b4ad' : '#ecebe5'}
+      rotation={[-slope, 0, 0]}
+      color={color}
       roughness={0.88}
-      opacity={0.88}
+      opacity={0.92}
     />
+  )
+}
+
+function ExteriorHVAC({ config }: Props) {
+  if (!config.airConditioning) return null
+  const color = config.hvacColor === 'white' ? '#e7e7e3' : config.hvacColor === 'black' ? '#17191b' : '#596168'
+  return (
+    <group position={[config.length / 2 + 0.22, 0.58, -config.width / 2 + 0.58]} rotation={[0, Math.PI / 2, 0]}>
+      <Box size={[0.72, 0.52, 0.22]} position={[0, 0, 0]} color={color} metalness={0.12} roughness={0.48} />
+      <mesh position={[0, 0, 0.125]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.025, 32]} />
+        <meshStandardMaterial color="#262a2d" metalness={0.18} roughness={0.42} />
+      </mesh>
+    </group>
   )
 }
 
 function Interior({ config }: Props) {
   if (!config.showInterior) return null
+  const { floorT } = envelope(config)
   const x0 = -config.length / 2 + 0.75
+
   return (
     <group>
       <SlopedCeiling config={config} />
-      {config.partitionWall && <Box size={[0.08, 2.35, Math.min(2.15, config.width - 0.3)]} position={[x0 + 1.25, 1.18, -0.22]} color="#e8e6df" opacity={0.92} />}
+      {config.partitionWall && (
+        <Box
+          size={[0.08, 2.30, Math.min(2.15, config.width - 0.3)]}
+          position={[x0 + 1.25, floorT + 1.15, -0.22]}
+          color="#e8e6df"
+          opacity={0.94}
+        />
+      )}
+
       {config.kitchen && (
-        <group position={[config.length / 2 - Math.max(0.8, config.kitchenLength / 2) - 0.18, 0, -config.width / 2 + 0.34]}>
+        <group position={[config.length / 2 - Math.max(0.8, config.kitchenLength / 2) - 0.18, floorT, -config.width / 2 + 0.34]}>
           <Box size={[config.kitchenLength, 0.88, 0.55]} position={[0, 0.44, 0]} color="#e7e2d8" />
           <Box size={[config.kitchenLength, 0.05, 0.60]} position={[0, 0.91, 0]} color="#55585a" />
-          {config.fridge && <Box size={[0.52, 1.75, 0.58]} position={[config.kitchenLength / 2 + 0.34, 0.88, 0]} color="#d4d7d8" metalness={0.25} />}
+          {config.fridge && (
+            <Box size={[0.52, 1.75, 0.58]} position={[config.kitchenLength / 2 + 0.34, 0.88, 0]} color="#d4d7d8" metalness={0.25} />
+          )}
         </group>
       )}
-      {config.toiletCompact && <Box size={[0.45, 0.42, 0.65]} position={[x0, 0.21, -config.width / 2 + 0.56]} color="#f4f4f0" />}
-      {config.washbasin && <Box size={[0.55, 0.82, 0.42]} position={[x0 + 0.65, 0.41, -config.width / 2 + 0.30]} color="#f4f4f0" />}
-      {config.shower && <Box size={[0.82, 0.08, 0.82]} position={[x0 + 0.40, 0.04, config.width / 2 - 0.52]} color="#d7e0e4" opacity={0.74} />}
-      {config.airConditioning && <Box size={[0.86, 0.28, 0.22]} position={[0, 2.16, -config.width / 2 + 0.15]} color={config.hvacColor === 'white' ? '#ecece7' : config.hvacColor === 'black' ? '#17191b' : '#596168'} />}
+
+      {config.toiletCompact && <Box size={[0.45, 0.42, 0.65]} position={[x0, floorT + 0.21, -config.width / 2 + 0.56]} color="#f4f4f0" />}
+      {config.washbasin && <Box size={[0.55, 0.82, 0.42]} position={[x0 + 0.65, floorT + 0.41, -config.width / 2 + 0.30]} color="#f4f4f0" />}
+      {config.shower && <Box size={[0.82, 0.08, 0.82]} position={[x0 + 0.40, floorT + 0.04, config.width / 2 - 0.52]} color="#d7e0e4" opacity={0.74} />}
+
+      {config.airConditioning && (
+        <Box
+          size={[0.86, 0.28, 0.22]}
+          position={[0, floorT + 2.16, -config.width / 2 + 0.15]}
+          color={config.hvacColor === 'white' ? '#ecece7' : config.hvacColor === 'black' ? '#17191b' : '#596168'}
+        />
+      )}
     </group>
   )
 }
@@ -319,31 +798,73 @@ function fallbackGeometry(config: PavilionConfig): ProjectGeometry {
   for (let i = 0; i < config.fixedGlazingCount; i++) itemWidths.push(config.fixedGlazingWidth)
   for (let i = 0; i < config.aluDoorCount; i++) itemWidths.push(config.aluDoorWidth)
   for (let i = 0; i < config.aluWindowCount; i++) itemWidths.push(config.aluWindowWidth)
+
   const total = itemWidths.reduce((a, b) => a + b, 0) + Math.max(0, itemWidths.length - 1) * 0.10
-  let cursor = -total / 2
+  let cursor = -Math.min(total, config.length - 0.45) / 2
 
   for (let i = 0; i < config.fixedGlazingCount; i++) {
     const center = cursor + config.fixedGlazingWidth / 2
-    openings.push({ id:'fg'+i, wall:'front', center, width:config.fixedGlazingWidth, height:config.fixedGlazingHeight, sill:0.08, kind:'fixed-glass', glazing:config.glazing, roller: config.rollers && i < config.rollerCount })
+    openings.push({
+      id: 'fg' + i,
+      wall: 'front',
+      center,
+      width: config.fixedGlazingWidth,
+      height: config.fixedGlazingHeight,
+      sill: 0.08,
+      kind: 'fixed-glass',
+      glazing: config.glazing,
+      roller: config.rollers && i < config.rollerCount,
+    })
     cursor += config.fixedGlazingWidth + 0.10
   }
+
   for (let i = 0; i < config.aluDoorCount; i++) {
     const center = cursor + config.aluDoorWidth / 2
-    openings.push({ id:'ad'+i, wall:'front', center, width:config.aluDoorWidth, height:config.aluDoorHeight, sill:0.08, kind:'door-glazed', glazing:config.glazing, roller: config.rollers && config.fixedGlazingCount + i < config.rollerCount })
+    openings.push({
+      id: 'ad' + i,
+      wall: 'front',
+      center,
+      width: config.aluDoorWidth,
+      height: config.aluDoorHeight,
+      sill: 0,
+      kind: 'door-glazed',
+      glazing: config.glazing,
+      roller: config.rollers && config.fixedGlazingCount + i < config.rollerCount,
+    })
     cursor += config.aluDoorWidth + 0.10
   }
+
   for (let i = 0; i < config.aluWindowCount; i++) {
     const center = cursor + config.aluWindowWidth / 2
-    openings.push({ id:'aw'+i, wall:'front', center, width:config.aluWindowWidth, height:config.aluWindowHeight, sill:0.08, kind:'alu-window', glazing:config.glazing })
+    openings.push({
+      id: 'aw' + i,
+      wall: 'front',
+      center,
+      width: config.aluWindowWidth,
+      height: config.aluWindowHeight,
+      sill: 0.08,
+      kind: 'alu-window',
+      glazing: config.glazing,
+    })
     cursor += config.aluWindowWidth + 0.10
   }
+
   for (let i = 0; i < config.pvcWindowCount; i++) {
-    openings.push({ id:'pvc'+i, wall:'left', center:(i - (config.pvcWindowCount - 1) / 2) * 0.75, width:config.pvcWindowWidth, height:config.pvcWindowHeight, sill:1.35, kind:'pvc-window', glazing:config.glazing })
+    openings.push({
+      id: 'pvc' + i,
+      wall: 'left',
+      center: (i - (config.pvcWindowCount - 1) / 2) * 0.75,
+      width: config.pvcWindowWidth,
+      height: config.pvcWindowHeight,
+      sill: 1.35,
+      kind: 'pvc-window',
+      glazing: config.glazing,
+    })
   }
 
   const decor: DecorPlacement[] = []
-  const fieldHeight = 2.36
-  const fieldY = 1.38
+  const fieldHeight = 2.24
+  const fieldY = 1.30
   const sideSpace = Math.max(0.45, Math.min(1.25, (config.length - Math.min(total, config.length - 0.5)) / 2 - 0.12))
   const leftCenter = -config.length / 2 + sideSpace / 2 + 0.16
   const rightCenter = config.length / 2 - sideSpace / 2 - 0.16
@@ -375,99 +896,74 @@ function fallbackGeometry(config: PavilionConfig): ProjectGeometry {
     )
   }
 
-  return { externalHeight: 3.0, openings, decor }
+  return { externalHeight: envelope(config).outerFront, openings, decor }
 }
 
 function ProjectPavilion({ config }: Props) {
   const geometry = config.geometry ?? fallbackGeometry(config)
   const transparent = config.showInterior || config.showStructure
-  const opacity = transparent ? 0.22 : 1
+  const opacity = transparent ? 0.20 : 1
 
   return (
-    <group position={[0, 0.07, 0]}>
-      <Box size={[config.length, 0.16, config.width]} position={[0, 0.08, 0]} color="#505356" />
+    <group>
+      <FloorSystem config={config} />
       <Wall side="front" config={config} geometry={geometry} opacity={opacity} />
       <Wall side="back" config={config} geometry={geometry} opacity={opacity} />
       <Wall side="left" config={config} geometry={geometry} opacity={opacity} />
       <Wall side="right" config={config} geometry={geometry} opacity={opacity} />
-      <Box
-        size={[config.length + 0.10, 0.13, config.width + 0.10]}
-        position={[0, geometry.externalHeight + 0.065, 0]}
-        color={config.flashingColor}
-        metalness={0.18}
-        roughness={0.62}
-      />
-      {config.showStructure && <Structure config={config} height={geometry.externalHeight} />}
+      <RoofSystem config={config} />
+      {config.showStructure && <Structure config={config} />}
       <Interior config={config} />
+      <ExteriorHVAC config={config} />
     </group>
   )
 }
 
 export default function Pavilion3D({ config }: Props) {
-  const cameraDistance = Math.max(8.5, config.length * 1.15)
-  const targetHeight = (config.geometry?.externalHeight ?? 3.0) * 0.45
+  const cameraDistance = Math.max(8.2, config.length * 1.05)
+  const { outerFront, outerBack } = envelope(config)
+  const targetHeight = (outerFront + outerBack) * 0.24
+
   return (
-    <Canvas shadows camera={{ position: [cameraDistance * 0.72, 5.2, cameraDistance], fov: 38 }}>
-      <color attach="background" args={['#e9ecef']} />
-      <ambientLight intensity={0.92} />
-      <directionalLight position={[8, 12, 9]} intensity={2.15} castShadow shadow-mapSize-width={2048} shadow-mapSize-height={2048} />
+    <Canvas
+      shadows
+      dpr={[1, 2]}
+      camera={{ position: [cameraDistance * 0.72, 3.15, cameraDistance], fov: 33 }}
+    >
+      <color attach="background" args={['#e7e7e3']} />
+      <ambientLight intensity={0.82} />
+      <directionalLight
+        position={[7, 10, 8]}
+        intensity={2.15}
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+      />
+      <directionalLight position={[-7, 5, -5]} intensity={0.55} />
+
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, 0]} receiveShadow>
+        <planeGeometry args={[42, 42]} />
+        <meshStandardMaterial color="#e3e1dc" roughness={1} />
+      </mesh>
+
       <ProjectPavilion config={config} />
-      <ContactShadows position={[0, 0.05, 0]} opacity={0.36} scale={24} blur={2.8} far={10} />
+
+      <ContactShadows
+        position={[0, 0.005, 0]}
+        opacity={0.34}
+        scale={26}
+        blur={3.2}
+        far={12}
+      />
       <Environment preset="city" />
+
       <OrbitControls
         makeDefault
         target={[0, targetHeight, 0]}
         minDistance={4.5}
-        maxDistance={28}
-        maxPolarAngle={Math.PI / 2.03}
+        maxDistance={30}
+        maxPolarAngle={Math.PI / 2.04}
       />
-      <gridHelper args={[30, 30, '#a8adb1', '#d0d4d7']} position={[0, 0.01, 0]} />
     </Canvas>
   )
-}
-
-// VISUAL SHELL HELPERS - Dampol gallery proportions
-function DampolFrameLocal({ span, height, side, wallDepth, color }: {
-  span: number
-  height: number
-  side: WallSide
-  wallDepth: number
-  color: string
-}) {
-  const topBand = side === 'front' ? 0.42 : 0.34
-  const bottomBand = 0.16
-  const sidePost = side === 'front' ? 0.18 : 0.14
-  const z = wallDepth / 2 + 0.055
-  const seamCount = Math.max(1, Math.floor(span / 0.72))
-
-  return (
-    <group>
-      <Box size={[span, topBand, 0.08]} position={[0, height - topBand / 2, z]} color={color} metalness={0.16} roughness={0.50} />
-      <Box size={[span, bottomBand, 0.08]} position={[0, bottomBand / 2, z]} color="#17191b" metalness={0.18} roughness={0.48} />
-      <Box size={[sidePost, height, 0.08]} position={[-span / 2 + sidePost / 2, height / 2, z]} color={color} metalness={0.16} roughness={0.50} />
-      <Box size={[sidePost, height, 0.08]} position={[span / 2 - sidePost / 2, height / 2, z]} color={color} metalness={0.16} roughness={0.50} />
-      {Array.from({ length: seamCount - 1 }, (_, i) => {
-        const x = -span / 2 + ((i + 1) * span) / seamCount
-        return <Box key={'fs-' + i} size={[0.018, topBand - 0.025, 0.085]} position={[x, height - topBand / 2, z + 0.008]} color="#0f1112" roughness={0.5} />
-      })}
-    </group>
-  )
-}
-
-function RibbedSkinLocal({ span, height, openings, wallDepth }: {
-  span: number
-  height: number
-  openings: OpeningPlacement[]
-  wallDepth: number
-}) {
-  const ribs: ReactNode[] = []
-  const step = 0.085
-  const ribW = 0.018
-  const z = wallDepth / 2 + 0.035
-  for (let x = -span / 2 + 0.06; x < span / 2 - 0.06; x += step) {
-    if (!overlapsOpening(x, height / 2, ribW, height - 0.18, openings)) {
-      ribs.push(<Box key={'rib-' + x.toFixed(2)} size={[ribW, height - 0.18, 0.04]} position={[x, height / 2, z]} color="#0f1112" roughness={0.58} />)
-    }
-  }
-  return <>{ribs}</>
 }

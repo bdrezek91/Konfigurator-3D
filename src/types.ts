@@ -1,6 +1,6 @@
 export type PanelType = 'PIR100' | 'PIR120' | 'PIR160' | 'EPS100'
 export type ConstructionType = 'angle50' | 'full100' | 'static100' | 'truss'
-export type SurfaceProfile = 'smooth' | 'ribbed'
+export type SurfaceProfile = 'smooth' | 'linear' | 'microline' | 'microrib' | 'microwave' | 'carbon' | 'ribbed' | 'trapezoid'
 export type RoofSlope = 'back' | 'front' | 'flat'
 export type FacadeStyle =
   | 'plain'
@@ -22,7 +22,10 @@ export type DecorKind =
   | 'cassette-rect-graphite'
   | 'cassette-black'
   | 'cassette-white'
+  | 'cassette-winchester'
+  | 'snake-winchester'
   | 'lamella-winchester'
+  | 'lamella-graphite'
   | 'lamella-black'
   | 'lamella-palisander'
   | 'board-natural'
@@ -53,6 +56,7 @@ export type DecorPlacement = {
   yCenter: number
   height: number
   kind: DecorKind
+  shape?: 'rect' | 'wedge-left' | 'wedge-right'
   sourceAccuracy?: 'dimensioned' | 'drawing-estimate'
 }
 
@@ -158,7 +162,7 @@ export const DEFAULT_CONFIG: PavilionConfig = {
   roofPanel: 'PIR100',
   floorPanel: 'PIR100',
   wallProfile: 'smooth',
-  roofProfile: 'smooth',
+  roofProfile: 'trapezoid',
   interiorFinish: 'white',
   floorFinish: 'wood',
   mfpThickness: 12,
@@ -232,6 +236,24 @@ export const PANEL_LABELS: Record<PanelType, string> = {
   PIR120: 'PIR 120 mm',
   PIR160: 'PIR 160 mm',
   EPS100: 'Styropian 100 mm',
+}
+
+export const PANEL_THICKNESS_M: Record<PanelType, number> = {
+  PIR100: 0.10,
+  PIR120: 0.12,
+  PIR160: 0.16,
+  EPS100: 0.10,
+}
+
+export const SURFACE_PROFILE_LABELS: Record<SurfaceProfile, string> = {
+  smooth: 'Gładka (G/F)',
+  linear: 'Liniowanie (L)',
+  microline: 'Mikrolinia (ML)',
+  microrib: 'Mikrorowek (MR)',
+  microwave: 'Mikrofala (MF)',
+  carbon: 'Carbon (C)',
+  ribbed: 'Głębokie liniowanie',
+  trapezoid: 'Trapez dachowy (T)',
 }
 
 export const CONSTRUCTION_LABELS: Record<ConstructionType, string> = {

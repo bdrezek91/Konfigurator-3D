@@ -37,7 +37,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('722/08/26', {
       length: 6.03, width: 2.96, construction: 'angle50',
       wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
-      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
+      wallProfile: 'smooth', roofProfile: 'trapezoid', interiorFinish: 'white', floorFinish: 'wood',
       facade: 'cassette-lamella',
       electrical: '1p230', doubleSockets: 4, singleSockets: 2, ledCeiling: 3, switches: 2,
       distributionBoard: true, externalConnection: true, externalLights: 2,
@@ -56,7 +56,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('81/08/26', {
       length: 9.03, width: 2.96, construction: 'full100',
       wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
-      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
+      wallProfile: 'smooth', roofProfile: 'trapezoid', interiorFinish: 'white', floorFinish: 'wood',
       facade: 'lamella-winchester', facadeFront: true, facadeLeft: true, facadeRight: true,
       glazing: 'double',
       electrical: 'none', doubleSockets: 0, singleSockets: 0, ledCeiling: 0, switches: 0,
@@ -72,7 +72,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('24/08/26', {
       length: 8.03, width: 2.96, wallPanel: 'EPS100', roofPanel: 'EPS100',
       floorPanel: 'PIR100', construction: 'angle50',
-      wallProfile: 'ribbed', roofProfile: 'ribbed', interiorFinish: 'white', floorFinish: 'wood',
+      wallProfile: 'ribbed', roofProfile: 'trapezoid', interiorFinish: 'white', floorFinish: 'wood',
       facade: 'cassette-lamella', exteriorColor: '#3a3f43',
       electrical: '1p230', distributionBoard: true, externalConnection: true,
       bathroom: true, toiletCompact: true, washbasin: true, shower: true,
@@ -90,7 +90,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('120/08/26', {
       length: 6.03, width: 2.96, construction: 'angle50',
       wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
-      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
+      wallProfile: 'smooth', roofProfile: 'trapezoid', interiorFinish: 'white', floorFinish: 'wood',
       facade: 'cassette-lamella', exteriorColor: '#3a3f43',
       airConditioning: true, hvacPower: 3.4, hvacColor: 'white',
       electrical: '1p230', ledCeiling: 2, doubleSockets: 2, singleSockets: 1,
@@ -105,7 +105,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('82/08/26', {
       length: 4.03, width: 2.96, wallPanel: 'EPS100', roofPanel: 'EPS100',
       floorPanel: 'PIR100', construction: 'angle50',
-      wallProfile: 'ribbed', roofProfile: 'ribbed', interiorFinish: 'white', floorFinish: 'concrete',
+      wallProfile: 'ribbed', roofProfile: 'trapezoid', interiorFinish: 'white', floorFinish: 'concrete',
       facade: 'cassette-lamella', exteriorColor: '#3a3f43',
       electrical: '1p230', doubleSockets: 1, singleSockets: 0, ledCeiling: 1, switches: 1,
       distributionBoard: true, externalConnection: true,
@@ -120,7 +120,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('09/09/26', {
       length: 8.03, width: 2.96, construction: 'angle50',
       wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
-      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
+      wallProfile: 'smooth', roofProfile: 'trapezoid', interiorFinish: 'white', floorFinish: 'wood',
       exteriorColor: '#121315', flashingColor: '#121315', facade: 'plain',
       electrical: '1p230', doubleSockets: 3, singleSockets: 0, ledCeiling: 3, switches: 1,
       distributionBoard: true, externalConnection: true, externalLights: 0,
@@ -135,7 +135,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('13/08/26', {
       length: 9.03, width: 2.96, exteriorColor: '#121315', flashingColor: '#121315',
       construction: 'angle50', wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
-      wallProfile: 'smooth', roofProfile: 'smooth', floorFinish: 'wood',
+      wallProfile: 'smooth', roofProfile: 'trapezoid', floorFinish: 'wood',
       facade: 'cassette-lamella', facadeLeft: true,
       electrical: '3p400', doubleSockets: 6, singleSockets: 2, ledCeiling: 4, switches: 4,
       distributionBoard: true, externalConnection: true, externalLights: 3,
@@ -154,7 +154,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('94/08/26', {
       length: 7.03, width: 2.96, construction: 'angle50',
       wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
-      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
+      wallProfile: 'smooth', roofProfile: 'trapezoid', interiorFinish: 'white', floorFinish: 'wood',
       exteriorColor: '#3a3f43', facade: 'cassette-graphite',
       electrical: '1p230', distributionBoard: true, externalConnection: true,
       bathroom: true, toiletCompact: true, washbasin: true,
@@ -171,7 +171,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('120/07/26', {
       length: 6.01, width: 2.96, construction: 'angle50',
       wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
-      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
+      wallProfile: 'smooth', roofProfile: 'trapezoid', interiorFinish: 'white', floorFinish: 'wood',
       exteriorColor: '#3a3f43', facade: 'cassette-lamella',
       electrical: '1p230', doubleSockets: 4, singleSockets: 0, ledCeiling: 2, switches: 1,
       distributionBoard: true, externalConnection: true, externalLights: 2,
@@ -186,7 +186,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('49/08/26', {
       length: 9.03, width: 2.96, wallPanel: 'EPS100', roofPanel: 'EPS100',
       floorPanel: 'PIR100', construction: 'angle50', exteriorColor: '#3a3f43',
-      wallProfile: 'ribbed', roofProfile: 'ribbed', interiorFinish: 'white', floorFinish: 'wood',
+      wallProfile: 'ribbed', roofProfile: 'trapezoid', interiorFinish: 'white', floorFinish: 'wood',
       facade: 'cassette-lamella', glazing: 'double',
       electrical: '1p230', doubleSockets: 3, singleSockets: 0, ledCeiling: 3, switches: 1,
       distributionBoard: true, externalConnection: true, externalLights: 3,
@@ -201,7 +201,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('114/08/26', {
       length: 7.03, width: 2.96, construction: 'angle50',
       wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
-      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'concrete', floorFinish: 'concrete',
+      wallProfile: 'smooth', roofProfile: 'trapezoid', interiorFinish: 'concrete', floorFinish: 'concrete',
       exteriorColor: '#121315', flashingColor: '#121315', facade: 'lamella-winchester',
       electrical: '1p230', doubleSockets: 2, singleSockets: 2, ledCeiling: 3, switches: 2,
       distributionBoard: true, externalConnection: true,
@@ -219,7 +219,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('109/08/26', {
       length: 6.03, width: 2.96, construction: 'angle50',
       wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
-      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
+      wallProfile: 'smooth', roofProfile: 'trapezoid', interiorFinish: 'white', floorFinish: 'wood',
       exteriorColor: '#3a3f43', facade: 'cassette-lamella',
       electrical: '1p230', doubleSockets: 2, singleSockets: 1, ledCeiling: 3, switches: 2,
       distributionBoard: true, externalConnection: true,
@@ -237,7 +237,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('28/03/26', {
       length: 9.03, width: 2.96, construction: 'full100',
       wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
-      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'concrete', floorFinish: 'wood',
+      wallProfile: 'smooth', roofProfile: 'trapezoid', interiorFinish: 'concrete', floorFinish: 'wood',
       exteriorColor: '#121315', flashingColor: '#121315',
       facade: 'cassette-lamella', facadeFront: true, facadeLeft: true,
       electrical: '1p230', doubleSockets: 4, singleSockets: 1,
@@ -254,7 +254,7 @@ export const PRESETS: PavilionPreset[] = [
     config: p('104/01/26', {
       length: 7.03, width: 2.96, construction: 'static100',
       wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
-      wallProfile: 'smooth', roofProfile: 'smooth', interiorFinish: 'white', floorFinish: 'wood',
+      wallProfile: 'smooth', roofProfile: 'trapezoid', interiorFinish: 'white', floorFinish: 'wood',
       facade: 'cassette-black', facadeFront: true, facadeLeft: true,
       facadeRight: true, facadeBack: true, exteriorColor: '#121315',
       flashingColor: '#121315', glazing: 'triple',
