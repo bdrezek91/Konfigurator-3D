@@ -1,4 +1,5 @@
 export type PanelType = 'PIR100' | 'PIR120' | 'PIR160' | 'EPS100'
+export type PanelManufacturer = 'paneltech' | 'balex' | 'generic'
 export type ConstructionType = 'angle50' | 'full100' | 'static100' | 'truss'
 export type SurfaceProfile = 'smooth' | 'linear' | 'microline' | 'microrib' | 'microwave' | 'carbon' | 'ribbed' | 'trapezoid'
 export type RoofSlope = 'back' | 'front' | 'flat'
@@ -84,6 +85,7 @@ export type PavilionConfig = {
   wallPanel: PanelType
   roofPanel: PanelType
   floorPanel: PanelType
+  panelManufacturer: PanelManufacturer
   wallProfile: SurfaceProfile
   roofProfile: SurfaceProfile
   interiorFinish: InteriorFinish
@@ -161,6 +163,7 @@ export const DEFAULT_CONFIG: PavilionConfig = {
   wallPanel: 'PIR100',
   roofPanel: 'PIR100',
   floorPanel: 'PIR100',
+  panelManufacturer: 'paneltech',
   wallProfile: 'smooth',
   roofProfile: 'trapezoid',
   interiorFinish: 'white',
@@ -230,6 +233,12 @@ export const RAL_COLORS = [
   { name: 'RAL 9006 — aluminium', value: '#a5a5a3' },
   { name: 'RAL 9007 — szary aluminium', value: '#7d7d7a' },
 ]
+
+export const PANEL_MANUFACTURER_LABELS: Record<PanelManufacturer, string> = {
+  paneltech: 'Paneltech',
+  balex: 'Balex Metal',
+  generic: 'Inny / ogólny',
+}
 
 export const PANEL_LABELS: Record<PanelType, string> = {
   PIR100: 'PIR 100 mm',

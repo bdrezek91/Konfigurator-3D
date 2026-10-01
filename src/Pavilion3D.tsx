@@ -11,7 +11,8 @@ import {
   type WallSide,
 } from './types'
 
-type Props = { config: PavilionConfig }
+export type PavilionView = 'perspective' | 'front' | 'left' | 'right' | 'back'
+type Props = { config: PavilionConfig; view?: PavilionView }
 
 function Box({
   size,
@@ -114,12 +115,16 @@ function OpeningFrame({
       <mesh position={[0, 0, 0.048]} castShadow>
         <boxGeometry args={[opening.width, opening.height, 0.032]} />
         <meshPhysicalMaterial
-          color="#142a34"
+          color="#6f8791"
           transparent
-          opacity={0.58}
-          roughness={0.07}
-          metalness={0.14}
-          transmission={0.20}
+          opacity={0.34}
+          roughness={0.08}
+          metalness={0.02}
+          transmission={0.52}
+          ior={1.45}
+          thickness={0.018}
+          clearcoat={0.28}
+          clearcoatRoughness={0.10}
         />
       </mesh>
       {opening.kind === 'door-double' && <Box size={[0.032, opening.height, 0.078]} position={[0, 0, 0.075]} color={frame} />}
@@ -208,6 +213,9 @@ function PanelProfileLocal({
   const out: ReactNode[] = []
   const { floorT } = envelope(config)
   const z = wallDepth / 2 + 0.008
+  const isLight = config.exteriorColor === '#f2f0e7' || config.exteriorColor === '#a5a5a3'
+  const jointColor = isLight ? '#d7d5ce' : '#202427'
+  const profileColor = isLight ? '#d9d7d0' : '#303538'
 
   // Widoczne zamki/podziały płyt ~1 m.
   const moduleWidth = 1.0
@@ -220,7 +228,7 @@ function PanelProfileLocal({
           key={'joint-' + x.toFixed(2)}
           size={[0.010, h, 0.010]}
           position={[x, h / 2, z]}
-          color="#202427"
+          color={jointColor}
           roughness={0.58}
         />,
       )
@@ -231,15 +239,15 @@ function PanelProfileLocal({
 
   const profile =
     config.wallProfile === 'linear' || config.wallProfile === 'ribbed'
-      ? { step: 0.18, width: 0.008, depth: 0.010, color: '#252a2d' }
+      ? { step: 0.18, width: 0.006, depth: 0.0012, color: '#2a2f32' }
       : config.wallProfile === 'microline'
-        ? { step: 0.055, width: 0.004, depth: 0.005, color: '#34393c' }
+        ? { step: 0.055, width: 0.003, depth: 0.0009, color: '#353a3d' }
         : config.wallProfile === 'microrib'
-          ? { step: 0.035, width: 0.003, depth: 0.004, color: '#3a3f42' }
+          ? { step: 0.035, width: 0.0025, depth: 0.0008, color: '#3b4043' }
           : config.wallProfile === 'microwave'
-            ? { step: 0.070, width: 0.010, depth: 0.006, color: '#34393c' }
+            ? { step: 0.070, width: 0.008, depth: 0.0012, color: '#34393c' }
             : config.wallProfile === 'carbon'
-              ? { step: 0.045, width: 0.006, depth: 0.005, color: '#2f3437' }
+              ? { step: 0.045, width: 0.004, depth: 0.0010, color: '#303538' }
               : null
 
   if (!profile) return <>{out}</>
@@ -253,7 +261,7 @@ function PanelProfileLocal({
           key={'profile-' + x.toFixed(3)}
           size={[profile.width, h, profile.depth]}
           position={[x, h / 2, z + 0.008]}
-          color={profile.color}
+          color={isLight ? profileColor : profile.color}
           roughness={0.64}
         />,
       )
@@ -292,6 +300,11 @@ function DecorLocal({
         segment.kind === 'lamella-palisander' ? '#5f3f2b' : '#a57245'
       const step = 0.072
       const slatWidth = 0.032
+      const woodPalette =
+        segment.kind === 'lamella-palisander'
+          ? ['#5a3a28', '#694630', '#4f3324', '#74503a']
+          : ['#9a693f', '#b27a49', '#8f603a', '#a97044']
+      let slatIndex = 0
 
       if (!segment.shape || segment.shape === 'rect') {
         out.push(
@@ -313,15 +326,20 @@ function DecorLocal({
         const localH = effectiveHeight * fraction
         const localY = y0 + localH / 2
         if (!overlapsOpening(x, localY, slatWidth, localH, openings, floorOffset)) {
+          const slatColor =
+            segment.kind === 'lamella-black' || segment.kind === 'lamella-graphite'
+              ? color
+              : woodPalette[slatIndex % woodPalette.length]
           out.push(
             <Box
               key={segment.id + '-l-' + x.toFixed(2)}
               size={[slatWidth, localH, 0.052]}
               position={[x, localY, z + 0.010]}
-              color={color}
-              roughness={0.78}
+              color={slatColor}
+              roughness={0.80}
             />,
           )
+          slatIndex++
         }
       }
       return
@@ -582,10 +600,10 @@ function RoofRib({
   y: number
 }) {
   const shape = new Shape()
-  shape.moveTo(-0.060, 0)
-  shape.lineTo(-0.032, 0.045)
-  shape.lineTo(0.032, 0.045)
-  shape.lineTo(0.060, 0)
+  shape.moveTo(-0.055, 0)
+  shape.lineTo(-0.032, 0.002)
+  shape.lineTo(0.032, 0.002)
+  shape.lineTo(0.055, 0)
   shape.closePath()
 
   return (
@@ -919,16 +937,23 @@ function ProjectPavilion({ config }: Props) {
   )
 }
 
-export default function Pavilion3D({ config }: Props) {
-  const cameraDistance = Math.max(8.2, config.length * 1.05)
+export default function Pavilion3D({ config, view = 'perspective' }: Props) {
+  const cameraDistance = Math.max(9.5, config.length * 1.35)
   const { outerFront, outerBack } = envelope(config)
   const targetHeight = (outerFront + outerBack) * 0.24
+  const cameraHeight = targetHeight + 1.25
+  const cameraPosition: [number, number, number] =
+    view === 'front' ? [0, cameraHeight, cameraDistance] :
+    view === 'back' ? [0, cameraHeight, -cameraDistance] :
+    view === 'left' ? [-cameraDistance, cameraHeight, 0] :
+    view === 'right' ? [cameraDistance, cameraHeight, 0] :
+    [cameraDistance * 0.62, 3.35, cameraDistance]
 
   return (
     <Canvas
       shadows
       dpr={[1, 2]}
-      camera={{ position: [cameraDistance * 0.72, 3.15, cameraDistance], fov: 33 }}
+      camera={{ position: cameraPosition, fov: 27 }}
     >
       <color attach="background" args={['#e7e7e3']} />
       <ambientLight intensity={0.82} />
@@ -960,9 +985,13 @@ export default function Pavilion3D({ config }: Props) {
       <OrbitControls
         makeDefault
         target={[0, targetHeight, 0]}
-        minDistance={4.5}
-        maxDistance={30}
-        maxPolarAngle={Math.PI / 2.04}
+        minDistance={Math.max(6.5, config.length * 0.82)}
+        maxDistance={Math.max(24, config.length * 2.4)}
+        minPolarAngle={Math.PI * 0.20}
+        maxPolarAngle={Math.PI * 0.48}
+        enablePan={false}
+        enableDamping
+        dampingFactor={0.08}
       />
     </Canvas>
   )

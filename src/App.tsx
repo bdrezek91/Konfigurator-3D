@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import Pavilion3D from './Pavilion3D'
+import Pavilion3D, { type PavilionView } from './Pavilion3D'
 import { PRESETS } from './presets'
 import { buildBom, validateConfig } from './logic'
 import {
   CONSTRUCTION_LABELS,
   DEFAULT_CONFIG,
   PANEL_LABELS,
+  PANEL_MANUFACTURER_LABELS,
   PANEL_THICKNESS_M,
   RAL_COLORS,
   SURFACE_PROFILE_LABELS,
@@ -64,6 +65,27 @@ function Select<T extends string>({ label, value, options, onChange }: {
 }
 
 function ConfigControls({ config, update }: { config: PavilionConfig; update: Setter }) {
+  const wallProfileOptions =
+    config.panelManufacturer === 'paneltech'
+      ? [
+          { value: 'smooth' as const, label: 'Gładka (G)' },
+          { value: 'linear' as const, label: 'Linia (L)' },
+          { value: 'microwave' as const, label: 'Mikrofala (MF)' },
+          { value: 'microline' as const, label: 'Mikrolinia (ML)' },
+          { value: 'microrib' as const, label: 'Mikrorowek (MR)' },
+          { value: 'carbon' as const, label: 'Carbon (C)' },
+        ]
+      : config.panelManufacturer === 'balex'
+        ? [
+            { value: 'smooth' as const, label: 'Gładka (F)' },
+            { value: 'linear' as const, label: 'Liniowanie (L)' },
+            { value: 'microline' as const, label: 'Mikroprofilowanie (M16)' },
+            { value: 'ribbed' as const, label: 'Rowkowanie / głębokie liniowanie' },
+          ]
+        : Object.entries(SURFACE_PROFILE_LABELS)
+            .filter(([value]) => value !== 'trapezoid')
+            .map(([value, label]) => ({ value: value as PavilionConfig['wallProfile'], label }))
+
   return (
     <>
       <Section title="Bryła i konstrukcja" subtitle="wymiary, dach, profile">
@@ -86,6 +108,9 @@ function ConfigControls({ config, update }: { config: PavilionConfig; update: Se
       </Section>
 
       <Section title="Płyty i wykończenie" subtitle="ściana, dach, podłoga">
+        <Select label="Producent płyt" value={config.panelManufacturer} onChange={(v) => update('panelManufacturer', v)} options={
+          Object.entries(PANEL_MANUFACTURER_LABELS).map(([value, label]) => ({ value: value as PavilionConfig['panelManufacturer'], label }))
+        } />
         <Select label="Ściany" value={config.wallPanel} onChange={(v) => update('wallPanel', v)} options={
           Object.entries(PANEL_LABELS).map(([value, label]) => ({ value: value as PavilionConfig['wallPanel'], label }))
         } />
@@ -96,11 +121,7 @@ function ConfigControls({ config, update }: { config: PavilionConfig; update: Se
           Object.entries(PANEL_LABELS).map(([value, label]) => ({ value: value as PavilionConfig['floorPanel'], label }))
         } />
         <div className="field-grid">
-          <Select label="Profilacja ściany" value={config.wallProfile} onChange={(v) => update('wallProfile', v)} options={
-            Object.entries(SURFACE_PROFILE_LABELS)
-              .filter(([value]) => value !== 'trapezoid')
-              .map(([value, label]) => ({ value: value as PavilionConfig['wallProfile'], label }))
-          } />
+          <Select label="Profilacja ściany" value={config.wallProfile} onChange={(v) => update('wallProfile', v)} options={wallProfileOptions} />
           <Select label="Profilacja dachu" value={config.roofProfile} onChange={(v) => update('roofProfile', v)} options={[
             { value: 'trapezoid', label: 'Trapez dachowy (T)' },
             { value: 'smooth', label: 'Gładka — tylko wariant niestandardowy' },
@@ -260,6 +281,7 @@ function initialConfig(): PavilionConfig {
 export default function App() {
   const [config, setConfig] = useState<PavilionConfig>(initialConfig)
   const [sceneKey, setSceneKey] = useState(0)
+  const [viewMode, setViewMode] = useState<PavilionView>('perspective')
 
   const validation = useMemo(() => validateConfig(config), [config])
   const bom = useMemo(() => buildBom(config), [config])
@@ -302,6 +324,7 @@ export default function App() {
     const preset = PRESETS.find((item) => item.id === id)
     if (!preset) return
     setConfig({ ...preset.config })
+    setViewMode('perspective')
     setSceneKey((value) => value + 1)
   }
 
@@ -338,7 +361,7 @@ export default function App() {
           <strong>{config.project}</strong>
           <small>{PRESETS.find((p) => p.config.project === config.project)?.notes ?? 'Konfiguracja własna — parametry zmieniane ręcznie.'}</small>
         </div>
-        <button onClick={() => { setConfig(DEFAULT_CONFIG); setSceneKey((v) => v + 1) }}>Reset</button>
+        <button onClick={() => { setConfig(DEFAULT_CONFIG); setViewMode('perspective'); setSceneKey((v) => v + 1) }}>Reset</button>
       </section>
 
       <section className="workspace">
@@ -353,10 +376,27 @@ export default function App() {
                 <strong>{config.length.toFixed(2)} × {config.width.toFixed(2)} m · zew. {stats.outerFront.toFixed(2)}→{stats.outerBack.toFixed(2)} m · wew. {config.frontHeight.toFixed(2)}→{config.backHeight.toFixed(2)} m</strong>
                 <small>obrót: LPM · zoom: kółko · podgląd wnętrza przełącza przezroczystość ścian</small>
               </div>
-              <button onClick={() => setSceneKey((v) => v + 1)}>Reset widoku</button>
+              <div className="viewer-actions">
+                {([
+                  ['perspective', 'Perspektywa'],
+                  ['front', 'Front'],
+                  ['left', 'Lewy'],
+                  ['right', 'Prawy'],
+                  ['back', 'Tył'],
+                ] as Array<[PavilionView, string]>).map(([view, label]) => (
+                  <button
+                    key={view}
+                    className={viewMode === view ? 'active' : ''}
+                    onClick={() => { setViewMode(view); setSceneKey((v) => v + 1) }}
+                  >
+                    {label}
+                  </button>
+                ))}
+                <button onClick={() => { setViewMode('perspective'); setSceneKey((v) => v + 1) }}>Reset widoku</button>
+              </div>
             </div>
             <div className="canvas-wrap">
-              <Pavilion3D key={sceneKey} config={config} />
+              <Pavilion3D key={sceneKey} config={config} view={viewMode} />
             </div>
           </div>
 

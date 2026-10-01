@@ -234,6 +234,24 @@ select {
   display: block;
 }
 
+.viewer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.viewer-actions button {
+  min-height: 32px;
+  padding: 0 9px;
+  font-size: 11px;
+}
+
+.viewer-actions button.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
 .viewer-toolbar > span {
   padding: 6px 9px;
   border-radius: 999px;
