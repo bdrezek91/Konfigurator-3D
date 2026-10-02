@@ -1,7 +1,7 @@
-import { Canvas } from '@react-three/fiber'
-import { ContactShadows, Environment, Lightformer, OrbitControls, RoundedBox, SoftShadows } from '@react-three/drei'
+import { Canvas, useThree } from '@react-three/fiber'
+import { ContactShadows, Environment, Lightformer, OrbitControls, RoundedBox, Sky, SoftShadows, useTexture } from '@react-three/drei'
 import { ACESFilmicToneMapping, CanvasTexture, Path, RepeatWrapping, Shape, SRGBColorSpace, type Texture } from 'three'
-import type { ReactNode } from 'react'
+import { useEffect, useMemo, type ReactNode } from 'react'
 import {
   PANEL_THICKNESS_M,
   type DecorPlacement,
@@ -106,7 +106,7 @@ function woodTexture(kind: 'winchester' | 'palisander' | 'natural') {
       ? ['#473126', '#5b3c2b', '#38261f', '#6a4932']
       : kind === 'natural'
         ? ['#80634b', '#967154', '#70533e', '#a37b58']
-        : ['#7c593d', '#916745', '#684932', '#9f7049']
+        : ['#5f4938', '#73553f', '#4d3a2f', '#84624a']
   const grad = ctx.createLinearGradient(0, 0, 128, 0)
   palette.forEach((c, i) => grad.addColorStop(i / (palette.length - 1), c))
   ctx.fillStyle = grad
@@ -126,6 +126,105 @@ function woodTexture(kind: 'winchester' | 'palisander' | 'natural') {
   texture.repeat.set(1, 1.5)
   textureCache.set(key, texture)
   return texture
+}
+
+
+function glassReflectionTexture() {
+  const key = 'glass-reflection-v2'
+  const cached = textureCache.get(key)
+  if (cached) return cached
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 512
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return undefined
+
+  const sky = ctx.createLinearGradient(0, 0, 0, 512)
+  sky.addColorStop(0, '#b8d0da')
+  sky.addColorStop(0.48, '#dbe3df')
+  sky.addColorStop(0.58, '#8ea48b')
+  sky.addColorStop(1, '#6b706b')
+  ctx.fillStyle = sky
+  ctx.fillRect(0, 0, 512, 512)
+
+  let seed = 42017
+  const rnd = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0
+    return seed / 4294967296
+  }
+
+  ctx.save()
+  ctx.globalAlpha = 0.30
+  ctx.filter = 'blur(0.8px)'
+  for (let i = 0; i < 26; i++) {
+    const x = rnd() * 540 - 14
+    const trunkW = 1.5 + rnd() * 3.5
+    const treeH = 110 + rnd() * 260
+    const base = 335 + rnd() * 85
+    ctx.strokeStyle = i % 3 === 0 ? '#31463b' : '#3a4f43'
+    ctx.lineWidth = trunkW
+    ctx.beginPath()
+    ctx.moveTo(x, base)
+    ctx.lineTo(x + (rnd() - 0.5) * 14, base - treeH)
+    ctx.stroke()
+    const crownY = base - treeH * (0.68 + rnd() * 0.18)
+    const branches = 3 + Math.floor(rnd() * 4)
+    for (let b = 0; b < branches; b++) {
+      const by = crownY + b * 18 + rnd() * 8
+      const spread = 14 + rnd() * 28
+      ctx.lineWidth = Math.max(0.8, trunkW * 0.45)
+      ctx.beginPath()
+      ctx.moveTo(x, by)
+      ctx.lineTo(x - spread, by - 10 - rnd() * 16)
+      ctx.moveTo(x, by)
+      ctx.lineTo(x + spread * 0.8, by - 12 - rnd() * 14)
+      ctx.stroke()
+    }
+  }
+  ctx.restore()
+
+  const horizon = ctx.createLinearGradient(0, 290, 0, 430)
+  horizon.addColorStop(0, 'rgba(240,244,238,.18)')
+  horizon.addColorStop(1, 'rgba(70,76,72,.28)')
+  ctx.fillStyle = horizon
+  ctx.fillRect(0, 290, 512, 150)
+
+  const texture = new CanvasTexture(canvas)
+  texture.colorSpace = SRGBColorSpace
+  texture.wrapS = RepeatWrapping
+  texture.wrapT = RepeatWrapping
+  texture.repeat.set(1.1, 1)
+  textureCache.set(key, texture)
+  return texture
+}
+
+function PhotoEnvironment() {
+  const loadedGround = useTexture('./textures/dampol-gravel.jpg')
+  const ground = useMemo(() => {
+    const texture = loadedGround.clone()
+    texture.colorSpace = SRGBColorSpace
+    texture.wrapS = RepeatWrapping
+    texture.wrapT = RepeatWrapping
+    texture.repeat.set(7, 7)
+    texture.needsUpdate = true
+    return texture
+  }, [loadedGround])
+
+  useEffect(() => () => {
+    ground.dispose()
+  }, [ground])
+
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.014, 0]} receiveShadow>
+      <planeGeometry args={[48, 48]} />
+      <meshStandardMaterial
+        color="#d6d2c8"
+        map={ground}
+        roughness={0.98}
+        metalness={0.01}
+      />
+    </mesh>
+  )
 }
 
 function RoundedPiece({
@@ -223,7 +322,11 @@ function OpeningFrame({
     return (
       <group position={[opening.center, y, z]}>
         <RoundedPiece size={[opening.width, opening.height, 0.058]} position={[0, 0, 0]} color={frame} metalness={0.34} roughness={0.46} radius={0.004} />
-        <Box size={[0.018, 0.54, 0.018]} position={[opening.width * 0.30, 0, 0.040]} color="#bfc3c4" metalness={0.82} roughness={0.18} />
+        <Box size={[0.12, 0.018, 0.018]} position={[opening.width * 0.28, 0.02, 0.052]} color="#24282a" metalness={0.72} roughness={0.22} />
+        <Box size={[0.020, 0.020, 0.045]} position={[opening.width * 0.23, 0.02, 0.035]} color="#24282a" metalness={0.72} roughness={0.22} />
+        {[-0.62, 0, 0.62].map((hy) => (
+          <Box key={'full-hinge-' + hy} size={[0.028, 0.085, 0.028]} position={[opening.width / 2 - 0.025, hy, 0.045]} color="#202426" metalness={0.56} roughness={0.30} />
+        ))}
         <Box size={[opening.width, 0.035, 0.075]} position={[0, -opening.height / 2 + 0.018, -0.005]} color="#111315" metalness={0.42} roughness={0.40} />
       </group>
     )
@@ -234,17 +337,27 @@ function OpeningFrame({
       <mesh position={[0, 0, -0.002]} castShadow receiveShadow>
         <boxGeometry args={[innerW, innerH, 0.016]} />
         <meshPhysicalMaterial
-          color="#607b86"
+          color="#526975"
           transparent
-          opacity={0.42}
-          roughness={0.10}
+          opacity={0.38}
+          roughness={0.08}
           metalness={0.02}
-          transmission={0.46}
+          transmission={0.50}
           ior={1.46}
           thickness={0.014}
-          clearcoat={0.42}
-          clearcoatRoughness={0.08}
-          envMapIntensity={1.65}
+          clearcoat={0.52}
+          clearcoatRoughness={0.06}
+          envMapIntensity={1.85}
+        />
+      </mesh>
+      <mesh position={[0, 0, 0.010]}>
+        <planeGeometry args={[innerW * 0.985, innerH * 0.985]} />
+        <meshBasicMaterial
+          map={glassReflectionTexture()}
+          transparent
+          opacity={0.14}
+          depthWrite={false}
+          toneMapped={false}
         />
       </mesh>
       <Box size={[rail, opening.height, 0.060]} position={[-opening.width / 2 + rail / 2, 0, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
@@ -260,7 +373,20 @@ function OpeningFrame({
         </>
       )}
       {isDoor && (
-        <Box size={[0.018, 0.54, 0.018]} position={[opening.width * 0.30, 0, 0.065]} color="#c3c7c8" metalness={0.85} roughness={0.16} />
+        <>
+          <Box size={[0.12, 0.018, 0.018]} position={[opening.width * 0.28, 0.02, 0.070]} color="#24282a" metalness={0.72} roughness={0.22} />
+          <Box size={[0.020, 0.020, 0.045]} position={[opening.width * 0.23, 0.02, 0.053]} color="#24282a" metalness={0.72} roughness={0.22} />
+          {[-0.62, 0, 0.62].map((hy) => (
+            <Box
+              key={'hinge-' + hy}
+              size={[0.028, 0.085, 0.028]}
+              position={[opening.width / 2 - rail * 0.45, hy, 0.058]}
+              color="#202426"
+              metalness={0.56}
+              roughness={0.30}
+            />
+          ))}
+        </>
       )}
       {isDoor && <Box size={[opening.width, 0.035, 0.075]} position={[0, -opening.height / 2 + 0.018, 0.006]} color="#111315" metalness={0.45} roughness={0.38} />}
       {opening.roller && (
@@ -1151,6 +1277,25 @@ function ProjectPavilion({ config }: Props) {
   )
 }
 
+function RealExportBridge() {
+  const gl = useThree((state) => state.gl)
+  const scene = useThree((state) => state.scene)
+  const camera = useThree((state) => state.camera)
+
+  useEffect(() => {
+    const root = window as typeof window & { __DAMPOL3D_REAL_CAPTURE__?: () => string }
+    root.__DAMPOL3D_REAL_CAPTURE__ = () => {
+      gl.render(scene, camera)
+      return gl.domElement.toDataURL('image/png')
+    }
+    return () => {
+      delete root.__DAMPOL3D_REAL_CAPTURE__
+    }
+  }, [gl, scene, camera])
+
+  return null
+}
+
 export default function Pavilion3D({ config, view = 'perspective' }: Props) {
   const cameraDistance = Math.max(9.0, config.length * 1.28)
   const { outerFront, outerBack } = envelope(config)
@@ -1176,6 +1321,15 @@ export default function Pavilion3D({ config, view = 'perspective' }: Props) {
     >
       <SoftShadows size={24} samples={10} focus={0.55} />
       <color attach="background" args={['#dfe2e2']} />
+      <fog attach="fog" args={['#d6dde0', 20, 46]} />
+      <Sky
+        distance={450000}
+        sunPosition={[10, 5, 8]}
+        turbidity={5.2}
+        rayleigh={2.2}
+        mieCoefficient={0.0038}
+        mieDirectionalG={0.80}
+      />
       <hemisphereLight color="#f1f6f8" groundColor="#aaa49a" intensity={0.72} />
       <ambientLight intensity={0.44} />
       <directionalLight
@@ -1189,11 +1343,9 @@ export default function Pavilion3D({ config, view = 'perspective' }: Props) {
       />
       <directionalLight position={[-8, 5, -3]} intensity={0.26} color="#c9d9ea" />
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.014, 0]} receiveShadow>
-        <planeGeometry args={[44, 44]} />
-        <meshStandardMaterial color="#d5d2cb" roughness={0.96} metalness={0.02} />
-      </mesh>
+      <PhotoEnvironment />
 
+      <RealExportBridge />
       <ProjectPavilion config={config} />
 
       <ContactShadows
