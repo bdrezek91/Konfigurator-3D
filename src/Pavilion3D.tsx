@@ -11,7 +11,7 @@ import {
   type WallSide,
 } from './types'
 
-export type PavilionView = 'perspective' | 'front' | 'left' | 'right' | 'back'
+export type PavilionView = 'perspective' | 'front' | 'front-left' | 'front-right' | 'left' | 'right' | 'back'
 type Props = { config: PavilionConfig; view?: PavilionView }
 
 function Box({
@@ -1306,6 +1306,8 @@ export default function Pavilion3D({ config, view = 'perspective' }: Props) {
     view === 'back' ? [0, cameraHeight, -cameraDistance] :
     view === 'left' ? [-cameraDistance, cameraHeight, 0] :
     view === 'right' ? [cameraDistance, cameraHeight, 0] :
+    view === 'front-left' ? [-cameraDistance * 0.50, 1.72, cameraDistance * 0.92] :
+    view === 'front-right' ? [cameraDistance * 0.50, 1.72, cameraDistance * 0.92] :
     [cameraDistance * 0.52, 1.78, cameraDistance * 0.94]
 
   return (

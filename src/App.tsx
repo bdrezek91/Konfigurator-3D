@@ -310,7 +310,7 @@ export default function App() {
   const [sceneKey, setSceneKey] = useState(0)
   const [viewMode, setViewMode] = useState<PavilionView>(() => {
     const value = new URLSearchParams(window.location.search).get('rview') as PavilionView | null
-    const allowed: PavilionView[] = ['perspective', 'front', 'left', 'right', 'back']
+    const allowed: PavilionView[] = ['perspective', 'front', 'front-left', 'front-right', 'left', 'right', 'back']
     return value && allowed.includes(value) ? value : 'perspective'
   })
   const [sceneMode, setSceneMode] = useState<SceneMode>(() =>
