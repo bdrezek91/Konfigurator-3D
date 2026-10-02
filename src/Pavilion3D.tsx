@@ -2,7 +2,7 @@ import { Canvas, useThree } from '@react-three/fiber'
 import { ContactShadows, Environment, Lightformer, OrbitControls, RoundedBox, Sky, SoftShadows, useTexture } from '@react-three/drei'
 import { ACESFilmicToneMapping, CanvasTexture, Path, PCFSoftShadowMap, RepeatWrapping, Shape, SRGBColorSpace, type Texture } from 'three'
 import { useEffect, useMemo, type ReactNode } from 'react'
-import { EffectComposer, N8AO } from '@react-three/postprocessing'
+import { EffectComposer, N8AO, SMAA } from '@react-three/postprocessing'
 import {
   PANEL_THICKNESS_M,
   type DecorPlacement,
@@ -209,9 +209,9 @@ function GalleryGround() {
     gravelNormal,
     gravelRoughness,
   ] = useTexture([
-    './textures/pbr/grass_diff.jpg',
-    './textures/pbr/grass_nor.jpg',
-    './textures/pbr/grass_rough.jpg',
+    './textures/pbr/aerial_grass_rock_diff_1k.jpg',
+    './textures/pbr/aerial_grass_rock_nor_gl_1k.jpg',
+    './textures/pbr/aerial_grass_rock_rough_1k.jpg',
     './textures/pbr/gravel_diff.jpg',
     './textures/pbr/gravel_nor.jpg',
     './textures/pbr/gravel_rough.jpg',
@@ -611,17 +611,39 @@ function makeWallShape(
   shape.lineTo(-span / 2, topLeft)
   shape.closePath()
 
-  for (const opening of openings) {
-    const x1 = Math.max(-span / 2 + 0.001, opening.center - opening.width / 2)
-    const x2 = Math.min(span / 2 - 0.001, opening.center + opening.width / 2)
-    const y1 = floorT + openingSill(opening)
-    const y2 = y1 + opening.height
-    if (x2 <= x1 || y2 <= y1) continue
+  // Sąsiadujące drzwi/FIX-y łączymy w jeden otwór. Dwie stykające się dziury
+  // potrafią zostawić artefakt triangulacji — fragment ściany widoczny na szybie.
+  const rects = openings
+    .map((opening) => {
+      const y1 = Math.max(0.002, floorT + openingSill(opening))
+      return {
+        x1: Math.max(-span / 2 + 0.002, opening.center - opening.width / 2),
+        x2: Math.min(span / 2 - 0.002, opening.center + opening.width / 2),
+        y1,
+        y2: y1 + opening.height,
+      }
+    })
+    .filter((r) => r.x2 > r.x1 && r.y2 > r.y1)
+    .sort((a, b) => a.x1 - b.x1)
+
+  const merged: typeof rects = []
+  for (const r of rects) {
+    const last = merged[merged.length - 1]
+    if (last && r.x1 <= last.x2 + 0.03 && r.y1 < last.y2 && r.y2 > last.y1) {
+      last.x2 = Math.max(last.x2, r.x2)
+      last.y1 = Math.min(last.y1, r.y1)
+      last.y2 = Math.max(last.y2, r.y2)
+    } else {
+      merged.push({ ...r })
+    }
+  }
+
+  for (const r of merged) {
     const hole = new Path()
-    hole.moveTo(x1, y1)
-    hole.lineTo(x1, y2)
-    hole.lineTo(x2, y2)
-    hole.lineTo(x2, y1)
+    hole.moveTo(r.x1, r.y1)
+    hole.lineTo(r.x1, r.y2)
+    hole.lineTo(r.x2, r.y2)
+    hole.lineTo(r.x2, r.y1)
     hole.closePath()
     shape.holes.push(hole)
   }
@@ -1711,9 +1733,13 @@ export default function Pavilion3D({ config, view = 'perspective', hq = false }:
       {!gallery03 && <SoftShadows size={24} samples={10} focus={0.55} />}
       {gallery03 ? (
         <Environment
-          files="./hdr/kloofendal_48d_partly_cloudy_2k.hdr"
+          files="./hdri/kloofendal_43d_clear_2k.hdr"
           background
           backgroundBlurriness={0}
+          environmentIntensity={0.85}
+          backgroundIntensity={0.85}
+          environmentRotation={[0, Math.PI, 0]}
+          backgroundRotation={[0, Math.PI, 0]}
         />
       ) : (
         <>
@@ -1731,23 +1757,23 @@ export default function Pavilion3D({ config, view = 'perspective', hq = false }:
       )}
       {gallery03 ? (
         <>
-          <hemisphereLight color="#f4f5f1" groundColor="#77766f" intensity={0.22} />
-          <ambientLight intensity={0.10} />
+          <hemisphereLight color="#f4f5f1" groundColor="#77766f" intensity={0.12} />
+          <ambientLight intensity={0.06} />
           <directionalLight
-            position={[-8, 8, 8]}
-            intensity={3.05}
-            color="#fff5df"
+            position={[-6.5, 5.2, 9.5]}
+            intensity={2.4}
+            color="#fff1dc"
             castShadow
             shadow-mapSize-width={4096}
             shadow-mapSize-height={4096}
-            shadow-bias={-0.00014}
-            shadow-normalBias={0.015}
-            shadow-camera-near={0.5}
-            shadow-camera-far={40}
-            shadow-camera-left={-10}
-            shadow-camera-right={10}
-            shadow-camera-top={10}
-            shadow-camera-bottom={-10}
+            shadow-camera-left={-7}
+            shadow-camera-right={7}
+            shadow-camera-top={6}
+            shadow-camera-bottom={-3}
+            shadow-camera-near={1}
+            shadow-camera-far={30}
+            shadow-bias={-0.0002}
+            shadow-normalBias={0.02}
           />
         </>
       ) : (
@@ -1773,10 +1799,10 @@ export default function Pavilion3D({ config, view = 'perspective', hq = false }:
       <ProjectPavilion config={config} />
 
       {gallery03 && !hq && (
-        <EffectComposer multisampling={0}>
+        <EffectComposer multisampling={4}>
           <N8AO
             aoRadius={0.30}
-            distanceFalloff={1}
+            distanceFalloff={0.6}
             intensity={3}
             quality="high"
             aoSamples={16}
@@ -1786,10 +1812,11 @@ export default function Pavilion3D({ config, view = 'perspective', hq = false }:
             screenSpaceRadius={false}
             color="#000000"
           />
+          <SMAA />
         </EffectComposer>
       )}
 
-      {!hq && <ContactShadows
+      {!hq && !gallery03 && <ContactShadows
         position={[0, 0.004, 0]}
         opacity={0.38}
         scale={26}
