@@ -76,6 +76,8 @@ export function Wall({
           opening={opening}
           floorOffset={floorT}
           depth={depth}
+          revealDepth={hasCladding ? 0.04 : 0}
+          revealColor={renderMetalColor(config.flashingColor)}
         />
       ))}
 
@@ -317,9 +319,27 @@ export function Interior({ config }: Props) {
   const { floorT } = envelope(config)
   const x0 = -config.length / 2 + 0.75
 
+  // Białe obróbki wewnętrzne wg nagrania WA0018: kątowniki ściana–sufit i w narożnikach pionowych (≈ 55 mm)
+  const wallT = PANEL_THICKNESS_M[config.wallPanel]
+  const ix = config.length / 2 - wallT
+  const iz = config.width / 2 - wallT
+  const yFront = floorT + config.frontHeight
+  const yBack = floorT + config.backHeight
+  const slope = Math.atan2(yFront - yBack, iz * 2)
+  const trim = 0.055
+  const trimColor = '#f1f0eb'
+
   return (
     <group>
       <SlopedCeiling config={config} />
+      <Box size={[ix * 2, trim, trim]} position={[0, yFront - trim / 2, iz - trim / 2]} color={trimColor} roughness={0.6} />
+      <Box size={[ix * 2, trim, trim]} position={[0, yBack - trim / 2, -iz + trim / 2]} color={trimColor} roughness={0.6} />
+      {[-1, 1].map((sx) => (
+        <Box key={'ceil-' + sx} size={[trim, trim, iz * 2]} position={[sx * (ix - trim / 2), (yFront + yBack) / 2 - trim / 2, 0]} rotation={[slope, 0, 0]} color={trimColor} roughness={0.6} />
+      ))}
+      {[[-1, 1, yFront], [1, 1, yFront], [-1, -1, yBack], [1, -1, yBack]].map(([sx, sz, top]) => (
+        <Box key={'corner-' + sx + sz} size={[trim, top - floorT, trim]} position={[sx * (ix - trim / 2), floorT + (top - floorT) / 2, sz * (iz - trim / 2)]} color={trimColor} roughness={0.6} />
+      ))}
       {config.partitionWall && (
         <Box
           size={[0.08, 2.30, Math.min(2.15, config.width - 0.3)]}

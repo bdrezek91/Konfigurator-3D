@@ -57,14 +57,34 @@ function Handle({ kind, x, height, side }: { kind: OpeningHandle; x: number; hei
   )
 }
 
+/** Obróbka ościeża: wykończenie głębokości otworu od ramy do lica okładziny. */
+function Reveal({ width, height, depth, z, color, sill }: { width: number; height: number; depth: number; z: number; color: string; sill: boolean }) {
+  if (depth <= 0.004) return null
+  const t = 0.008
+  const mat = { color, metalness: 0.3, roughness: 0.5 }
+  return (
+    <>
+      <Box size={[t, height + t * 2, depth]} position={[-width / 2 - t / 2, 0, z + depth / 2]} {...mat} />
+      <Box size={[t, height + t * 2, depth]} position={[width / 2 + t / 2, 0, z + depth / 2]} {...mat} />
+      <Box size={[width, t, depth]} position={[0, height / 2 + t / 2, z + depth / 2]} {...mat} />
+      {sill && <Box size={[width + 0.04, t, depth + 0.03]} position={[0, -height / 2 - t / 2, z + (depth + 0.03) / 2]} {...mat} />}
+    </>
+  )
+}
+
 export function OpeningFrame({
   opening,
   floorOffset,
   depth = 0.10,
+  revealDepth = 0,
+  revealColor = '#2b3033',
 }: {
   opening: OpeningPlacement
   floorOffset: number
   depth?: number
+  /** Głębokość ościeża przed ramą (np. grubość okładziny kasetonowej). */
+  revealDepth?: number
+  revealColor?: string
 }) {
   const sill = openingSill(opening)
   const y = floorOffset + sill + opening.height / 2
@@ -75,7 +95,9 @@ export function OpeningFrame({
   const frameDepth = 0.07
   const innerW = Math.max(0.12, opening.width - rail * 2)
   const innerH = Math.max(0.12, opening.height - rail * 2)
-  const z = depth / 2 + 0.018
+  // rama osadzona w otworze: lico ramy ≈ lico płyty, szyba cofnięta (cień w ościeżu jak na nagraniach)
+  const z = depth / 2 - 0.045
+  const frameFace = 0.055
   const hingeSide: 1 | -1 = opening.hinge === 'right' ? 1 : -1
   const handle = defaultHandle(opening)
   const frameMat = { color: frame, metalness: profile === 'pvc' ? 0.05 : 0.3, roughness: profile === 'pvc' ? 0.62 : 0.52 }
@@ -100,6 +122,7 @@ export function OpeningFrame({
 
   return (
     <group position={[opening.center, y, z]}>
+      <Reveal width={opening.width} height={opening.height} depth={revealDepth} z={frameFace} color={revealColor} sill={!isDoor} />
       <GlassPane width={glassW} height={glassH} />
       {/* ościeżnica */}
       <Box size={[rail, opening.height, frameDepth]} position={[-opening.width / 2 + rail / 2, 0, 0.02]} {...frameMat} />

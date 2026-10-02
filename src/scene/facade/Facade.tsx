@@ -1,6 +1,7 @@
 import { buildComponentModel } from '../../components'
 import { type DecorPlacement, type OpeningPlacement, type PavilionConfig, type ProjectGeometry, type WallSide } from '../../types'
-import { envelope, overlapsOpening, wallTopAt, wallTopHeights } from '../geometry'
+import { envelope, openingSill, overlapsOpening, wallTopAt, wallTopHeights } from '../geometry'
+import { Path, Shape } from 'three'
 import { Box, RoundedPiece } from '../materials/primitives'
 import { renderMetalColor, woodTexture } from '../materials/textures'
 import { type ReactNode, useMemo } from 'react'
@@ -186,6 +187,53 @@ export function FoundationSupports({ config, geometry }: { config: PavilionConfi
   )
 }
 
+/**
+ * Płyta podkładowa okładziny (pod lamelami) z wycięciami na otwory —
+ * stolarka osadzona w otworze musi być widoczna przez okładzinę, tak jak na budowie.
+ */
+function BaseBoard({
+  id, center, yCenter, width, height, z, depth, color, openings, floorOffset,
+}: {
+  id: string; center: number; yCenter: number; width: number; height: number; z: number; depth: number; color: string
+  openings: OpeningPlacement[]; floorOffset: number
+}) {
+  const shape = useMemo(() => {
+    const x0 = center - width / 2
+    const x1 = center + width / 2
+    const y0 = yCenter - height / 2
+    const y1 = yCenter + height / 2
+    const sh = new Shape()
+    sh.moveTo(x0, y0)
+    sh.lineTo(x1, y0)
+    sh.lineTo(x1, y1)
+    sh.lineTo(x0, y1)
+    sh.closePath()
+    const m = 0.003
+    for (const o of openings) {
+      const oy0 = floorOffset + openingSill(o)
+      const hx0 = Math.max(x0 + m, o.center - o.width / 2)
+      const hx1 = Math.min(x1 - m, o.center + o.width / 2)
+      const hy0 = Math.max(y0 + m, oy0)
+      const hy1 = Math.min(y1 - m, oy0 + o.height)
+      if (hx1 - hx0 < 0.02 || hy1 - hy0 < 0.02) continue
+      const hole = new Path()
+      hole.moveTo(hx0, hy0)
+      hole.lineTo(hx0, hy1)
+      hole.lineTo(hx1, hy1)
+      hole.lineTo(hx1, hy0)
+      hole.closePath()
+      sh.holes.push(hole)
+    }
+    return sh
+  }, [center, yCenter, width, height, openings, floorOffset])
+  return (
+    <mesh key={id} position={[0, 0, z - depth / 2]} castShadow receiveShadow>
+      <extrudeGeometry args={[shape, { depth, bevelEnabled: false, steps: 1 }]} />
+      <meshStandardMaterial color={color} roughness={0.62} metalness={0.08} />
+    </mesh>
+  )
+}
+
 export function DecorLocal({
   decor,
   openings,
@@ -227,12 +275,18 @@ export function DecorLocal({
 
       if (!segment.shape || segment.shape === 'rect') {
         out.push(
-          <Box
+          <BaseBoard
             key={segment.id + '-base'}
-            size={[segment.width, effectiveHeight, gallery03Lamella ? 0.012 : 0.040]}
-            position={[segment.center, effectiveY, z - (gallery03Lamella ? 0.013 : 0.015)]}
+            id={segment.id + '-base'}
+            center={segment.center}
+            yCenter={effectiveY}
+            width={segment.width}
+            height={effectiveHeight}
+            z={z - (gallery03Lamella ? 0.013 : 0.015)}
+            depth={gallery03Lamella ? 0.012 : 0.040}
             color="#111315"
-            roughness={0.62}
+            openings={openings}
+            floorOffset={floorOffset}
           />,
         )
       }
@@ -269,12 +323,18 @@ export function DecorLocal({
 
     if (segment.kind === 'snake-winchester') {
       out.push(
-        <Box
+        <BaseBoard
           key={segment.id + '-base'}
-          size={[segment.width, effectiveHeight, 0.040]}
-          position={[segment.center, effectiveY, z - 0.015]}
+          id={segment.id + '-base'}
+          center={segment.center}
+          yCenter={effectiveY}
+          width={segment.width}
+          height={effectiveHeight}
+          z={z - 0.015}
+          depth={0.040}
           color="#17191b"
-          roughness={0.58}
+          openings={openings}
+          floorOffset={floorOffset}
         />,
       )
       const barW = segment.width < 0.8 ? 0.072 : 0.115
@@ -300,13 +360,14 @@ export function DecorLocal({
     }
 
     if (segment.kind === 'board-natural' || segment.kind === 'board-horizontal-winchester') {
-      const boardH = 0.275
-      for (let y = y0 + boardH / 2; y < y0 + effectiveHeight; y += boardH + 0.018) {
+      // deska drewnopodobna wg nagrania WA0016: ≈ 140 mm, szczelina cieniowa ≈ 12 mm
+      const boardH = 0.14
+      for (let y = y0 + boardH / 2; y < y0 + effectiveHeight; y += boardH + 0.012) {
         if (!overlapsOpening(segment.center, y, segment.width, boardH, openings, floorOffset)) {
           out.push(
             <RoundedPiece
               key={segment.id + '-b-' + y.toFixed(2)}
-              size={[segment.width, boardH, 0.060]}
+              size={[segment.width, boardH, 0.024]}
               position={[segment.center, y, z]}
               color="#ffffff"
               map={woodTexture(segment.kind === 'board-horizontal-winchester' ? 'winchester' : 'natural')}
@@ -450,9 +511,13 @@ export function DampolFrameLocal({
 }) {
   const { roofT, floorT } = envelope(config)
   const [topLeft, topRight] = wallTopHeights(side, config)
+  // Widoczna rama wg nagrań z produkcji (WA0016/WA0019): obróbka korony ≈ 0,22 m, rygiel dolny ≈ 0,15 m.
+  // Szerokość słupa narożnego zależy od konstrukcji: kątownik 50 — wąski, profil 100×100/statyka — szerszy.
   const topBand = Math.max(0.22, roofT + 0.13)
-  const bottomBand = Math.max(0.105, floorT + 0.012)
-  const sidePost = side === 'front' ? 0.105 : 0.095
+  const bottomBand = Math.max(0.15, floorT + 0.05)
+  const sidePost =
+    config.construction === 'angle50' ? 0.07 :
+    config.construction === 'truss' ? 0.12 : 0.105
   const z = wallDepth / 2 + 0.018
   const delta = topRight - topLeft
   const angle = Math.atan2(delta, span)
