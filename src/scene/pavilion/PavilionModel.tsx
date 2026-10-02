@@ -4,7 +4,8 @@ import { DampolFrameLocal, DecorLocal, FacadeCladdingFromModel, FoundationSuppor
 import { facadeKindForWall } from '../facade/facadeKind'
 import { envelope, fallbackGeometry, makeWallShape, wallTransform } from '../geometry'
 import { Box, RoundedPiece } from '../materials/primitives'
-import { panelNormalTexture, renderMetalColor } from '../materials/textures'
+import { renderMetalColor } from '../materials/textures'
+import { profileNormalMap, surfaceProfileDef } from '../materials/profiles'
 import { OpeningFrame } from '../openings/OpeningFrame'
 import { useLighting } from '../environment/lighting'
 import { type ReactNode } from 'react'
@@ -34,6 +35,8 @@ export function Wall({
   const depth = PANEL_THICKNESS_M[config.wallPanel]
   const shape = makeWallShape(side, config, transform.span, openings)
   const hasCladding = facadeKind !== 'none'
+  // przetłoczenie okładziny płyty: normal mapa z fizycznego profilu [mm] (pitch/głębokość producenta)
+  const profileDef = hasCladding ? null : surfaceProfileDef(config.panelManufacturer, config.wallProfile)
 
   return (
     <group position={transform.position} rotation={transform.rotation}>
@@ -43,8 +46,7 @@ export function Wall({
           color={hasCladding ? (config.project === 'GALERIA/03' ? '#070a0d' : '#202528') : renderMetalColor(config.exteriorColor)}
           metalness={hasCladding ? 0.20 : 0.38}
           roughness={hasCladding ? 0.68 : 0.50}
-          normalMap={hasCladding ? undefined : panelNormalTexture(config.wallProfile)}
-          normalScale={[0.18, 0.18]}
+          normalMap={profileDef ? profileNormalMap(profileDef) : undefined}
           envMapIntensity={hasCladding ? 0.55 : 1.05}
           transparent={opacity < 1}
           opacity={opacity}

@@ -1,42 +1,6 @@
 import { CanvasTexture, RepeatWrapping, SRGBColorSpace } from 'three'
-import type { PavilionConfig } from '../../types'
 
 export const textureCache = new Map<string, CanvasTexture>()
-
-export function panelNormalTexture(profile: PavilionConfig['wallProfile']) {
-  if (profile === 'smooth') return undefined
-  const key = 'panel-normal-' + profile
-  const cached = textureCache.get(key)
-  if (cached) return cached
-  const canvas = document.createElement('canvas')
-  canvas.width = 256
-  canvas.height = 256
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return undefined
-  ctx.fillStyle = 'rgb(128,128,255)'
-  ctx.fillRect(0, 0, 256, 256)
-  const spacing =
-    profile === 'microrib' ? 9 :
-    profile === 'microline' ? 14 :
-    profile === 'carbon' ? 12 :
-    profile === 'microwave' ? 22 : 36
-  const strength = profile === 'microrib' || profile === 'microline' ? 5 : 9
-  for (let x = 0; x < 256; x += spacing) {
-    const grad = ctx.createLinearGradient(x - 3, 0, x + 3, 0)
-    grad.addColorStop(0, 'rgb(128,128,255)')
-    grad.addColorStop(0.35, 'rgb(' + (128 - strength) + ',128,255)')
-    grad.addColorStop(0.65, 'rgb(' + (128 + strength) + ',128,255)')
-    grad.addColorStop(1, 'rgb(128,128,255)')
-    ctx.fillStyle = grad
-    ctx.fillRect(x - 3, 0, 6, 256)
-  }
-  const texture = new CanvasTexture(canvas)
-  texture.wrapS = RepeatWrapping
-  texture.wrapT = RepeatWrapping
-  texture.repeat.set(5, 1)
-  textureCache.set(key, texture)
-  return texture
-}
 
 export function woodTexture(kind: 'winchester' | 'palisander' | 'natural') {
   const key = 'wood-' + kind

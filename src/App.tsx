@@ -37,7 +37,15 @@ const FACADE_NAMES: Record<PavilionConfig['facade'], string> = {
 function initialConfig(): PavilionConfig {
   const presetId = new URLSearchParams(window.location.search).get('preset')
   const preset = PRESETS.find((item) => item.id === presetId)
-  return preset ? { ...preset.config } : { ...DEFAULT_CONFIG }
+  const base = preset ? { ...preset.config } : { ...DEFAULT_CONFIG }
+  // ?mfr=paneltech|balex&wall=microwave — szybki podgląd profilu okładziny (testy wizualne, linki)
+  const q = new URLSearchParams(window.location.search)
+  const mfr = q.get('mfr') as PavilionConfig['panelManufacturer'] | null
+  const wall = q.get('wall') as PavilionConfig['wallProfile'] | null
+  if (mfr && ['paneltech', 'balex', 'generic'].includes(mfr)) base.panelManufacturer = mfr
+  if (wall && ['smooth', 'linear', 'microline', 'microrib', 'microwave', 'carbon', 'ribbed'].includes(wall)) base.wallProfile = wall
+  if (q.get('facade') === 'plain') base.facade = 'plain'
+  return base
 }
 
 function download(blob: Blob, filename: string) {

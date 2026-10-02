@@ -24,7 +24,6 @@ export function PanelProfileLocal({
   const z = wallDepth / 2 + 0.008
   const isLight = config.exteriorColor === '#f2f0e7' || config.exteriorColor === '#a5a5a3'
   const jointColor = isLight ? '#d7d5ce' : '#202427'
-  const profileColor = isLight ? '#d9d7d0' : '#303538'
 
   // Widoczne zamki/podziały płyt ~1 m.
   const moduleWidth = 1.0
@@ -44,39 +43,8 @@ export function PanelProfileLocal({
     }
   }
 
-  if (config.wallProfile === 'smooth') return <>{out}</>
-
-  const profile =
-    config.wallProfile === 'linear' || config.wallProfile === 'ribbed'
-      ? { step: 0.18, width: 0.006, depth: 0.0012, color: '#2a2f32' }
-      : config.wallProfile === 'microline'
-        ? { step: 0.055, width: 0.003, depth: 0.0009, color: '#353a3d' }
-        : config.wallProfile === 'microrib'
-          ? { step: 0.035, width: 0.0025, depth: 0.0008, color: '#3b4043' }
-          : config.wallProfile === 'microwave'
-            ? { step: 0.070, width: 0.008, depth: 0.0012, color: '#34393c' }
-            : config.wallProfile === 'carbon'
-              ? { step: 0.045, width: 0.004, depth: 0.0010, color: '#303538' }
-              : null
-
-  if (!profile) return <>{out}</>
-
-  for (let x = -span / 2 + profile.step; x < span / 2; x += profile.step) {
-    const top = wallTopAt(side, x, span, config)
-    const h = Math.max(0.15, top - 0.10)
-    if (!overlapsOpening(x, h / 2, profile.width, h, openings, floorT)) {
-      out.push(
-        <Box
-          key={'profile-' + x.toFixed(3)}
-          size={[profile.width, h, profile.depth]}
-          position={[x, h / 2, z + 0.008]}
-          color={isLight ? profileColor : profile.color}
-          roughness={0.64}
-        />,
-      )
-    }
-  }
-
+  // Przetłoczenie okładziny (mikrofala, linie, rowki) jest w normal mapie materiału ściany
+  // generowanej z fizycznego profilu [mm] — patrz materials/profiles.ts.
   return <>{out}</>
 }
 
