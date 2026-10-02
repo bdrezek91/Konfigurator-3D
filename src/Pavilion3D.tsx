@@ -1,7 +1,7 @@
-import { Canvas } from '@react-three/fiber'
-import { ContactShadows, Environment, OrbitControls } from '@react-three/drei'
-import { Path, Shape } from 'three'
-import type { ReactNode } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
+import { ContactShadows, Environment, Lightformer, OrbitControls, RoundedBox, Sky, SoftShadows, useTexture } from '@react-three/drei'
+import { ACESFilmicToneMapping, CanvasTexture, Path, RepeatWrapping, Shape, SRGBColorSpace, type Texture } from 'three'
+import { useEffect, useMemo, type ReactNode } from 'react'
 import {
   PANEL_THICKNESS_M,
   type DecorPlacement,
@@ -10,8 +10,9 @@ import {
   type ProjectGeometry,
   type WallSide,
 } from './types'
+import { buildComponentModel } from './components'
 
-export type PavilionView = 'perspective' | 'front' | 'left' | 'right' | 'back'
+export type PavilionView = 'perspective' | 'front' | 'front-left' | 'front-right' | 'left' | 'right' | 'back'
 type Props = { config: PavilionConfig; view?: PavilionView }
 
 function Box({
@@ -22,6 +23,9 @@ function Box({
   metalness = 0.08,
   roughness = 0.72,
   opacity = 1,
+  map,
+  normalMap,
+  envMapIntensity = 1,
 }: {
   size: [number, number, number]
   position: [number, number, number]
@@ -30,6 +34,9 @@ function Box({
   metalness?: number
   roughness?: number
   opacity?: number
+  map?: Texture
+  normalMap?: Texture
+  envMapIntensity?: number
 }) {
   return (
     <mesh position={position} rotation={rotation} castShadow receiveShadow>
@@ -40,9 +47,220 @@ function Box({
         roughness={roughness}
         transparent={opacity < 1}
         opacity={opacity}
+        map={map}
+        normalMap={normalMap}
+        normalScale={[0.22, 0.22]}
+        envMapIntensity={envMapIntensity}
       />
     </mesh>
   )
+}
+
+const textureCache = new Map<string, CanvasTexture>()
+
+function panelNormalTexture(profile: PavilionConfig['wallProfile']) {
+  if (profile === 'smooth') return undefined
+  const key = 'panel-normal-' + profile
+  const cached = textureCache.get(key)
+  if (cached) return cached
+  const canvas = document.createElement('canvas')
+  canvas.width = 256
+  canvas.height = 256
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return undefined
+  ctx.fillStyle = 'rgb(128,128,255)'
+  ctx.fillRect(0, 0, 256, 256)
+  const spacing =
+    profile === 'microrib' ? 9 :
+    profile === 'microline' ? 14 :
+    profile === 'carbon' ? 12 :
+    profile === 'microwave' ? 22 : 36
+  const strength = profile === 'microrib' || profile === 'microline' ? 5 : 9
+  for (let x = 0; x < 256; x += spacing) {
+    const grad = ctx.createLinearGradient(x - 3, 0, x + 3, 0)
+    grad.addColorStop(0, 'rgb(128,128,255)')
+    grad.addColorStop(0.35, 'rgb(' + (128 - strength) + ',128,255)')
+    grad.addColorStop(0.65, 'rgb(' + (128 + strength) + ',128,255)')
+    grad.addColorStop(1, 'rgb(128,128,255)')
+    ctx.fillStyle = grad
+    ctx.fillRect(x - 3, 0, 6, 256)
+  }
+  const texture = new CanvasTexture(canvas)
+  texture.wrapS = RepeatWrapping
+  texture.wrapT = RepeatWrapping
+  texture.repeat.set(5, 1)
+  textureCache.set(key, texture)
+  return texture
+}
+
+function woodTexture(kind: 'winchester' | 'palisander' | 'natural') {
+  const key = 'wood-' + kind
+  const cached = textureCache.get(key)
+  if (cached) return cached
+  const canvas = document.createElement('canvas')
+  canvas.width = 128
+  canvas.height = 512
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return undefined
+  const palette =
+    kind === 'palisander'
+      ? ['#473126', '#5b3c2b', '#38261f', '#6a4932']
+      : kind === 'natural'
+        ? ['#80634b', '#967154', '#70533e', '#a37b58']
+        : ['#5f4938', '#73553f', '#4d3a2f', '#84624a']
+  const grad = ctx.createLinearGradient(0, 0, 128, 0)
+  palette.forEach((c, i) => grad.addColorStop(i / (palette.length - 1), c))
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, 128, 512)
+  for (let y = 0; y < 512; y += 14) {
+    ctx.strokeStyle = y % 28 === 0 ? 'rgba(45,25,14,.24)' : 'rgba(255,225,180,.13)'
+    ctx.lineWidth = 1 + (y % 3) * 0.35
+    ctx.beginPath()
+    ctx.moveTo(0, y + Math.sin(y * 0.12) * 3)
+    ctx.bezierCurveTo(32, y - 4, 86, y + 6, 128, y + Math.sin(y * 0.08) * 4)
+    ctx.stroke()
+  }
+  const texture = new CanvasTexture(canvas)
+  texture.colorSpace = SRGBColorSpace
+  texture.wrapS = RepeatWrapping
+  texture.wrapT = RepeatWrapping
+  texture.repeat.set(1, 1.5)
+  textureCache.set(key, texture)
+  return texture
+}
+
+
+function glassReflectionTexture() {
+  const key = 'glass-reflection-v2'
+  const cached = textureCache.get(key)
+  if (cached) return cached
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 512
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return undefined
+
+  const sky = ctx.createLinearGradient(0, 0, 0, 512)
+  sky.addColorStop(0, '#b8d0da')
+  sky.addColorStop(0.48, '#dbe3df')
+  sky.addColorStop(0.58, '#8ea48b')
+  sky.addColorStop(1, '#6b706b')
+  ctx.fillStyle = sky
+  ctx.fillRect(0, 0, 512, 512)
+
+  let seed = 42017
+  const rnd = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0
+    return seed / 4294967296
+  }
+
+  ctx.save()
+  ctx.globalAlpha = 0.30
+  ctx.filter = 'blur(0.8px)'
+  for (let i = 0; i < 26; i++) {
+    const x = rnd() * 540 - 14
+    const trunkW = 1.5 + rnd() * 3.5
+    const treeH = 110 + rnd() * 260
+    const base = 335 + rnd() * 85
+    ctx.strokeStyle = i % 3 === 0 ? '#31463b' : '#3a4f43'
+    ctx.lineWidth = trunkW
+    ctx.beginPath()
+    ctx.moveTo(x, base)
+    ctx.lineTo(x + (rnd() - 0.5) * 14, base - treeH)
+    ctx.stroke()
+    const crownY = base - treeH * (0.68 + rnd() * 0.18)
+    const branches = 3 + Math.floor(rnd() * 4)
+    for (let b = 0; b < branches; b++) {
+      const by = crownY + b * 18 + rnd() * 8
+      const spread = 14 + rnd() * 28
+      ctx.lineWidth = Math.max(0.8, trunkW * 0.45)
+      ctx.beginPath()
+      ctx.moveTo(x, by)
+      ctx.lineTo(x - spread, by - 10 - rnd() * 16)
+      ctx.moveTo(x, by)
+      ctx.lineTo(x + spread * 0.8, by - 12 - rnd() * 14)
+      ctx.stroke()
+    }
+  }
+  ctx.restore()
+
+  const horizon = ctx.createLinearGradient(0, 290, 0, 430)
+  horizon.addColorStop(0, 'rgba(240,244,238,.18)')
+  horizon.addColorStop(1, 'rgba(70,76,72,.28)')
+  ctx.fillStyle = horizon
+  ctx.fillRect(0, 290, 512, 150)
+
+  const texture = new CanvasTexture(canvas)
+  texture.colorSpace = SRGBColorSpace
+  texture.wrapS = RepeatWrapping
+  texture.wrapT = RepeatWrapping
+  texture.repeat.set(1.1, 1)
+  textureCache.set(key, texture)
+  return texture
+}
+
+function PhotoEnvironment() {
+  const loadedGround = useTexture('./textures/dampol-gravel.jpg')
+  const ground = useMemo(() => {
+    const texture = loadedGround.clone()
+    texture.colorSpace = SRGBColorSpace
+    texture.wrapS = RepeatWrapping
+    texture.wrapT = RepeatWrapping
+    texture.repeat.set(7, 7)
+    texture.needsUpdate = true
+    return texture
+  }, [loadedGround])
+
+  useEffect(() => () => {
+    ground.dispose()
+  }, [ground])
+
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.014, 0]} receiveShadow>
+      <planeGeometry args={[48, 48]} />
+      <meshStandardMaterial
+        color="#d6d2c8"
+        map={ground}
+        roughness={0.98}
+        metalness={0.01}
+      />
+    </mesh>
+  )
+}
+
+function RoundedPiece({
+  size,
+  position,
+  rotation = [0, 0, 0],
+  color,
+  map,
+  metalness = 0.10,
+  roughness = 0.55,
+  radius = 0.006,
+}: {
+  size: [number, number, number]
+  position: [number, number, number]
+  rotation?: [number, number, number]
+  color: string
+  map?: Texture
+  metalness?: number
+  roughness?: number
+  radius?: number
+}) {
+  return (
+    <RoundedBox args={size} position={position} rotation={rotation} radius={Math.min(radius, size[0] / 5, size[1] / 5)} smoothness={2} castShadow receiveShadow>
+      <meshStandardMaterial color={color} map={map} metalness={metalness} roughness={roughness} envMapIntensity={1.15} />
+    </RoundedBox>
+  )
+}
+
+function renderMetalColor(color: string) {
+  if (color === '#3a3f43') return '#545c61'
+  if (color === '#121315') return '#272a2c'
+  if (color === '#f2f0e7') return '#f3f1e9'
+  if (color === '#a5a5a3') return '#b4b4b1'
+  if (color === '#7d7d7a') return '#8d8d89'
+  return color
 }
 
 function envelope(config: PavilionConfig) {
@@ -96,55 +314,122 @@ function OpeningFrame({
 }) {
   const sill = openingSill(opening)
   const y = floorOffset + sill + opening.height / 2
-  const frame = opening.frameColor ?? '#15181a'
+  const frame = opening.frameColor ?? '#17191b'
   const isDoor = opening.kind.startsWith('door-')
+  const gallery03Opening = opening.id.startsWith('G03-')
+  const rail = gallery03Opening ? 0.055 : Math.min(0.068, Math.max(0.052, opening.width * 0.055))
+  const innerW = Math.max(0.12, opening.width - rail * 2)
+  const innerH = Math.max(0.12, opening.height - rail * 2)
+  const z = depth / 2 + 0.018
 
   if (opening.kind === 'door-full') {
     return (
-      <group position={[opening.center, y, depth / 2 + 0.035]}>
-        <Box size={[opening.width + 0.075, opening.height + 0.075, 0.075]} position={[0, 0, 0]} color={frame} metalness={0.16} roughness={0.40} />
-        <Box size={[opening.width - 0.06, opening.height - 0.06, 0.055]} position={[0, 0, 0.045]} color={frame} metalness={0.10} roughness={0.36} />
-        <Box size={[0.024, 0.58, 0.035]} position={[opening.width * 0.30, 0, 0.085]} color="#c4c7c7" metalness={0.75} roughness={0.20} />
+      <group position={[opening.center, y, z]}>
+        <RoundedPiece size={[opening.width, opening.height, 0.058]} position={[0, 0, 0]} color={frame} metalness={0.34} roughness={0.46} radius={0.004} />
+        <Box size={[0.12, 0.018, 0.018]} position={[opening.width * 0.28, 0.02, 0.052]} color="#24282a" metalness={0.72} roughness={0.22} />
+        <Box size={[0.020, 0.020, 0.045]} position={[opening.width * 0.23, 0.02, 0.035]} color="#24282a" metalness={0.72} roughness={0.22} />
+        {[-0.62, 0, 0.62].map((hy) => (
+          <Box key={'full-hinge-' + hy} size={[0.028, 0.085, 0.028]} position={[opening.width / 2 - 0.025, hy, 0.045]} color="#202426" metalness={0.56} roughness={0.30} />
+        ))}
+        <Box size={[opening.width, 0.035, 0.075]} position={[0, -opening.height / 2 + 0.018, -0.005]} color="#111315" metalness={0.42} roughness={0.40} />
       </group>
     )
   }
 
   return (
-    <group position={[opening.center, y, depth / 2 + 0.025]}>
-      <Box size={[opening.width + 0.075, opening.height + 0.075, 0.070]} position={[0, 0, 0]} color={frame} metalness={0.18} roughness={0.35} />
-      <mesh position={[0, 0, 0.048]} castShadow>
-        <boxGeometry args={[opening.width, opening.height, 0.032]} />
+    <group position={[opening.center, y, z]}>
+      <mesh position={[0, 0, -0.002]} castShadow receiveShadow>
+        <boxGeometry args={[innerW, innerH, 0.016]} />
         <meshPhysicalMaterial
-          color="#6f8791"
+          color={gallery03Opening ? '#91bed3' : '#526975'}
           transparent
-          opacity={0.34}
+          opacity={gallery03Opening ? 0.16 : 0.38}
           roughness={0.08}
           metalness={0.02}
-          transmission={0.52}
-          ior={1.45}
-          thickness={0.018}
-          clearcoat={0.28}
-          clearcoatRoughness={0.10}
+          transmission={gallery03Opening ? 0.80 : 0.50}
+          ior={1.46}
+          thickness={0.014}
+          clearcoat={0.52}
+          clearcoatRoughness={0.06}
+          envMapIntensity={gallery03Opening ? 2.50 : 1.85}
         />
       </mesh>
-      {opening.kind === 'door-double' && <Box size={[0.032, opening.height, 0.078]} position={[0, 0, 0.075]} color={frame} />}
-      {opening.kind === 'alu-window' && <Box size={[0.026, opening.height, 0.072]} position={[opening.width * 0.18, 0, 0.075]} color={frame} />}
+      <mesh position={[0, 0, 0.010]}>
+        <planeGeometry args={[innerW * 0.985, innerH * 0.985]} />
+        <meshBasicMaterial
+          map={glassReflectionTexture()}
+          transparent
+          opacity={gallery03Opening ? 0.36 : 0.14}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+      <Box size={[rail, opening.height, 0.060]} position={[-opening.width / 2 + rail / 2, 0, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
+      <Box size={[rail, opening.height, 0.060]} position={[opening.width / 2 - rail / 2, 0, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
+      <Box size={[innerW, rail, 0.060]} position={[0, opening.height / 2 - rail / 2, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
+      <Box size={[innerW, rail, 0.060]} position={[0, -opening.height / 2 + rail / 2, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
+      {opening.kind === 'door-double' && <Box size={[0.052, innerH, 0.064]} position={[0, 0, 0.024]} color={frame} metalness={0.42} roughness={0.44} />}
+      {opening.kind === 'alu-window' && <Box size={[0.046, innerH, 0.064]} position={[opening.width * 0.18, 0, 0.024]} color={frame} metalness={0.42} roughness={0.44} />}
       {opening.kind === 'pvc-window' && (
         <>
-          <Box size={[0.026, opening.height, 0.072]} position={[0, 0, 0.075]} color={frame} />
-          <Box size={[opening.width, 0.026, 0.072]} position={[0, 0, 0.075]} color={frame} />
+          <Box size={[0.042, innerH, 0.064]} position={[0, 0, 0.024]} color={frame} metalness={0.30} roughness={0.48} />
+          <Box size={[innerW, 0.042, 0.064]} position={[0, 0, 0.024]} color={frame} metalness={0.30} roughness={0.48} />
         </>
       )}
-      {isDoor && opening.kind !== 'door-double' && (
-        <Box size={[0.024, 0.58, 0.035]} position={[opening.width * 0.30, 0, 0.090]} color="#c4c7c7" metalness={0.78} roughness={0.18} />
+      {isDoor && (
+        gallery03Opening ? (
+          <>
+            <Box
+              size={[0.018, 0.72, 0.024]}
+              position={[opening.width / 2 - 0.11, 0.05, 0.078]}
+              color="#c6c9c8"
+              metalness={0.86}
+              roughness={0.18}
+            />
+            <Box
+              size={[0.035, 0.028, 0.050]}
+              position={[opening.width / 2 - 0.11, -0.34, 0.058]}
+              color="#b7bcbd"
+              metalness={0.78}
+              roughness={0.20}
+            />
+            {[-0.62, 0, 0.62].map((hy) => (
+              <Box
+                key={'hinge-gallery03-' + hy}
+                size={[0.030, 0.085, 0.030]}
+                position={[-opening.width / 2 + rail * 0.46, hy, 0.060]}
+                color="#8f989d"
+                metalness={0.70}
+                roughness={0.24}
+              />
+            ))}
+          </>
+        ) : (
+          <>
+            <Box size={[0.12, 0.018, 0.018]} position={[opening.width * 0.28, 0.02, 0.070]} color="#24282a" metalness={0.72} roughness={0.22} />
+            <Box size={[0.020, 0.020, 0.045]} position={[opening.width * 0.23, 0.02, 0.053]} color="#24282a" metalness={0.72} roughness={0.22} />
+            {[-0.62, 0, 0.62].map((hy) => (
+              <Box
+                key={'hinge-' + hy}
+                size={[0.028, 0.085, 0.028]}
+                position={[opening.width / 2 - rail * 0.45, hy, 0.058]}
+                color="#202426"
+                metalness={0.56}
+                roughness={0.30}
+              />
+            ))}
+          </>
+        )
       )}
+      {isDoor && <Box size={[opening.width, 0.035, 0.075]} position={[0, -opening.height / 2 + 0.018, 0.006]} color="#111315" metalness={0.45} roughness={0.38} />}
       {opening.roller && (
-        <Box
-          size={[opening.width + 0.10, 0.13, 0.13]}
-          position={[0, opening.height / 2 + 0.085, 0.02]}
+        <RoundedPiece
+          size={[opening.width + 0.09, 0.14, 0.105]}
+          position={[0, opening.height / 2 + 0.086, 0.006]}
           color="#1a1d1f"
-          metalness={0.18}
+          metalness={0.36}
           roughness={0.45}
+          radius={0.008}
         />
       )}
     </group>
@@ -271,6 +556,130 @@ function PanelProfileLocal({
   return <>{out}</>
 }
 
+function facadeKindForWall(side: WallSide, config: PavilionConfig, geometry: ProjectGeometry) {
+  const explicit = geometry.facadeCladding?.[side]
+  if (explicit) return explicit.kind
+  const enabled = side === 'front' ? config.facadeFront : side === 'back' ? config.facadeBack : side === 'left' ? config.facadeLeft : config.facadeRight
+  if (!enabled || config.facade === 'plain') return 'none'
+  if (
+    config.facade === 'lamella-winchester' ||
+    config.facade === 'lamella-black' ||
+    config.facade === 'lamella-diagonal-winchester' ||
+    config.facade === 'wood-horizontal' ||
+    config.facade === 'ornament-panel'
+  ) return 'none'
+  if (config.facade === 'vertical-ribbed') return 'vertical-ribbed'
+  if (config.facade === 'cassette-grid') return 'cassette-grid'
+  return 'cassette-horizontal'
+}
+
+function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) {
+  const model = useMemo(() => buildComponentModel(config), [config])
+  const pieces = model.components.filter((item) =>
+    item.category === 'decor' &&
+    (item.id.startsWith('facade-cassette-') || item.id.startsWith('corner-cassette-') || item.id.startsWith('facade-ribbed-'))
+  )
+
+  return (
+    <>
+      {pieces.map((item) => {
+        const h = item.dimensions.lengthMm / 1000
+        const w = item.dimensions.widthMm / 1000
+        const depth = item.dimensions.thicknessMm / 1000
+        const color = renderMetalColor(item.color)
+
+        if (item.id.startsWith('corner-cassette-')) {
+          const left = item.id.includes('-fl-') || item.id.includes('-bl-')
+          const front = item.id.includes('-fl-') || item.id.includes('-fr-')
+          const sx = left ? 1 : -1
+          const sz = front ? -1 : 1
+          return (
+            <group key={item.id} position={item.position}>
+              <RoundedPiece
+                size={[0.15, h, depth]}
+                position={[sx * 0.075, 0, front ? 0.010 : -0.010]}
+                color={color}
+                metalness={0.38}
+                roughness={0.48}
+                radius={0.003}
+              />
+              <RoundedPiece
+                size={[depth, h, 0.15]}
+                position={[left ? -0.010 : 0.010, 0, sz * 0.075]}
+                color={color}
+                metalness={0.38}
+                roughness={0.48}
+                radius={0.003}
+              />
+            </group>
+          )
+        }
+
+        if (item.id.startsWith('facade-ribbed-')) {
+          const ribs: ReactNode[] = []
+          for (let x = -w / 2 + 0.06; x < w / 2; x += 0.12) {
+            ribs.push(
+              <Box key={item.id + '-rib-' + x.toFixed(3)} size={[0.018, h, 0.055]} position={[x, 0, 0.020]} color={color} metalness={0.36} roughness={0.50} />,
+            )
+          }
+          return (
+            <group key={item.id} position={item.position} rotation={item.rotation}>
+              <Box size={[w, h, 0.018]} position={[0, 0, 0]} color={color} metalness={0.34} roughness={0.52} />
+              {ribs}
+            </group>
+          )
+        }
+
+        return (
+          <group key={item.id} position={item.position} rotation={item.rotation}>
+            {config.project === 'GALERIA/03' ? (
+              <Box
+                size={[w, h, depth]}
+                position={[0, 0, 0]}
+                color={color}
+                metalness={0.34}
+                roughness={0.46}
+              />
+            ) : (
+              <RoundedPiece
+                size={[w, h, depth]}
+                position={[0, 0, 0]}
+                color={color}
+                metalness={0.38}
+                roughness={0.48}
+                radius={0.003}
+              />
+            )}
+          </group>
+        )
+      })}
+    </>
+  )
+}
+
+function FoundationSupports({ config, geometry }: { config: PavilionConfig; geometry: ProjectGeometry }) {
+  const gap = geometry.foundationGap ?? 0.12
+  const xs = [-config.length / 2 + 0.45, 0, config.length / 2 - 0.45]
+  return (
+    <>
+      {[-config.width / 2 + 0.28, config.width / 2 - 0.28].flatMap((z) =>
+        xs.map((x, i) => (
+          <RoundedPiece
+            key={'foundation-' + z + '-' + i}
+            size={[0.40, 0.12, 0.20]}
+            position={[x, 0.06, z]}
+            color="#888983"
+            roughness={0.92}
+            radius={0.012}
+          />
+        )),
+      )}
+      <Box size={[config.length, 0.10, 0.10]} position={[0, gap - 0.05, config.width / 2 - 0.05]} color="#15191b" metalness={0.32} roughness={0.55} />
+      <Box size={[config.length, 0.10, 0.10]} position={[0, gap - 0.05, -config.width / 2 + 0.05]} color="#15191b" metalness={0.32} roughness={0.55} />
+    </>
+  )
+}
+
 function DecorLocal({
   decor,
   openings,
@@ -286,32 +695,36 @@ function DecorLocal({
 
   decor.forEach((segment) => {
     const fullWallCassette = segment.kind === 'cassette-black' && segment.height >= 2.8
-    const isBody = !fullWallCassette && segment.height > 1.0 && segment.yCenter < 2.2
-    const effectiveHeight = fullWallCassette ? 2.76 : isBody ? Math.min(segment.height, 2.26) : segment.height
-    const effectiveY = fullWallCassette ? 1.39 : isBody ? 1.31 : Math.min(segment.yCenter, 2.82 - effectiveHeight / 2)
-    const z = wallDepth / 2 + 0.070
+    const effectiveHeight = fullWallCassette ? 2.76 : segment.height
+    const effectiveY = fullWallCassette ? 1.39 : Math.min(segment.yCenter, 2.82 - effectiveHeight / 2)
+    const gallery03Lamella = segment.id === 'gallery03-lamella'
+    const z = gallery03Lamella ? wallDepth / 2 + 0.025 : wallDepth / 2 + 0.070
     const x0 = segment.center - segment.width / 2
     const y0 = effectiveY - effectiveHeight / 2
 
     if (segment.kind.startsWith('lamella-')) {
       const color =
-        segment.kind === 'lamella-black' ? '#141618' :
-        segment.kind === 'lamella-graphite' ? '#34393d' :
+        segment.kind === 'lamella-black' ? '#1d2022' :
+        segment.kind === 'lamella-graphite' ? '#3d4448' :
         segment.kind === 'lamella-palisander' ? '#5f3f2b' : '#a57245'
-      const step = 0.072
-      const slatWidth = 0.032
+      const step = gallery03Lamella ? 0.058 : 0.072
+      const slatWidth = 0.040
+      const diagonal = segment.kind === 'lamella-diagonal-winchester'
       const woodPalette =
         segment.kind === 'lamella-palisander'
           ? ['#5a3a28', '#694630', '#4f3324', '#74503a']
           : ['#9a693f', '#b27a49', '#8f603a', '#a97044']
+      const slatMap =
+        segment.kind === 'lamella-palisander' ? woodTexture('palisander') :
+        segment.kind === 'lamella-winchester' || diagonal ? woodTexture('winchester') : undefined
       let slatIndex = 0
 
       if (!segment.shape || segment.shape === 'rect') {
         out.push(
           <Box
             key={segment.id + '-base'}
-            size={[segment.width, effectiveHeight, 0.040]}
-            position={[segment.center, effectiveY, z - 0.015]}
+            size={[segment.width, effectiveHeight, gallery03Lamella ? 0.012 : 0.040]}
+            position={[segment.center, effectiveY, z - (gallery03Lamella ? 0.013 : 0.015)]}
             color="#111315"
             roughness={0.62}
           />,
@@ -331,12 +744,15 @@ function DecorLocal({
               ? color
               : woodPalette[slatIndex % woodPalette.length]
           out.push(
-            <Box
+            <RoundedPiece
               key={segment.id + '-l-' + x.toFixed(2)}
-              size={[slatWidth, localH, 0.052]}
-              position={[x, localY, z + 0.010]}
-              color={slatColor}
-              roughness={0.80}
+              size={[slatWidth, localH, gallery03Lamella ? 0.015 : 0.052]}
+              position={[x, localY, gallery03Lamella ? z : z + 0.010]}
+              rotation={[0, 0, diagonal ? -0.35 : 0]}
+              color={gallery03Lamella ? '#826f66' : (slatMap ? '#ffffff' : slatColor)}
+              map={gallery03Lamella ? undefined : slatMap}
+              roughness={0.68}
+              radius={0.005}
             />,
           )
           slatIndex++
@@ -361,12 +777,14 @@ function DecorLocal({
       for (let x = x0 + barW / 2; x <= x0 + segment.width; x += barW + gap) {
         if (!overlapsOpening(x, effectiveY, barW, effectiveHeight, openings, floorOffset)) {
           out.push(
-            <Box
+            <RoundedPiece
               key={segment.id + '-s-' + i}
               size={[barW, effectiveHeight, 0.058]}
               position={[x, effectiveY, z + 0.010]}
-              color="#a36f45"
-              roughness={0.80}
+              color="#ffffff"
+              map={woodTexture('winchester')}
+              roughness={0.70}
+              radius={0.006}
             />,
           )
         }
@@ -375,21 +793,63 @@ function DecorLocal({
       return
     }
 
-    if (segment.kind === 'board-natural') {
-      const boardH = 0.16
+    if (segment.kind === 'board-natural' || segment.kind === 'board-horizontal-winchester') {
+      const boardH = 0.275
       for (let y = y0 + boardH / 2; y < y0 + effectiveHeight; y += boardH + 0.018) {
         if (!overlapsOpening(segment.center, y, segment.width, boardH, openings, floorOffset)) {
           out.push(
-            <Box
+            <RoundedPiece
               key={segment.id + '-b-' + y.toFixed(2)}
               size={[segment.width, boardH, 0.060]}
               position={[segment.center, y, z]}
-              color="#9a704e"
-              roughness={0.82}
+              color="#ffffff"
+              map={woodTexture(segment.kind === 'board-horizontal-winchester' ? 'winchester' : 'natural')}
+              roughness={0.72}
+              radius={0.006}
             />,
           )
         }
       }
+      return
+    }
+
+    if (segment.kind === 'ornament-panel') {
+      const border = 0.032
+      const pattern: ReactNode[] = []
+      pattern.push(
+        <Box key={segment.id + '-top'} size={[segment.width, border, 0.055]} position={[segment.center, y0 + effectiveHeight - border / 2, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
+        <Box key={segment.id + '-bottom'} size={[segment.width, border, 0.055]} position={[segment.center, y0 + border / 2, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
+        <Box key={segment.id + '-left'} size={[border, effectiveHeight, 0.055]} position={[x0 + border / 2, effectiveY, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
+        <Box key={segment.id + '-right'} size={[border, effectiveHeight, 0.055]} position={[x0 + segment.width - border / 2, effectiveY, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
+      )
+      for (let x = x0 + 0.18; x < x0 + segment.width - 0.10; x += 0.34) {
+        for (let y = y0 + 0.22; y < y0 + effectiveHeight - 0.12; y += 0.42) {
+          if (overlapsOpening(x, y, 0.28, 0.36, openings, floorOffset)) continue
+          pattern.push(
+            <RoundedPiece
+              key={segment.id + '-orn-a-' + x.toFixed(2) + '-' + y.toFixed(2)}
+              size={[0.034, 0.42, 0.052]}
+              position={[x, y, z + 0.008]}
+              rotation={[0, 0, 0.62]}
+              color="#22272a"
+              metalness={0.30}
+              roughness={0.48}
+              radius={0.006}
+            />,
+            <RoundedPiece
+              key={segment.id + '-orn-b-' + x.toFixed(2) + '-' + y.toFixed(2)}
+              size={[0.034, 0.42, 0.052]}
+              position={[x + 0.12, y, z + 0.008]}
+              rotation={[0, 0, -0.62]}
+              color="#22272a"
+              metalness={0.30}
+              roughness={0.48}
+              radius={0.006}
+            />,
+          )
+        }
+      }
+      out.push(<group key={segment.id + '-ornament'}>{pattern}</group>)
       return
     }
 
@@ -406,26 +866,32 @@ function DecorLocal({
       const isSquare = segment.kind === 'cassette-black' || segment.kind === 'cassette-square-graphite'
       const cellW = isSquare ? 0.66 : segment.kind === 'cassette-winchester' ? 0.72 : 0.70
       const cellH = isSquare ? 0.66 : Math.min(0.40, effectiveHeight - 0.02)
+      const gap = 0.009
       const color =
-        segment.kind === 'cassette-black' ? '#17191b' :
-        segment.kind === 'cassette-white' ? '#e8e8e1' :
-        segment.kind === 'cassette-winchester' ? '#9c7049' :
-        segment.kind === 'silver-rect' ? '#aeb3b5' : '#343a3f'
-      const metalness = segment.kind === 'silver-rect' ? 0.32 : 0.10
+        segment.kind === 'cassette-black' ? '#232629' :
+        segment.kind === 'cassette-white' ? '#e7e6df' :
+        segment.kind === 'cassette-winchester' ? '#ffffff' :
+        segment.kind === 'silver-rect' ? '#aeb3b5' : '#3f474c'
+      const metalness =
+        segment.kind === 'cassette-winchester' ? 0.02 :
+        segment.kind === 'silver-rect' ? 0.42 : 0.32
+      const cassetteMap = segment.kind === 'cassette-winchester' ? woodTexture('winchester') : undefined
 
-      for (let x = x0 + cellW / 2; x < x0 + segment.width; x += cellW + 0.025) {
-        for (let y = y0 + cellH / 2; y < y0 + effectiveHeight; y += cellH + 0.025) {
+      for (let x = x0 + cellW / 2; x < x0 + segment.width; x += cellW + gap) {
+        for (let y = y0 + cellH / 2; y < y0 + effectiveHeight; y += cellH + gap) {
           const cw = Math.min(cellW, x0 + segment.width - x + cellW / 2)
           const ch = Math.min(cellH, y0 + effectiveHeight - y + cellH / 2)
           if (cw > 0.08 && ch > 0.08 && !overlapsOpening(x, y, cw, ch, openings, floorOffset)) {
             out.push(
-              <Box
+              <RoundedPiece
                 key={segment.id + '-c-' + x.toFixed(2) + '-' + y.toFixed(2)}
-                size={[cw, ch, 0.066]}
+                size={[Math.max(0.02, cw - gap), Math.max(0.02, ch - gap), 0.050]}
                 position={[x, y, z]}
                 color={color}
+                map={cassetteMap}
                 metalness={metalness}
-                roughness={segment.kind === 'cassette-winchester' ? 0.78 : 0.48}
+                roughness={segment.kind === 'cassette-winchester' ? 0.68 : 0.46}
+                radius={0.006}
               />,
             )
           }
@@ -478,45 +944,70 @@ function DampolFrameLocal({
 }) {
   const { roofT, floorT } = envelope(config)
   const [topLeft, topRight] = wallTopHeights(side, config)
-  const topBand = Math.max(0.20, roofT + 0.15)
-  const bottomBand = Math.max(0.13, floorT + 0.035)
-  const sidePost = side === 'front' ? 0.14 : 0.12
-  const z = wallDepth / 2 + 0.030
+  const topBand = Math.max(0.22, roofT + 0.13)
+  const bottomBand = Math.max(0.105, floorT + 0.012)
+  const sidePost = side === 'front' ? 0.105 : 0.095
+  const z = wallDepth / 2 + 0.018
   const delta = topRight - topLeft
   const angle = Math.atan2(delta, span)
   const railLength = Math.hypot(span, delta)
   const railY = (topLeft + topRight) / 2 - topBand / 2
+  const metalness = 0.42
+  const roughness = 0.46
 
   return (
     <group>
       <Box
-        size={[railLength, topBand, 0.075]}
+        size={[railLength, topBand, 0.052]}
         position={[0, railY, z]}
         rotation={[0, 0, angle]}
-        color={config.flashingColor}
-        metalness={0.18}
-        roughness={0.46}
+        color={renderMetalColor(config.flashingColor)}
+        metalness={metalness}
+        roughness={roughness}
+        envMapIntensity={1.1}
       />
       <Box
-        size={[span, bottomBand, 0.075]}
+        size={[railLength + 0.035, 0.024, 0.105]}
+        position={[0, railY - topBand / 2 + 0.012, z + 0.012]}
+        rotation={[0, 0, angle]}
+        color={renderMetalColor(config.flashingColor)}
+        metalness={metalness}
+        roughness={0.40}
+      />
+      <Box
+        size={[span, bottomBand, 0.052]}
         position={[0, bottomBand / 2, z]}
         color="#15181a"
-        metalness={0.18}
-        roughness={0.45}
+        metalness={0.38}
+        roughness={0.46}
       />
       <Box
-        size={[sidePost, topLeft, 0.075]}
+        size={[sidePost, topLeft, 0.052]}
         position={[-span / 2 + sidePost / 2, topLeft / 2, z]}
-        color={config.flashingColor}
-        metalness={0.18}
-        roughness={0.46}
+        color={renderMetalColor(config.flashingColor)}
+        metalness={metalness}
+        roughness={roughness}
       />
       <Box
-        size={[sidePost, topRight, 0.075]}
+        size={[0.030, topLeft, 0.112]}
+        position={[-span / 2 + 0.015, topLeft / 2, z - 0.025]}
+        color={renderMetalColor(config.flashingColor)}
+        metalness={metalness}
+        roughness={roughness}
+      />
+      <Box
+        size={[sidePost, topRight, 0.052]}
         position={[span / 2 - sidePost / 2, topRight / 2, z]}
-        color={config.flashingColor}
-        metalness={0.18}
-        roughness={0.46}
+        color={renderMetalColor(config.flashingColor)}
+        metalness={metalness}
+        roughness={roughness}
+      />
+      <Box
+        size={[0.030, topRight, 0.112]}
+        position={[span / 2 - 0.015, topRight / 2, z - 0.025]}
+        color={renderMetalColor(config.flashingColor)}
+        metalness={metalness}
+        roughness={roughness}
       />
     </group>
   )
@@ -535,34 +1026,42 @@ function Wall({
 }) {
   const transform = wallTransform(side, config)
   const openings = geometry.openings.filter((x) => x.wall === side)
-  const decor = geometry.decor.filter((x) => x.wall === side)
+  const facadeKind = facadeKindForWall(side, config, geometry)
+  const legacyFacadeKinds = new Set(['cassette-black', 'cassette-square-graphite', 'cassette-rect-graphite', 'cassette-white'])
+  const decor = geometry.decor.filter((x) => x.wall === side && !(facadeKind !== 'none' && legacyFacadeKinds.has(x.kind)))
   const lights = geometry.exteriorLights?.filter((x) => x.wall === side) ?? []
   const { floorT } = envelope(config)
   const depth = PANEL_THICKNESS_M[config.wallPanel]
   const shape = makeWallShape(side, config, transform.span, openings)
+  const hasCladding = facadeKind !== 'none'
 
   return (
     <group position={transform.position} rotation={transform.rotation}>
       <mesh position={[0, 0, -depth / 2]} castShadow receiveShadow>
         <extrudeGeometry args={[shape, { depth, bevelEnabled: false, steps: 1 }]} />
         <meshStandardMaterial
-          color={config.exteriorColor}
-          metalness={0.06}
-          roughness={0.63}
+          color={hasCladding ? (config.project === 'GALERIA/03' ? '#070a0d' : '#202528') : renderMetalColor(config.exteriorColor)}
+          metalness={hasCladding ? 0.20 : 0.38}
+          roughness={hasCladding ? 0.68 : 0.50}
+          normalMap={hasCladding ? undefined : panelNormalTexture(config.wallProfile)}
+          normalScale={[0.18, 0.18]}
+          envMapIntensity={hasCladding ? 0.55 : 1.05}
           transparent={opacity < 1}
           opacity={opacity}
         />
       </mesh>
 
-      <PanelProfileLocal
-        side={side}
-        span={transform.span}
-        config={config}
-        openings={openings}
-        wallDepth={depth}
-      />
+      {!hasCladding && (
+        <PanelProfileLocal
+          side={side}
+          span={transform.span}
+          config={config}
+          openings={openings}
+          wallDepth={depth}
+        />
+      )}
 
-      <DampolFrameLocal side={side} span={transform.span} config={config} wallDepth={depth} />
+      {!hasCladding && <DampolFrameLocal side={side} span={transform.span} config={config} wallDepth={depth} />}
 
       <DecorLocal
         decor={decor}
@@ -581,9 +1080,13 @@ function Wall({
       ))}
 
       {lights.map((lamp, i) => (
-        <group key={'light-' + i} position={[lamp.center, lamp.y, depth / 2 + 0.12]}>
-          <Box size={[0.16, 0.24, 0.08]} position={[0, 0, 0]} color="#202426" metalness={0.12} roughness={0.42} />
-          <Box size={[0.08, 0.13, 0.025]} position={[0, 0, 0.055]} color="#f4e6a8" roughness={0.24} />
+        <group key={'light-' + i} position={[lamp.center, lamp.y, depth / 2 + 0.105]}>
+          <RoundedPiece size={[0.13, 0.22, 0.07]} position={[0, 0, 0]} color="#202426" metalness={0.34} roughness={0.40} radius={0.012} />
+          <mesh position={[0, 0, 0.044]}>
+            <boxGeometry args={[0.074, 0.125, 0.018]} />
+            <meshStandardMaterial color="#ffe8ad" emissive="#f2c96b" emissiveIntensity={1.25} roughness={0.24} />
+          </mesh>
+          <pointLight position={[0, -0.03, 0.10]} color="#ffd58a" intensity={0.22} distance={1.6} decay={2} />
         </group>
       ))}
     </group>
@@ -594,22 +1097,24 @@ function RoofRib({
   x,
   depth,
   y,
+  color,
 }: {
   x: number
   depth: number
   y: number
+  color: string
 }) {
   const shape = new Shape()
-  shape.moveTo(-0.055, 0)
-  shape.lineTo(-0.032, 0.002)
-  shape.lineTo(0.032, 0.002)
-  shape.lineTo(0.055, 0)
+  shape.moveTo(-0.060, 0)
+  shape.lineTo(-0.032, 0.045)
+  shape.lineTo(0.032, 0.045)
+  shape.lineTo(0.060, 0)
   shape.closePath()
 
   return (
     <mesh position={[x, y, -depth / 2]} castShadow receiveShadow>
       <extrudeGeometry args={[shape, { depth, bevelEnabled: false, steps: 1 }]} />
-      <meshStandardMaterial color="#373c40" metalness={0.14} roughness={0.48} />
+      <meshStandardMaterial color={color} metalness={0.34} roughness={0.44} envMapIntensity={1.05} />
     </mesh>
   )
 }
@@ -617,11 +1122,11 @@ function RoofRib({
 function RoofSystem({ config }: Props) {
   const { roofT, outerFront, outerBack, slope, roofDepth } = envelope(config)
   const centerY = (outerFront + outerBack) / 2 - roofT / 2
-  const roofColor = config.flashingColor
+  const roofColor = renderMetalColor(config.flashingColor)
   const ribSpacing = 0.35
   const ribs: ReactNode[] = []
   for (let x = -config.length / 2 + 0.18; x < config.length / 2; x += ribSpacing) {
-    ribs.push(<RoofRib key={'roof-rib-' + x.toFixed(2)} x={x} depth={roofDepth + 0.04} y={roofT / 2} />)
+    ribs.push(<RoofRib key={'roof-rib-' + x.toFixed(2)} x={x} depth={roofDepth + 0.04} y={roofT / 2} color={roofColor} />)
   }
 
   const joints: ReactNode[] = []
@@ -638,31 +1143,52 @@ function RoofSystem({ config }: Props) {
   }
 
   return (
-    <group position={[0, centerY, 0]} rotation={[-slope, 0, 0]}>
-      <Box
-        size={[config.length + 0.06, roofT, roofDepth + 0.06]}
-        position={[0, 0, 0]}
-        color={roofColor}
-        metalness={0.10}
-        roughness={0.58}
-      />
-      {config.roofProfile === 'trapezoid' && ribs}
-      {joints}
-      <Box
-        size={[config.length + 0.10, 0.045, 0.055]}
-        position={[0, roofT / 2 + 0.020, roofDepth / 2 + 0.020]}
-        color={roofColor}
-        metalness={0.18}
-        roughness={0.44}
-      />
-      <Box
-        size={[config.length + 0.10, 0.045, 0.055]}
-        position={[0, roofT / 2 + 0.020, -roofDepth / 2 - 0.020]}
-        color={roofColor}
-        metalness={0.18}
-        roughness={0.44}
-      />
-    </group>
+    <>
+      <group position={[0, centerY, 0]} rotation={[-slope, 0, 0]}>
+        <Box
+          size={[config.length + 0.08, roofT, roofDepth + 0.08]}
+          position={[0, 0, 0]}
+          color={roofColor}
+          metalness={0.34}
+          roughness={0.48}
+          envMapIntensity={1.05}
+        />
+        {config.roofProfile === 'trapezoid' && ribs}
+        {joints}
+        <Box
+          size={[config.length + 0.12, 0.034, 0.070]}
+          position={[0, roofT / 2 + 0.014, roofDepth / 2 + 0.028]}
+          color={roofColor}
+          metalness={0.42}
+          roughness={0.40}
+        />
+        <Box
+          size={[config.length + 0.12, 0.034, 0.070]}
+          position={[0, roofT / 2 + 0.014, -roofDepth / 2 - 0.028]}
+          color={roofColor}
+          metalness={0.42}
+          roughness={0.40}
+        />
+        {config.gutter && (
+          <mesh position={[0, -roofT / 2 - 0.015, -roofDepth / 2 - 0.045]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <cylinderGeometry args={[0.035, 0.035, config.length + 0.10, 14]} />
+            <meshStandardMaterial color="#24282a" metalness={0.42} roughness={0.42} />
+          </mesh>
+        )}
+      </group>
+      {config.gutter && (
+        <group position={[config.length / 2 - 0.08, outerBack / 2 - 0.10, -config.width / 2 - 0.045]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.030, 0.030, Math.max(0.5, outerBack - 0.22), 14]} />
+            <meshStandardMaterial color="#24282a" metalness={0.42} roughness={0.42} />
+          </mesh>
+          <mesh position={[0, -(outerBack - 0.22) / 2 - 0.05, 0.045]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+            <torusGeometry args={[0.055, 0.028, 10, 20, Math.PI / 2]} />
+            <meshStandardMaterial color="#24282a" metalness={0.42} roughness={0.42} />
+          </mesh>
+        </group>
+      )}
+    </>
   )
 }
 
@@ -756,14 +1282,32 @@ function SlopedCeiling({ config }: Props) {
 
 function ExteriorHVAC({ config }: Props) {
   if (!config.airConditioning) return null
-  const color = config.hvacColor === 'white' ? '#e7e7e3' : config.hvacColor === 'black' ? '#17191b' : '#596168'
+  const color = config.hvacColor === 'white' ? '#e8e8e3' : config.hvacColor === 'black' ? '#1b1d1f' : '#5d656b'
+  const blades = Array.from({ length: 12 }, (_, i) => {
+    const a = (Math.PI * 2 * i) / 12
+    return (
+      <Box
+        key={'fan-' + i}
+        size={[0.015, 0.13, 0.012]}
+        position={[Math.cos(a) * 0.07, Math.sin(a) * 0.07, 0.145]}
+        rotation={[0, 0, a]}
+        color="#313538"
+        metalness={0.28}
+        roughness={0.38}
+      />
+    )
+  })
   return (
-    <group position={[config.length / 2 + 0.22, 0.58, -config.width / 2 + 0.58]} rotation={[0, Math.PI / 2, 0]}>
-      <Box size={[0.72, 0.52, 0.22]} position={[0, 0, 0]} color={color} metalness={0.12} roughness={0.48} />
-      <mesh position={[0, 0, 0.125]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.18, 0.18, 0.025, 32]} />
-        <meshStandardMaterial color="#262a2d" metalness={0.18} roughness={0.42} />
+    <group position={[config.length / 2 + 0.20, 0.58, -config.width / 2 + 0.58]} rotation={[0, Math.PI / 2, 0]}>
+      <RoundedPiece size={[0.70, 0.50, 0.22]} position={[0, 0, 0]} color={color} metalness={0.20} roughness={0.48} radius={0.035} />
+      <mesh position={[0, 0, 0.133]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.175, 0.012, 10, 36]} />
+        <meshStandardMaterial color="#3a3e41" metalness={0.28} roughness={0.42} />
       </mesh>
+      {blades}
+      <Box size={[0.48, 0.018, 0.012]} position={[0, -0.20, 0.135]} color="#b8bcbd" metalness={0.45} roughness={0.34} />
+      <Box size={[0.08, 0.06, 0.016]} position={[0.26, 0.16, 0.136]} color="#aeb3b5" metalness={0.18} roughness={0.50} />
+      <Box size={[0.62, 0.035, 0.08]} position={[0, -0.30, -0.045]} color="#33373a" metalness={0.44} roughness={0.42} />
     </group>
   )
 }
@@ -881,114 +1425,176 @@ function fallbackGeometry(config: PavilionConfig): ProjectGeometry {
   }
 
   const decor: DecorPlacement[] = []
-  const fieldHeight = 2.24
-  const fieldY = 1.30
-  const sideSpace = Math.max(0.45, Math.min(1.25, (config.length - Math.min(total, config.length - 0.5)) / 2 - 0.12))
-  const leftCenter = -config.length / 2 + sideSpace / 2 + 0.16
-  const rightCenter = config.length / 2 - sideSpace / 2 - 0.16
+  const enabledSides = (['front', 'back', 'left', 'right'] as WallSide[]).filter((side) => {
+    return side === 'front' ? config.facadeFront :
+      side === 'back' ? config.facadeBack :
+      side === 'left' ? config.facadeLeft : config.facadeRight
+  })
+  const fullDecorKind: DecorPlacement['kind'] | null =
+    config.facade === 'lamella-winchester' ? 'lamella-winchester' :
+    config.facade === 'lamella-black' ? 'lamella-black' :
+    config.facade === 'lamella-diagonal-winchester' ? 'lamella-diagonal-winchester' :
+    config.facade === 'wood-horizontal' ? 'board-horizontal-winchester' :
+    config.facade === 'ornament-panel' ? 'ornament-panel' : null
 
-  if (config.facade === 'cassette-lamella' || config.facade === 'lamella-winchester') {
+  if (fullDecorKind) {
+    const { outerFront, outerBack } = envelope(config)
+    for (const side of enabledSides) {
+      const span = side === 'front' || side === 'back' ? config.length : config.width
+      const h = side === 'front' ? outerFront : side === 'back' ? outerBack : (outerFront + outerBack) / 2
+      decor.push({
+        id: 'custom-full-' + side,
+        wall: side,
+        center: 0,
+        width: span,
+        yCenter: h / 2,
+        height: h,
+        kind: fullDecorKind,
+        sourceAccuracy: 'drawing-estimate',
+      })
+    }
+  } else if (config.facade === 'cassette-lamella' && config.facadeFront) {
+    const fieldHeight = Math.min(2.40, envelope(config).outerFront - 0.18)
+    const groupWidth = Math.min(total, config.length - 0.50)
+    const sideSpace = Math.max(0.38, Math.min(1.10, (config.length - groupWidth) / 2 - 0.10))
+    if (sideSpace > 0.20) {
+      decor.push(
+        { id:'custom-l', wall:'front', center:-config.length / 2 + sideSpace / 2 + 0.05, width:sideSpace, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'lamella-winchester', sourceAccuracy:'drawing-estimate' },
+        { id:'custom-r', wall:'front', center:config.length / 2 - sideSpace / 2 - 0.05, width:sideSpace, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'lamella-winchester', sourceAccuracy:'drawing-estimate' },
+      )
+    }
+  } else if (config.facade === 'silver-rectangle' && config.facadeFront) {
+    const fieldHeight = Math.min(2.40, envelope(config).outerFront - 0.18)
     decor.push(
-      { id:'custom-l', wall:'front', center:leftCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'lamella-winchester' },
-      { id:'custom-r', wall:'front', center:rightCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'lamella-winchester' },
-    )
-  } else if (config.facade === 'lamella-black') {
-    decor.push(
-      { id:'custom-l', wall:'front', center:leftCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'lamella-black' },
-      { id:'custom-r', wall:'front', center:rightCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'lamella-black' },
-    )
-  } else if (config.facade === 'cassette-graphite') {
-    decor.push(
-      { id:'custom-l', wall:'front', center:leftCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'cassette-square-graphite' },
-      { id:'custom-r', wall:'front', center:rightCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'cassette-square-graphite' },
-    )
-  } else if (config.facade === 'cassette-black') {
-    decor.push(
-      { id:'custom-l', wall:'front', center:leftCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'cassette-black' },
-      { id:'custom-r', wall:'front', center:rightCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'cassette-black' },
-    )
-  } else if (config.facade === 'silver-rectangle') {
-    decor.push(
-      { id:'custom-l', wall:'front', center:leftCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'silver-rect' },
-      { id:'custom-r', wall:'front', center:rightCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'silver-rect' },
+      { id:'custom-silver-l', wall:'front', center:-config.length / 2 + 0.50, width:0.82, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'silver-rect', sourceAccuracy:'drawing-estimate' },
+      { id:'custom-silver-r', wall:'front', center:config.length / 2 - 0.50, width:0.82, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'silver-rect', sourceAccuracy:'drawing-estimate' },
     )
   }
 
-  return { externalHeight: envelope(config).outerFront, openings, decor }
+  return { externalHeight: envelope(config).outerFront, foundationGap: 0.12, openings, decor }
 }
 
 function ProjectPavilion({ config }: Props) {
   const geometry = config.geometry ?? fallbackGeometry(config)
   const transparent = config.showInterior || config.showStructure
   const opacity = transparent ? 0.20 : 1
+  const foundationGap = geometry.foundationGap ?? 0.12
 
   return (
     <group>
-      <FloorSystem config={config} />
-      <Wall side="front" config={config} geometry={geometry} opacity={opacity} />
-      <Wall side="back" config={config} geometry={geometry} opacity={opacity} />
-      <Wall side="left" config={config} geometry={geometry} opacity={opacity} />
-      <Wall side="right" config={config} geometry={geometry} opacity={opacity} />
-      <RoofSystem config={config} />
-      {config.showStructure && <Structure config={config} />}
-      <Interior config={config} />
-      <ExteriorHVAC config={config} />
+      <FoundationSupports config={config} geometry={geometry} />
+      <group position={[0, foundationGap, 0]}>
+        <FloorSystem config={config} />
+        <Wall side="front" config={config} geometry={geometry} opacity={opacity} />
+        <Wall side="back" config={config} geometry={geometry} opacity={opacity} />
+        <Wall side="left" config={config} geometry={geometry} opacity={opacity} />
+        <Wall side="right" config={config} geometry={geometry} opacity={opacity} />
+        <FacadeCladdingFromModel config={config} />
+        {config.project !== 'GALERIA/03' && <RoofSystem config={config} />}
+        {config.showStructure && <Structure config={config} />}
+        <Interior config={config} />
+        <ExteriorHVAC config={config} />
+      </group>
     </group>
   )
 }
 
+function RealExportBridge() {
+  const gl = useThree((state) => state.gl)
+  const scene = useThree((state) => state.scene)
+  const camera = useThree((state) => state.camera)
+
+  useEffect(() => {
+    const root = window as typeof window & { __DAMPOL3D_REAL_CAPTURE__?: () => string }
+    root.__DAMPOL3D_REAL_CAPTURE__ = () => {
+      gl.render(scene, camera)
+      return gl.domElement.toDataURL('image/png')
+    }
+    return () => {
+      delete root.__DAMPOL3D_REAL_CAPTURE__
+    }
+  }, [gl, scene, camera])
+
+  return null
+}
+
 export default function Pavilion3D({ config, view = 'perspective' }: Props) {
-  const cameraDistance = Math.max(9.5, config.length * 1.35)
+  const gallery03 = config.project === 'GALERIA/03'
+  const cameraDistance = Math.max(9.0, config.length * 1.28)
   const { outerFront, outerBack } = envelope(config)
-  const targetHeight = (outerFront + outerBack) * 0.24
-  const cameraHeight = targetHeight + 1.25
+  const targetHeight = gallery03 ? 1.30 : Math.min(1.34, (outerFront + outerBack) * 0.245)
+  const cameraHeight = gallery03 ? 1.28 : 1.68
   const cameraPosition: [number, number, number] =
+    gallery03 && view === 'perspective' ? [-2.05, 1.28, 7.45] :
     view === 'front' ? [0, cameraHeight, cameraDistance] :
     view === 'back' ? [0, cameraHeight, -cameraDistance] :
     view === 'left' ? [-cameraDistance, cameraHeight, 0] :
     view === 'right' ? [cameraDistance, cameraHeight, 0] :
-    [cameraDistance * 0.62, 3.35, cameraDistance]
+    view === 'front-left' ? [-cameraDistance * 0.50, 1.72, cameraDistance * 0.92] :
+    view === 'front-right' ? [cameraDistance * 0.50, 1.72, cameraDistance * 0.92] :
+    [cameraDistance * 0.52, 1.78, cameraDistance * 0.94]
 
   return (
     <Canvas
       shadows
-      dpr={[1, 2]}
-      camera={{ position: cameraPosition, fov: 27 }}
+      dpr={[1, 1.75]}
+      camera={{ position: cameraPosition, fov: gallery03 ? 37 : 32 }}
+      onCreated={({ gl }) => {
+        gl.toneMapping = ACESFilmicToneMapping
+        gl.toneMappingExposure = 1.18
+        gl.outputColorSpace = SRGBColorSpace
+      }}
     >
-      <color attach="background" args={['#e7e7e3']} />
-      <ambientLight intensity={0.82} />
+      <SoftShadows size={24} samples={10} focus={0.55} />
+      <color attach="background" args={['#dfe2e2']} />
+      <fog attach="fog" args={['#d6dde0', 20, 46]} />
+      <Sky
+        distance={450000}
+        sunPosition={[10, 5, 8]}
+        turbidity={5.2}
+        rayleigh={2.2}
+        mieCoefficient={0.0038}
+        mieDirectionalG={0.80}
+      />
+      <hemisphereLight color="#f1f6f8" groundColor="#aaa49a" intensity={0.72} />
+      <ambientLight intensity={0.44} />
       <directionalLight
-        position={[7, 10, 8]}
-        intensity={2.15}
+        position={[8, 10, 7]}
+        intensity={2.65}
+        color="#fff7ea"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
+        shadow-bias={-0.00018}
       />
-      <directionalLight position={[-7, 5, -5]} intensity={0.55} />
+      <directionalLight position={[-8, 5, -3]} intensity={0.26} color="#c9d9ea" />
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, 0]} receiveShadow>
-        <planeGeometry args={[42, 42]} />
-        <meshStandardMaterial color="#e3e1dc" roughness={1} />
-      </mesh>
+      <PhotoEnvironment />
 
+      <RealExportBridge />
       <ProjectPavilion config={config} />
 
       <ContactShadows
-        position={[0, 0.005, 0]}
-        opacity={0.34}
+        position={[0, 0.004, 0]}
+        opacity={0.38}
         scale={26}
-        blur={3.2}
-        far={12}
+        blur={2.6}
+        far={10}
       />
-      <Environment preset="city" />
+      <Environment resolution={128}>
+        <Lightformer form="rect" intensity={1.8} color="#eef5ff" position={[0, 7, -8]} scale={[12, 5, 1]} />
+        <Lightformer form="rect" intensity={1.35} color="#e9f2f6" position={[0, 3.2, 8]} scale={[10, 4.5, 1]} rotation={[0, Math.PI, 0]} />
+        <Lightformer form="rect" intensity={1.15} color="#fff3de" position={[8, 4, 5]} scale={[5, 5, 1]} rotation={[0, -Math.PI / 2, 0]} />
+        <Lightformer form="rect" intensity={0.9} color="#d9e7f2" position={[-8, 3, 2]} scale={[5, 4, 1]} rotation={[0, Math.PI / 2, 0]} />
+      </Environment>
 
       <OrbitControls
         makeDefault
-        target={[0, targetHeight, 0]}
-        minDistance={Math.max(6.5, config.length * 0.82)}
+        target={gallery03 ? [0.08, 1.25, 0] : [0, targetHeight, 0]}
+        minDistance={Math.max(6.3, config.length * 0.78)}
         maxDistance={Math.max(24, config.length * 2.4)}
-        minPolarAngle={Math.PI * 0.20}
-        maxPolarAngle={Math.PI * 0.48}
+        minPolarAngle={Math.PI * 0.25}
+        maxPolarAngle={Math.PI * 0.50}
         enablePan={false}
         enableDamping
         dampingFactor={0.08}

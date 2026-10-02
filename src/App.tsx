@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Pavilion3D, { type PavilionView } from './Pavilion3D'
+import TechnicalPavilion3D, { type ClipAxis, type TechnicalView } from './TechnicalPavilion3D'
 import { PRESETS } from './presets'
 import { buildBom, validateConfig } from './logic'
+import { buildComponentModel, CATEGORY_COLORS, componentModelToCsv, type ComponentCategory } from './components'
 import {
   CONSTRUCTION_LABELS,
   DEFAULT_CONFIG,
@@ -15,6 +17,31 @@ import {
 import './App.css'
 
 type Setter = <K extends keyof PavilionConfig>(key: K, value: PavilionConfig[K]) => void
+
+type SceneMode = 'realistic' | 'technical'
+
+const CATEGORY_LABELS: Record<ComponentCategory, string> = {
+  'floor-frame': 'Rama podłogi',
+  structure: 'Konstrukcja nośna',
+  'corner-posts': 'Słupy narożne',
+  'roof-beams': 'Belki / płatwie dachowe',
+  'floor-panels': 'Panele podłogowe',
+  'wall-panels': 'Panele ścienne',
+  'roof-panels': 'Panele dachowe',
+  flashings: 'Obróbki blacharskie',
+  joinery: 'Stolarka ALU / PVC',
+  decor: 'Okładziny dekoracyjne',
+  fasteners: 'Łączniki / wkręty / nity',
+  seals: 'Uszczelnienia / taśmy',
+  installations: 'Instalacje',
+  interior: 'Wykończenie wnętrza',
+}
+
+const CATEGORY_KEYS = Object.keys(CATEGORY_LABELS) as ComponentCategory[]
+
+const DEFAULT_CATEGORY_VISIBILITY = Object.fromEntries(
+  CATEGORY_KEYS.map((key) => [key, true]),
+) as Record<ComponentCategory, boolean>
 
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
@@ -152,13 +179,19 @@ function ConfigControls({ config, update }: { config: PavilionConfig; update: Se
           </label>
         </div>
         <Select label="Styl elewacji" value={config.facade} onChange={(v) => update('facade', v)} options={[
-          { value: 'plain', label: 'Bez dekoru / gładka' },
+          { value: 'plain', label: 'Goły panel PIR / techniczny' },
           { value: 'cassette-graphite', label: 'Kaseton grafit' },
           { value: 'cassette-black', label: 'Kaseton czarny mat' },
           { value: 'lamella-winchester', label: 'Lamele Winchester' },
           { value: 'lamella-black', label: 'Lamele czarne' },
+          { value: 'lamella-diagonal-winchester', label: 'Lamele ukośne · Winchester' },
           { value: 'cassette-lamella', label: 'Kaseton + lamele' },
           { value: 'silver-rectangle', label: 'Srebrny prostokąt' },
+          { value: 'cassette-horizontal', label: 'Kasetony poziome · fuga cieniowa' },
+          { value: 'cassette-grid', label: 'Kasetony · siatka prostokątna' },
+          { value: 'vertical-ribbed', label: 'Blacha pionowa · wysoki profil' },
+          { value: 'wood-horizontal', label: 'Deska drewnopodobna · pozioma' },
+          { value: 'ornament-panel', label: 'Panel ażurowy · ornament' },
         ]} />
         <div className="toggle-pair">
           <Toggle label="Front" checked={config.facadeFront} onChange={(v) => update('facadeFront', v)} />
@@ -281,10 +314,62 @@ function initialConfig(): PavilionConfig {
 export default function App() {
   const [config, setConfig] = useState<PavilionConfig>(initialConfig)
   const [sceneKey, setSceneKey] = useState(0)
-  const [viewMode, setViewMode] = useState<PavilionView>('perspective')
+  const [viewMode, setViewMode] = useState<PavilionView>(() => {
+    const value = new URLSearchParams(window.location.search).get('rview') as PavilionView | null
+    const allowed: PavilionView[] = ['perspective', 'front', 'front-left', 'front-right', 'left', 'right', 'back']
+    return value && allowed.includes(value) ? value : 'perspective'
+  })
+  const [sceneMode, setSceneMode] = useState<SceneMode>(() =>
+    new URLSearchParams(window.location.search).get('mode') === 'technical' ? 'technical' : 'realistic',
+  )
+  const [technicalView, setTechnicalView] = useState<TechnicalView>(() => {
+    const value = new URLSearchParams(window.location.search).get('view') as TechnicalView | null
+    const allowed: TechnicalView[] = ['axon', 'front', 'side', 'top', 'perspective', 'detail-a', 'detail-b', 'detail-c', 'detail-d']
+    return value && allowed.includes(value) ? value : 'axon'
+  })
+  const [exploded, setExploded] = useState(() => {
+    const value = Number(new URLSearchParams(window.location.search).get('explode') ?? 0)
+    return Math.max(0, Math.min(1, value > 1 ? value / 100 : value))
+  })
+  const [assemblyStage, setAssemblyStage] = useState(() => {
+    const value = Number(new URLSearchParams(window.location.search).get('stage') ?? 12)
+    return Math.max(1, Math.min(12, Number.isFinite(value) ? value : 12))
+  })
+  const [playingAssembly, setPlayingAssembly] = useState(false)
+  const [categoryVisibility, setCategoryVisibility] = useState<Record<ComponentCategory, boolean>>({ ...DEFAULT_CATEGORY_VISIBILITY })
+  const [selectedId, setSelectedId] = useState<string>()
+  const [hoveredId, setHoveredId] = useState<string>()
+  const [isolatedId, setIsolatedId] = useState<string>()
+  const [showDimensions, setShowDimensions] = useState(() => new URLSearchParams(window.location.search).get('dims') !== '0')
+  const [showBalloons, setShowBalloons] = useState(() => new URLSearchParams(window.location.search).get('balloons') === '1')
+  const [clipAxis, setClipAxis] = useState<ClipAxis>(() => {
+    const value = new URLSearchParams(window.location.search).get('clip')
+    return value === 'x' || value === 'y' || value === 'z' ? value : 'none'
+  })
+  const [clipOffset, setClipOffset] = useState(() => Number(new URLSearchParams(window.location.search).get('clipOffset') ?? 0) || 0)
 
+  const componentModel = useMemo(() => buildComponentModel(config), [config])
   const validation = useMemo(() => validateConfig(config), [config])
   const bom = useMemo(() => buildBom(config), [config])
+  const selectedComponent = useMemo(
+    () => componentModel.components.find((item) => item.id === selectedId),
+    [componentModel, selectedId],
+  )
+
+  useEffect(() => {
+    if (!playingAssembly) return
+    const timer = window.setInterval(() => {
+      setAssemblyStage((stage) => {
+        if (stage >= 12) {
+          window.clearInterval(timer)
+          setPlayingAssembly(false)
+          return 12
+        }
+        return stage + 1
+      })
+    }, 650)
+    return () => window.clearInterval(timer)
+  }, [playingAssembly])
 
   const stats = useMemo(() => {
     const floorT = PANEL_THICKNESS_M[config.floorPanel]
@@ -325,18 +410,63 @@ export default function App() {
     if (!preset) return
     setConfig({ ...preset.config })
     setViewMode('perspective')
+    if (id === 'galeria-03') setSceneMode('realistic')
+    setTechnicalView('axon')
+    setSelectedId(undefined)
+    setHoveredId(undefined)
+    setIsolatedId(undefined)
+    setExploded(0)
+    setAssemblyStage(12)
     setSceneKey((value) => value + 1)
   }
 
-  const exportConfig = () => {
-    const payload = JSON.stringify({ version: 3, generatedAt: new Date().toISOString(), config, validation, bom }, null, 2)
-    const blob = new Blob([payload], { type: 'application/json' })
+  const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = 'pawilon-' + config.project.replaceAll('/', '-') + '.json'
+    link.download = filename
     link.click()
     URL.revokeObjectURL(url)
+  }
+
+  const exportConfig = () => {
+    const payload = JSON.stringify({
+      version: 6,
+      generatedAt: new Date().toISOString(),
+      config,
+      validation,
+      bom,
+      componentModel,
+    }, null, 2)
+    downloadBlob(
+      new Blob([payload], { type: 'application/json' }),
+      'pawilon-' + config.project.replaceAll('/', '-') + '-components.json',
+    )
+  }
+
+  const exportCsv = () => {
+    downloadBlob(
+      new Blob(['\uFEFF' + componentModelToCsv(componentModel)], { type: 'text/csv;charset=utf-8' }),
+      'pawilon-' + config.project.replaceAll('/', '-') + '-bom.csv',
+    )
+  }
+
+  const exportPng = () => {
+    const root = window as typeof window & {
+      __DAMPOL3D_CAPTURE__?: () => string
+      __DAMPOL3D_REAL_CAPTURE__?: () => string
+    }
+    const canvas = document.querySelector<HTMLCanvasElement>('.canvas-wrap canvas')
+    if (!canvas) return
+    const link = document.createElement('a')
+    link.download = 'pawilon-' + config.project.replaceAll('/', '-') + '-' + sceneMode + '.png'
+    link.href =
+      sceneMode === 'technical' && root.__DAMPOL3D_CAPTURE__
+        ? root.__DAMPOL3D_CAPTURE__()
+        : sceneMode === 'realistic' && root.__DAMPOL3D_REAL_CAPTURE__
+          ? root.__DAMPOL3D_REAL_CAPTURE__()
+          : canvas.toDataURL('image/png')
+    link.click()
   }
 
   return (
@@ -344,9 +474,9 @@ export default function App() {
       <header className="topbar">
         <div>
           <div className="brand-row"><span className="brand-mark">D</span><strong>DAMPOL 3D</strong></div>
-          <p>Konfigurator techniczno-sprzedażowy · 14 projektów referencyjnych</p>
+          <p>Konfigurator techniczno-sprzedażowy · 15 projektów referencyjnych</p>
         </div>
-        <span className="status-pill">V4</span>
+        <span className="status-pill">V6</span>
       </header>
 
       <section className="preset-bar">
@@ -374,39 +504,250 @@ export default function App() {
             <div className="viewer-toolbar">
               <div>
                 <strong>{config.length.toFixed(2)} × {config.width.toFixed(2)} m · zew. {stats.outerFront.toFixed(2)}→{stats.outerBack.toFixed(2)} m · wew. {config.frontHeight.toFixed(2)}→{config.backHeight.toFixed(2)} m</strong>
-                <small>obrót: LPM · zoom: kółko · podgląd wnętrza przełącza przezroczystość ścian</small>
+                <small>{sceneMode === 'realistic' ? 'widok realistyczny · obrót LPM · zoom kółko' : 'widok techniczny 3D · BOM i scena z jednego modelu danych'}</small>
+              </div>
+              <div className="mode-switch">
+                <button className={sceneMode === 'realistic' ? 'active' : ''} onClick={() => setSceneMode('realistic')}>Realistyczny</button>
+                <button className={sceneMode === 'technical' ? 'active' : ''} onClick={() => setSceneMode('technical')}>Rozbiórka / techniczny</button>
+              </div>
+            </div>
+
+            <div className="viewer-toolbar sub-toolbar">
+              <div className="viewer-actions">
+                {sceneMode === 'realistic' ? (
+                  <>
+                    {([
+                      ['perspective', 'Perspektywa'],
+                      ['front', 'Front'],
+                      ['left', 'Lewy'],
+                      ['right', 'Prawy'],
+                      ['back', 'Tył'],
+                    ] as Array<[PavilionView, string]>).map(([view, label]) => (
+                      <button
+                        key={view}
+                        className={viewMode === view ? 'active' : ''}
+                        onClick={() => { setViewMode(view); setSceneKey((v) => v + 1) }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    {([
+                      ['axon', 'Aksonometria'],
+                      ['front', 'Front'],
+                      ['side', 'Bok'],
+                      ['top', 'Góra'],
+                      ['perspective', 'Perspektywa'],
+                    ] as Array<[TechnicalView, string]>).map(([view, label]) => (
+                      <button key={view} className={technicalView === view ? 'active' : ''} onClick={() => setTechnicalView(view)}>{label}</button>
+                    ))}
+                  </>
+                )}
               </div>
               <div className="viewer-actions">
-                {([
-                  ['perspective', 'Perspektywa'],
-                  ['front', 'Front'],
-                  ['left', 'Lewy'],
-                  ['right', 'Prawy'],
-                  ['back', 'Tył'],
-                ] as Array<[PavilionView, string]>).map(([view, label]) => (
-                  <button
-                    key={view}
-                    className={viewMode === view ? 'active' : ''}
-                    onClick={() => { setViewMode(view); setSceneKey((v) => v + 1) }}
-                  >
-                    {label}
-                  </button>
-                ))}
-                <button onClick={() => { setViewMode('perspective'); setSceneKey((v) => v + 1) }}>Reset widoku</button>
+                <button onClick={exportPng}>PNG</button>
+                <button onClick={exportCsv}>CSV BOM</button>
+                <button onClick={exportConfig}>JSON</button>
               </div>
             </div>
-            <div className="canvas-wrap">
-              <Pavilion3D key={sceneKey} config={config} view={viewMode} />
-            </div>
+
+            {sceneMode === 'technical' && (
+              <div className="tech-controls">
+                <label className="range-control">
+                  <span>Rozsunięcie <strong>{Math.round(exploded * 100)}%</strong></span>
+                  <input type="range" min="0" max="1" step="0.01" value={exploded} onChange={(e) => setExploded(Number(e.target.value))} />
+                </label>
+                <label className="range-control">
+                  <span>Etap montażu <strong>{assemblyStage}/12</strong></span>
+                  <input type="range" min="1" max="12" step="1" value={assemblyStage} onChange={(e) => setAssemblyStage(Number(e.target.value))} />
+                </label>
+                <button
+                  className="play-button"
+                  onClick={() => {
+                    if (!playingAssembly) setAssemblyStage(1)
+                    setPlayingAssembly((v) => !v)
+                  }}
+                >{playingAssembly ? 'Stop' : '▶ Odtwórz montaż'}</button>
+                <label className="mini-toggle"><input type="checkbox" checked={showDimensions} onChange={(e) => setShowDimensions(e.target.checked)} /> Wymiary</label>
+                <label className="mini-toggle"><input type="checkbox" checked={showBalloons} onChange={(e) => setShowBalloons(e.target.checked)} /> Balony poz.</label>
+                <label className="clip-control">
+                  <span>Przekrój</span>
+                  <select value={clipAxis} onChange={(e) => setClipAxis(e.target.value as ClipAxis)}>
+                    <option value="none">Wył.</option>
+                    <option value="x">X</option>
+                    <option value="y">Y</option>
+                    <option value="z">Z</option>
+                  </select>
+                </label>
+                {clipAxis !== 'none' && (
+                  <label className="range-control compact">
+                    <span>Płaszczyzna {clipAxis.toUpperCase()} <strong>{clipOffset.toFixed(2)} m</strong></span>
+                    <input
+                      type="range"
+                      min={-Math.max(config.length, config.width, 4)}
+                      max={Math.max(config.length, config.width, 4)}
+                      step="0.05"
+                      value={clipOffset}
+                      onChange={(e) => setClipOffset(Number(e.target.value))}
+                    />
+                  </label>
+                )}
+              </div>
+            )}
+
+            {sceneMode === 'realistic' ? (
+              config.project === 'GALERIA/03' ? (
+                <div className="gallery-compare">
+                  <figure className="gallery-reference-pane">
+                    <img src="./reference/gallery-03.jpg" alt="Zdjęcie referencyjne 03 z galerii Dampol" />
+                    <figcaption>ZDJĘCIE 03 · REFERENCJA</figcaption>
+                  </figure>
+                  <div className="gallery-render-pane">
+                    <div className="gallery-pane-label">RENDER · GALERIA-03</div>
+                    <div className="canvas-wrap gallery-render-canvas">
+                      <Pavilion3D key={sceneKey} config={config} view={viewMode} />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="canvas-wrap">
+                  <Pavilion3D key={sceneKey} config={config} view={viewMode} />
+                </div>
+              )
+            ) : (
+              <div className="technical-workspace">
+                <aside className="technical-tree">
+                  <div className="tech-pane-title">
+                    <strong>Elementy</strong>
+                    <small>{componentModel.metrics.componentCount} obiektów</small>
+                  </div>
+                  <div className="category-tree">
+                    {CATEGORY_KEYS.map((category) => {
+                      const items = componentModel.components.filter((item) => item.category === category)
+                      return (
+                        <details key={category} open={category !== 'fasteners'}>
+                          <summary>
+                            <span className="category-dot" style={{ background: CATEGORY_COLORS[category] }} />
+                            <input
+                              type="checkbox"
+                              checked={categoryVisibility[category]}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => setCategoryVisibility((current) => ({ ...current, [category]: e.target.checked }))}
+                            />
+                            <span>{CATEGORY_LABELS[category]}</span>
+                            <small>{items.length}</small>
+                          </summary>
+                          <div className="tree-items">
+                            {items.map((item) => (
+                              <button
+                                key={item.id}
+                                className={(selectedId === item.id ? 'selected ' : '') + (hoveredId === item.id ? 'hovered' : '')}
+                                onMouseEnter={() => setHoveredId(item.id)}
+                                onMouseLeave={() => setHoveredId(undefined)}
+                                onClick={() => setSelectedId(item.id)}
+                              >
+                                <b>{item.positionNo}</b>
+                                <span>{item.namePL}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </details>
+                      )
+                    })}
+                  </div>
+                </aside>
+
+                <div className="canvas-wrap technical-canvas">
+                  <TechnicalPavilion3D
+                    key={technicalView}
+                    config={config}
+                    model={componentModel}
+                    exploded={exploded}
+                    assemblyStage={assemblyStage}
+                    categoryVisibility={categoryVisibility}
+                    selectedId={selectedId}
+                    hoveredId={hoveredId}
+                    isolatedId={isolatedId}
+                    view={technicalView}
+                    showDimensions={showDimensions}
+                    showBalloons={showBalloons}
+                    clipAxis={clipAxis}
+                    clipOffset={clipOffset}
+                    onSelect={setSelectedId}
+                    onHover={setHoveredId}
+                  />
+                  <div className="drawing-title-block">
+                    <strong>DAMPOL · {config.project}</strong>
+                    <span>{Math.round(config.length * 1000)}×{Math.round(config.width * 1000)} mm</span>
+                    <span>{technicalView.toUpperCase()} · 3D TECH</span>
+                  </div>
+                </div>
+
+                <aside className="technical-inspector">
+                  <div className="tech-pane-title"><strong>Karta elementu</strong></div>
+                  {selectedComponent ? (
+                    <div className="component-card">
+                      <div className="position-chip">POZ. {selectedComponent.positionNo}</div>
+                      <h3>{selectedComponent.namePL}</h3>
+                      <dl>
+                        <dt>Kategoria</dt><dd>{CATEGORY_LABELS[selectedComponent.category]}</dd>
+                        <dt>Materiał</dt><dd>{selectedComponent.material}</dd>
+                        <dt>Kolor / RAL</dt><dd>{selectedComponent.ral ?? selectedComponent.color}</dd>
+                        <dt>Wymiary</dt>
+                        <dd>{selectedComponent.dimensions.lengthMm} × {selectedComponent.dimensions.widthMm} × {selectedComponent.dimensions.thicknessMm} mm</dd>
+                        {selectedComponent.dimensions.developedWidthMm && <><dt>Rozwinięcie</dt><dd>{selectedComponent.dimensions.developedWidthMm} mm</dd></>}
+                        <dt>Ilość</dt><dd>{selectedComponent.quantity} szt.</dd>
+                        {selectedComponent.massKg != null && <><dt>Masa</dt><dd>{selectedComponent.massKg.toFixed(2)} kg</dd></>}
+                        <dt>Etap</dt><dd>{selectedComponent.assemblyStage}/12</dd>
+                        <dt>Dokładność</dt><dd>{selectedComponent.sourceAccuracy}</dd>
+                      </dl>
+                      <div className="component-actions">
+                        <button onClick={() => setIsolatedId(isolatedId === selectedComponent.id ? undefined : selectedComponent.id)}>
+                          {isolatedId === selectedComponent.id ? 'Pokaż wszystko' : 'Izoluj'}
+                        </button>
+                        <button onClick={() => { setSelectedId(undefined); setIsolatedId(undefined) }}>Wyczyść</button>
+                      </div>
+                      {(selectedComponent.assumptionCodes?.length ?? 0) > 0 && (
+                        <div className="assumption-tags">{selectedComponent.assumptionCodes?.map((code) => <span key={code}>{code}</span>)}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="empty-selection">Kliknij element w modelu lub na liście, aby zobaczyć jego dane.</p>
+                  )}
+
+                  <div className="legend">
+                    <strong>Legenda</strong>
+                    {CATEGORY_KEYS.map((category) => (
+                      <span key={category}><i style={{ background: CATEGORY_COLORS[category] }} />{CATEGORY_LABELS[category]}</span>
+                    ))}
+                  </div>
+                </aside>
+              </div>
+            )}
+
+            {sceneMode === 'technical' && (
+              <div className="detail-toolbar">
+                {([
+                  ['detail-a', 'Detal A · narożnik ściana–dach'],
+                  ['detail-b', 'Detal B · osadzenie drzwi'],
+                  ['detail-c', 'Detal C · panel–rama podłogi'],
+                  ['detail-d', 'Detal D · attyka'],
+                ] as Array<[TechnicalView, string]>).map(([view, label]) => (
+                  <button key={view} className={technicalView === view ? 'active' : ''} onClick={() => setTechnicalView(view)}>{label}</button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="summary-grid">
-            <article><span>Podłoga</span><strong>{stats.floor.toFixed(1)} m²</strong><small>rzut</small></article>
-            <article><span>Ściany brutto</span><strong>{stats.walls.toFixed(1)} m²</strong><small>przed odjęciem otworów</small></article>
-            <article><span>Dach</span><strong>{stats.roof.toFixed(1)} m²</strong><small>po spadku</small></article>
-            <article><span>Spadek wewn.</span><strong>{stats.roofDrop} mm</strong><small>różnica przód / tył</small></article>
-            <article><span>Stolarka</span><strong>{stats.openings}</strong><small>elementów</small></article>
-            <article><span>BOM</span><strong>{bom.length}</strong><small>pozycji</small></article>
+            <article><span>Podłoga</span><strong>{componentModel.metrics.floorAreaM2.toFixed(1)} m²</strong><small>z modelu elementów</small></article>
+            <article><span>Ściany netto</span><strong>{componentModel.metrics.netWallAreaM2.toFixed(1)} m²</strong><small>po odjęciu otworów</small></article>
+            <article><span>Dach</span><strong>{componentModel.metrics.roofAreaM2.toFixed(1)} m²</strong><small>po spadku</small></article>
+            <article><span>Obróbki</span><strong>{componentModel.metrics.flashingLengthM.toFixed(1)} m</strong><small>łączna długość</small></article>
+            <article><span>Łączniki</span><strong>{componentModel.metrics.fastenerCount}</strong><small>wkręty / nity / kotwy</small></article>
+            <article><span>Elementy</span><strong>{componentModel.metrics.componentCount}</strong><small>obiektów 3D/BOM</small></article>
           </div>
 
           <div className="lower-grid">
@@ -414,13 +755,21 @@ export default function App() {
               <div className="card-head"><strong>Walidacja</strong></div>
               <div className="validation-list">
                 {validation.map((item, i) => <div key={i} className={'validation ' + item.level}><span>{item.level === 'error' ? '×' : item.level === 'warning' ? '!' : '✓'}</span>{item.message}</div>)}
+                <div className="validation ok"><span>✓</span>Model paneli ściennych: {componentModel.metrics.modeledWallPanelAreaM2.toFixed(2)} m² / wymagane netto {componentModel.metrics.netWallAreaM2.toFixed(2)} m².</div>
+                <div className={Math.abs(componentModel.metrics.modeledWallPanelAreaM2 - componentModel.metrics.netWallAreaM2) < 0.05 ? 'validation ok' : 'validation warning'}>
+                  <span>{Math.abs(componentModel.metrics.modeledWallPanelAreaM2 - componentModel.metrics.netWallAreaM2) < 0.05 ? '✓' : '!'}</span>
+                  Różnica powierzchni paneli: {Math.abs(componentModel.metrics.modeledWallPanelAreaM2 - componentModel.metrics.netWallAreaM2).toFixed(3)} m².
+                </div>
               </div>
             </section>
 
             <section className="info-card">
               <div className="card-head">
-                <strong>Wstępny BOM</strong>
-                <button onClick={exportConfig}>Eksport JSON</button>
+                <strong>BOM z modelu 3D</strong>
+                <div className="card-actions">
+                  <button onClick={exportCsv}>CSV</button>
+                  <button onClick={exportConfig}>JSON</button>
+                </div>
               </div>
               <div className="bom-wrap">
                 <table>
@@ -432,8 +781,12 @@ export default function App() {
           </div>
 
           <div className="development-note">
-            <strong>Zakres V3</strong>
-            <p>Konfigurator obejmuje parametry potwierdzone w projektach: konstrukcję, płyty, dach, podłogę, stolarkę i szyby, elewacje, elektrykę, hydraulikę, sanitariaty, aneks, HVAC, rolety i podstawowe wyposażenie. Ilości materiałów powierzchniowych i konstrukcyjnych oznaczone jako „szacunkowe” wymagają jeszcze docelowych reguł produkcyjnych.</p>
+            <strong>Założenia techniczne V5</strong>
+            <p>Pozycje oznaczone jako „assumption” nie są przedstawiane jako dane projektowe. Rozstaw łączników, rozwinięcia obróbek, masa blach i część położeń instalacji są jawnie parametryzowane i mogą zostać podmienione po dostarczeniu detali wykonawczych.</p>
+            <details>
+              <summary>Pokaż {componentModel.assumptions.length} założeń</summary>
+              <ul>{componentModel.assumptions.map((item) => <li key={item.code}><b>{item.code}</b> — {item.description}</li>)}</ul>
+            </details>
           </div>
         </section>
       </section>

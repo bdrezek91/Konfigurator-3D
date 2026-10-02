@@ -30,6 +30,31 @@ const p = (project: string, overrides: Partial<PavilionConfig>): PavilionConfig 
 
 export const PRESETS: PavilionPreset[] = [
   {
+    id: 'galeria-03',
+    label: 'galeria-03 · zdjęcie 03 · wzorzec 1:1',
+    source: 'reference/gallery/03-front-kasetony-poziome-zblizenie.jpg',
+    notes: 'Wzorzec kalibracyjny: najpierw dopasowujemy ten pawilon 1:1 do zdjęcia 03. Pomiary z POMIARY.md.',
+    config: p('GALERIA/03', {
+      length: 6.03, width: 2.96,
+      frontHeight: 2.62, backHeight: 2.62, roofSlope: 'flat',
+      construction: 'angle50',
+      wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      wallProfile: 'smooth', roofProfile: 'smooth',
+      interiorFinish: 'white', floorFinish: 'wood',
+      facade: 'cassette-horizontal',
+      facadeFront: true, facadeLeft: false, facadeRight: false, facadeBack: false,
+      exteriorColor: '#34495b', flashingColor: '#34495b',
+      glazing: 'double',
+      electrical: 'none', doubleSockets: 0, singleSockets: 0, ledCeiling: 0, switches: 0,
+      distributionBoard: false, externalConnection: false, externalLights: 0,
+      bathroom: false, toiletCompact: false, washbasin: false, shower: false,
+      boilerLiters: 0, heater: false, partitionWall: false, internalDoorCount: 0,
+      kitchen: false, kitchenWaterPoint: false,
+      airConditioning: false, hvacPower: 0, gutter: false, attic: true,
+      showStructure: false, showInterior: false,
+    }),
+  },
+  {
     id: '722-08-26',
     label: '722/08/26 · 6×3 · Ostrzeszów',
     source: 'projekt 722/08/26',
