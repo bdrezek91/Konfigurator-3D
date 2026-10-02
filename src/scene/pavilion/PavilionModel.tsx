@@ -5,7 +5,7 @@ import { facadeKindForWall } from '../facade/facadeKind'
 import { envelope, fallbackGeometry, makeWallShape, wallTransform } from '../geometry'
 import { Box, RoundedPiece } from '../materials/primitives'
 import { renderMetalColor } from '../materials/textures'
-import { profileNormalMap, surfaceProfileDef } from '../materials/profiles'
+import { profileNormalMap, ROOF_TRAPEZOIDS, surfaceProfileDef, type RoofTrapezoidDef } from '../materials/profiles'
 import { OpeningFrame } from '../openings/OpeningFrame'
 import { useLighting } from '../environment/lighting'
 import { type ReactNode } from 'react'
@@ -102,17 +102,23 @@ export function RoofRib({
   depth,
   y,
   color,
+  trapezoid,
 }: {
   x: number
   depth: number
   y: number
   color: string
+  trapezoid: RoofTrapezoidDef
 }) {
+  // przekrój żebra wg katalogu producenta [mm → m]
+  const b = trapezoid.baseMm / 2000
+  const t = trapezoid.topMm / 2000
+  const h = trapezoid.heightMm / 1000
   const shape = new Shape()
-  shape.moveTo(-0.060, 0)
-  shape.lineTo(-0.032, 0.045)
-  shape.lineTo(0.032, 0.045)
-  shape.lineTo(0.060, 0)
+  shape.moveTo(-b, 0)
+  shape.lineTo(-t, h)
+  shape.lineTo(t, h)
+  shape.lineTo(b, 0)
   shape.closePath()
 
   return (
@@ -127,10 +133,11 @@ export function RoofSystem({ config }: Props) {
   const { roofT, outerFront, outerBack, slope, roofDepth } = envelope(config)
   const centerY = (outerFront + outerBack) / 2 - roofT / 2
   const roofColor = renderMetalColor(config.flashingColor)
-  const ribSpacing = 0.35
+  const trapezoid = ROOF_TRAPEZOIDS[config.panelManufacturer]
+  const ribSpacing = trapezoid.pitchMm / 1000
   const ribs: ReactNode[] = []
   for (let x = -config.length / 2 + 0.18; x < config.length / 2; x += ribSpacing) {
-    ribs.push(<RoofRib key={'roof-rib-' + x.toFixed(2)} x={x} depth={roofDepth + 0.04} y={roofT / 2} color={roofColor} />)
+    ribs.push(<RoofRib key={'roof-rib-' + x.toFixed(2)} x={x} depth={roofDepth + 0.04} y={roofT / 2} color={roofColor} trapezoid={trapezoid} />)
   }
 
   const joints: ReactNode[] = []

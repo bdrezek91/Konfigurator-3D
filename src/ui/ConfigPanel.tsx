@@ -62,9 +62,9 @@ export function ConfigPanel({
       : config.panelManufacturer === 'balex'
         ? [
             { value: 'smooth' as const, label: 'Gładka (F)' },
-            { value: 'linear' as const, label: 'Liniowanie (L)' },
+            { value: 'linear' as const, label: 'Liniowane (L)' },
             { value: 'microline' as const, label: 'Mikroprofilowanie (M16)' },
-            { value: 'ribbed' as const, label: 'Głębokie liniowanie' },
+            { value: 'ribbed' as const, label: 'Pogłębione liniowanie (D)' },
           ]
         : Object.entries(SURFACE_PROFILE_LABELS)
             .filter(([value]) => value !== 'trapezoid')
