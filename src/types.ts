@@ -11,12 +11,27 @@ export type FacadeStyle =
   | 'lamella-black'
   | 'cassette-lamella'
   | 'silver-rectangle'
+  | 'cassette-horizontal'
+  | 'cassette-grid'
+  | 'vertical-ribbed'
+  | 'wood-horizontal'
+  | 'ornament-panel'
 export type GlazingType = 'double' | 'triple'
 export type ElectricalType = '1p230' | '3p400' | 'none'
 export type InteriorFinish = 'white' | 'concrete' | 'black' | 'oak' | 'walnut'
 export type FloorFinish = 'wood' | 'concrete' | 'other'
 export type HvacColor = 'white' | 'graphite' | 'black'
 export type WallSide = 'front' | 'back' | 'left' | 'right'
+export type FacadeCladdingKind = 'cassette-horizontal' | 'cassette-grid' | 'vertical-ribbed' | 'none'
+export type FacadeCladdingSpec = {
+  kind: FacadeCladdingKind
+  color?: string
+  gap?: number
+  bandHeight?: number
+  moduleWidth?: number
+  moduleHeight?: number
+  staggered?: boolean
+}
 export type OpeningKind = 'door-glazed' | 'door-full' | 'door-double' | 'fixed-glass' | 'alu-window' | 'pvc-window'
 export type DecorKind =
   | 'cassette-square-graphite'
@@ -33,6 +48,9 @@ export type DecorKind =
   | 'silver-rect'
   | 'steel-plate'
   | 'led-strip'
+  | 'lamella-diagonal-winchester'
+  | 'board-horizontal-winchester'
+  | 'ornament-panel'
 
 export type OpeningPlacement = {
   id: string
@@ -69,6 +87,9 @@ export type LightPlacement = {
 
 export type ProjectGeometry = {
   externalHeight: number
+  facadeCladding?: Partial<Record<WallSide, FacadeCladdingSpec>>
+  foundationGap?: number
+  roofEdgeFlashing?: boolean
   openings: OpeningPlacement[]
   decor: DecorPlacement[]
   exteriorLights?: LightPlacement[]

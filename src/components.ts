@@ -1,5 +1,6 @@
 import type {
   DecorPlacement,
+  FacadeCladdingSpec,
   OpeningPlacement,
   PavilionConfig,
   ProjectGeometry,
@@ -74,7 +75,7 @@ export type ModelComponent = {
   opening?: OpeningPlacement
   decor?: DecorPlacement
   parentId?: string
-  fastenerKind?: 'panel-wall' | 'panel-roof' | 'flashing' | 'rivet' | 'anchor'
+  fastenerKind?: 'panel-wall' | 'panel-roof' | 'flashing' | 'rivet' | 'anchor' | 'cladding'
 }
 
 export type ComponentModelMetrics = {
@@ -87,6 +88,10 @@ export type ComponentModelMetrics = {
   flashingLengthM: number
   fastenerCount: number
   componentCount: number
+  facadeCladdingAreaM2: number
+  facadeCladdingCount: number
+  cassetteAreaM2: number
+  cassetteCount: number
 }
 
 export type ComponentModel = {
@@ -159,6 +164,41 @@ const ASSUMPTIONS: ComponentAssumption[] = [
   {
     code: 'A-SEALS',
     description: 'Taśmy/uszczelnienia pokazano jako ciągłe pasy przy podwalinie, obwodzie stolarki i połączeniach dachu. Typ uszczelki należy podmienić wg detalu wykonawczego.',
+    source: 'assumption',
+  },
+  {
+    code: 'A-CASSETTE-LAYOUT',
+    description: 'Kasetony poziome: fuga cieniowa 12 mm, pas bazowy 400 mm, moduł poziomy 1200 mm z mijanką. Wartości wynikają ze zdjęć referencyjnych i wymagają potwierdzenia dokumentacją Dampol.',
+    source: 'assumption',
+  },
+  {
+    code: 'A-CASSETTE-SUBSTRUCTURE',
+    description: 'Podkonstrukcja kasetonów jest modelowana ilościowo pośrednio; jej przekroje, rozstaw szyn i sposób kotwienia wymagają danych produkcyjnych Dampol.',
+    source: 'assumption',
+  },
+  {
+    code: 'A-CASSETTE-FASTENERS',
+    description: 'Przyjęto 4 ukryte łączniki na kaseton/narożnik L. Rodzaj, liczba i rozstaw wkrętów/nitów wymagają potwierdzenia technologią Dampol.',
+    source: 'assumption',
+  },
+  {
+    code: 'A-CASSETTE-CORNER',
+    description: 'Kaseton narożny L przyjęto jako zawinięcie 150+150 mm z ciągłością fug poziomych. Szerokość zawinięcia wymaga rysunku gięcia.',
+    source: 'assumption',
+  },
+  {
+    code: 'A-CROWN-FLASHING',
+    description: 'Korona attyki: cienka obróbka o rozwinięciu 80 mm. Brak szerokiego okapu, chyba że projekt jawnie go wymaga.',
+    source: 'assumption',
+  },
+  {
+    code: 'A-FOUNDATION-BLOCKS',
+    description: 'Posadowienie pokazano na 6 bloczkach betonowych 400×200×120 mm i szczelinie około 120 mm pod ramą. Liczbę i wymiary należy potwierdzić dla konkretnego montażu.',
+    source: 'assumption',
+  },
+  {
+    code: 'A-RIBBED-FACADE',
+    description: 'Alternatywna blacha elewacyjna wysokoprofilowana: moduł modelowy 600 mm i pionowe żebra; dokładny profil i szerokość krycia wymagają wskazania produktu.',
     source: 'assumption',
   },
   {
@@ -550,6 +590,260 @@ function addRoofPanels(list: ModelComponent[], c: PavilionConfig) {
   }
 }
 
+
+function facadeEnabled(side: WallSide, c: PavilionConfig) {
+  return side === 'front' ? c.facadeFront :
+    side === 'back' ? c.facadeBack :
+    side === 'left' ? c.facadeLeft : c.facadeRight
+}
+
+function facadeSpecForSide(c: PavilionConfig, g: ProjectGeometry, side: WallSide): FacadeCladdingSpec | null {
+  const explicit = g.facadeCladding?.[side]
+  if (explicit) return explicit.kind === 'none' ? null : explicit
+  if (!facadeEnabled(side, c) || c.facade === 'plain') return null
+  if (c.facade === 'cassette-grid') {
+    return { kind: 'cassette-grid', gap: 0.012, moduleWidth: 0.80, moduleHeight: 0.65, color: c.exteriorColor }
+  }
+  if (c.facade === 'vertical-ribbed') {
+    return { kind: 'vertical-ribbed', gap: 0.008, moduleWidth: 0.60, color: c.exteriorColor }
+  }
+  return {
+    kind: 'cassette-horizontal',
+    gap: 0.012,
+    bandHeight: 0.40,
+    moduleWidth: 1.20,
+    staggered: true,
+    color: c.exteriorColor,
+  }
+}
+
+function visibleIntervalsForBand(
+  side: WallSide,
+  a: number,
+  b: number,
+  y0: number,
+  y1: number,
+  floorT: number,
+  g: ProjectGeometry,
+) {
+  const cuts = g.openings
+    .filter((o) => o.wall === side)
+    .filter((o) => {
+      const oy0 = floorT + openingSill(o)
+      const oy1 = oy0 + o.height
+      return Math.min(y1, oy1) - Math.max(y0, oy0) > 0.001
+    })
+    .map((o) => [o.center - o.width / 2, o.center + o.width / 2] as [number, number])
+    .sort((x, y) => x[0] - y[0])
+
+  const out: Array<[number, number]> = []
+  let cursor = a
+  for (const [c0, c1] of cuts) {
+    if (c1 <= cursor || c0 >= b) continue
+    const left = Math.max(a, c0)
+    if (left > cursor) out.push([cursor, Math.min(left, b)])
+    cursor = Math.max(cursor, c1)
+    if (cursor >= b) break
+  }
+  if (cursor < b) out.push([cursor, b])
+  return out.filter(([x0, x1]) => x1 - x0 > 0.025)
+}
+
+function pushFacadePiece(
+  list: ModelComponent[],
+  c: PavilionConfig,
+  side: WallSide,
+  id: string,
+  kind: FacadeCladdingSpec['kind'],
+  a: number,
+  b: number,
+  y0: number,
+  y1: number,
+  color: string,
+) {
+  const center = (a + b) / 2
+  const localTop = wallHeightAt(side, center, c)
+  const top = Math.min(y1, localTop)
+  const height = top - y0
+  const width = b - a
+  if (height <= 0.025 || width <= 0.025) return
+  const normal = wallNormal(side)
+  const p = wallPosition(side, center, y0 + height / 2, c)
+  const isRibbed = kind === 'vertical-ribbed'
+  list.push({
+    id,
+    positionNo: 0,
+    namePL: isRibbed ? 'Blacha elewacyjna wysokoprofilowana' : 'Kaseton elewacyjny',
+    category: 'decor',
+    primitive: 'decor',
+    material: isRibbed ? 'Blacha elewacyjna wysokoprofilowana' : 'Kaseton elewacyjny stalowy',
+    color,
+    ral: color,
+    dimensions: {
+      lengthMm: Math.round(height * 1000),
+      widthMm: Math.round(width * 1000),
+      thicknessMm: isRibbed ? 35 : 30,
+      netAreaM2: round(width * height),
+    },
+    quantity: 1,
+    position: [p[0] + normal[0] * 0.075, p[1], p[2] + normal[2] * 0.075],
+    rotation: wallRotation(side),
+    explodeDirection: [normal[0] * 1.4, 0.1, normal[2] * 1.4],
+    assemblyStage: 9,
+    wall: side,
+    sourceAccuracy: 'assumption',
+    assumptionCodes: isRibbed
+      ? ['A-RIBBED-FACADE', 'A-CASSETTE-SUBSTRUCTURE']
+      : ['A-CASSETTE-LAYOUT', 'A-CASSETTE-SUBSTRUCTURE'],
+  })
+}
+
+function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry) {
+  const { floorT } = envelope(c)
+  const sides: WallSide[] = ['front', 'back', 'left', 'right']
+
+  for (const side of sides) {
+    const spec = facadeSpecForSide(c, g, side)
+    if (!spec) continue
+    const span = wallSpan(side, c)
+    const gap = spec.gap ?? 0.012
+    const maxHeight = Math.max(wallHeightAt(side, -span / 2, c), wallHeightAt(side, span / 2, c))
+
+    if (spec.kind === 'vertical-ribbed') {
+      const moduleW = spec.moduleWidth ?? 0.60
+      const yBreaks = new Set<number>([0, maxHeight])
+      for (const o of g.openings.filter((x) => x.wall === side)) {
+        const oy0 = floorT + openingSill(o)
+        yBreaks.add(Math.max(0, oy0))
+        yBreaks.add(Math.min(maxHeight, oy0 + o.height))
+      }
+      const ys = [...yBreaks].filter((x) => x >= 0 && x <= maxHeight).sort((a, b) => a - b)
+      for (let col = 0, x0 = -span / 2; x0 < span / 2 - 0.001; col++, x0 += moduleW) {
+        const x1 = Math.min(span / 2, x0 + moduleW)
+        for (let row = 0; row < ys.length - 1; row++) {
+          const y0 = ys[row]
+          const y1 = ys[row + 1]
+          for (const [v0, v1] of visibleIntervalsForBand(side, x0, x1, y0, y1, floorT, g)) {
+            const shrink = gap / 2
+            pushFacadePiece(
+              list, c, side, 'facade-ribbed-' + side + '-' + col + '-' + row,
+              spec.kind, v0 + shrink, v1 - shrink, y0 + shrink, y1 - shrink, spec.color ?? c.exteriorColor,
+            )
+          }
+        }
+      }
+      continue
+    }
+
+    const bandH = spec.kind === 'cassette-grid'
+      ? (spec.moduleHeight ?? 0.65)
+      : (spec.bandHeight ?? 0.40)
+    const moduleW = spec.moduleWidth ?? (spec.kind === 'cassette-grid' ? 0.80 : 1.20)
+    const staggered = spec.kind === 'cassette-horizontal' && (spec.staggered ?? true)
+    const rows = Math.ceil(maxHeight / bandH)
+
+    for (let row = 0; row < rows; row++) {
+      const y0 = row * bandH
+      const y1 = Math.min(maxHeight, y0 + bandH)
+      const shift = staggered && row % 2 === 1 ? moduleW / 2 : 0
+      for (let col = -1, x0 = -span / 2 - shift; x0 < span / 2 - 0.001; col++, x0 += moduleW) {
+        const cell0 = Math.max(-span / 2, x0)
+        const cell1 = Math.min(span / 2, x0 + moduleW)
+        if (cell1 - cell0 <= 0.025) continue
+        const visible = visibleIntervalsForBand(side, cell0, cell1, y0, y1, floorT, g)
+        for (let part = 0; part < visible.length; part++) {
+          const [v0, v1] = visible[part]
+          const shrink = gap / 2
+          pushFacadePiece(
+            list, c, side, 'facade-cassette-' + side + '-' + row + '-' + col + '-' + part,
+            spec.kind, v0 + shrink, v1 - shrink, y0 + shrink, y1 - shrink, spec.color ?? c.exteriorColor,
+          )
+        }
+      }
+    }
+  }
+
+  const corners: Array<{
+    id: string
+    x: number
+    z: number
+    sides: [WallSide, WallSide]
+    direction: Vec3
+  }> = [
+    { id: 'fl', x: -c.length / 2, z: c.width / 2, sides: ['front', 'left'], direction: [-1, 0, 1] },
+    { id: 'fr', x: c.length / 2, z: c.width / 2, sides: ['front', 'right'], direction: [1, 0, 1] },
+    { id: 'bl', x: -c.length / 2, z: -c.width / 2, sides: ['back', 'left'], direction: [-1, 0, -1] },
+    { id: 'br', x: c.length / 2, z: -c.width / 2, sides: ['back', 'right'], direction: [1, 0, -1] },
+  ]
+
+  for (const corner of corners) {
+    const specs = corner.sides.map((side) => facadeSpecForSide(c, g, side)).filter(Boolean) as FacadeCladdingSpec[]
+    const cassetteSpec = specs.find((spec) => spec.kind === 'cassette-horizontal' || spec.kind === 'cassette-grid')
+    if (!cassetteSpec) continue
+    const bandH = cassetteSpec.kind === 'cassette-grid' ? (cassetteSpec.moduleHeight ?? 0.65) : (cassetteSpec.bandHeight ?? 0.40)
+    const gap = cassetteSpec.gap ?? 0.012
+    const h = Math.min(
+      wallHeightAt(corner.sides[0], corner.sides[0] === 'front' || corner.sides[0] === 'back' ? corner.x : corner.z, c),
+      wallHeightAt(corner.sides[1], corner.sides[1] === 'front' || corner.sides[1] === 'back' ? corner.x : corner.z, c),
+    )
+    const rows = Math.ceil(h / bandH)
+    for (let row = 0; row < rows; row++) {
+      const y0 = row * bandH
+      const y1 = Math.min(h, y0 + bandH)
+      const pieceH = Math.max(0.025, y1 - y0 - gap)
+      list.push({
+        id: 'corner-cassette-' + corner.id + '-' + row,
+        positionNo: 0,
+        namePL: 'Kaseton narożny L ' + corner.id.toUpperCase(),
+        category: 'decor',
+        primitive: 'decor',
+        material: 'Kaseton narożny L',
+        color: cassetteSpec.color ?? c.exteriorColor,
+        dimensions: {
+          lengthMm: Math.round(pieceH * 1000),
+          widthMm: 300,
+          thicknessMm: 30,
+          netAreaM2: round(pieceH * 0.30),
+        },
+        quantity: 1,
+        position: [corner.x, y0 + gap / 2 + pieceH / 2, corner.z],
+        rotation: [0, 0, 0],
+        explodeDirection: corner.direction,
+        assemblyStage: 9,
+        sourceAccuracy: 'assumption',
+        assumptionCodes: ['A-CASSETTE-LAYOUT', 'A-CASSETTE-CORNER', 'A-CASSETTE-SUBSTRUCTURE'],
+      })
+    }
+  }
+}
+
+function addFoundationBlocks(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry) {
+  const gap = g.foundationGap ?? 0.12
+  const xs = [-c.length / 2 + 0.45, 0, c.length / 2 - 0.45]
+  for (const z of [-c.width / 2 + 0.28, c.width / 2 - 0.28]) {
+    xs.forEach((x, i) => {
+      list.push({
+        id: 'foundation-block-' + (z > 0 ? 'f' : 'b') + '-' + i,
+        positionNo: 0,
+        namePL: 'Bloczek betonowy posadowienia',
+        category: 'structure',
+        primitive: 'beam',
+        material: 'Beton',
+        color: '#8d8d88',
+        dimensions: { lengthMm: 400, widthMm: 200, thicknessMm: 120 },
+        quantity: 1,
+        massKg: 18,
+        position: [x, -gap / 2, z],
+        rotation: [0, 0, 0],
+        explodeDirection: [0, -1, 0],
+        assemblyStage: 1,
+        sourceAccuracy: 'assumption',
+        assumptionCodes: ['A-FOUNDATION-BLOCKS'],
+      })
+    })
+  }
+}
+
 type FlashingInput = {
   id: string
   name: string
@@ -560,6 +854,7 @@ type FlashingInput = {
   direction: Vec3
   wall?: WallSide
   profile2Dmm: Array<[number, number]>
+  assumptionCodes?: string[]
 }
 
 function addFlashing(list: ModelComponent[], c: PavilionConfig, f: FlashingInput) {
@@ -587,7 +882,7 @@ function addFlashing(list: ModelComponent[], c: PavilionConfig, f: FlashingInput
     assemblyStage: 7,
     wall: f.wall,
     sourceAccuracy: 'assumption',
-    assumptionCodes: ['A-SHEET'],
+    assumptionCodes: ['A-SHEET', ...(f.assumptionCodes ?? [])],
     profile2Dmm: f.profile2Dmm,
   })
 }
@@ -595,8 +890,7 @@ function addFlashing(list: ModelComponent[], c: PavilionConfig, f: FlashingInput
 function addFlashings(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry) {
   const { floorT, outerFront, outerBack, roofDepth, roofSlope } = envelope(c)
   const hAvg = (outerFront + outerBack) / 2
-  const cornerProfile: Array<[number, number]> = [[0, 0], [125, 0], [125, 20], [20, 20], [20, 125], [0, 125]]
-  const topProfile: Array<[number, number]> = [[0, 0], [20, 0], [20, 245], [35, 245], [35, 280], [0, 280]]
+  const crownProfile: Array<[number, number]> = [[0, 0], [18, 0], [18, 45], [35, 45], [35, 80], [0, 80]]
   const roofEdgeProfile: Array<[number, number]> = [[0, 0], [25, 0], [25, 120], [45, 120], [45, 185], [0, 185]]
   const baseProfile: Array<[number, number]> = [[0, 0], [25, 0], [25, 110], [50, 110], [50, 155], [0, 155]]
   const jambProfile: Array<[number, number]> = [[0, 0], [20, 0], [20, 95], [40, 95], [40, 160], [0, 160]]
@@ -604,20 +898,20 @@ function addFlashings(list: ModelComponent[], c: PavilionConfig, g: ProjectGeome
 
   const x = c.length / 2
   const z = c.width / 2
-  addFlashing(list, c, { id: 'fl-corner-fl', name: 'Narożnik zewnętrzny FL', lengthM: outerFront, developedWidthM: 0.25, position: [-x, outerFront / 2, z], rotation: [0, 0, Math.PI / 2], direction: [-1, 0, 1], profile2Dmm: cornerProfile })
-  addFlashing(list, c, { id: 'fl-corner-fr', name: 'Narożnik zewnętrzny FR', lengthM: outerFront, developedWidthM: 0.25, position: [x, outerFront / 2, z], rotation: [0, 0, Math.PI / 2], direction: [1, 0, 1], profile2Dmm: cornerProfile })
-  addFlashing(list, c, { id: 'fl-corner-bl', name: 'Narożnik zewnętrzny BL', lengthM: outerBack, developedWidthM: 0.25, position: [-x, outerBack / 2, -z], rotation: [0, Math.PI, Math.PI / 2], direction: [-1, 0, -1], profile2Dmm: cornerProfile })
-  addFlashing(list, c, { id: 'fl-corner-br', name: 'Narożnik zewnętrzny BR', lengthM: outerBack, developedWidthM: 0.25, position: [x, outerBack / 2, -z], rotation: [0, Math.PI, Math.PI / 2], direction: [1, 0, -1], profile2Dmm: cornerProfile })
 
-  addFlashing(list, c, { id: 'fl-top-front', name: 'Attyka / pas górny front', lengthM: c.length, developedWidthM: 0.28, position: [0, outerFront - 0.14, z + 0.03], direction: [0, 0.4, 1], wall: 'front', profile2Dmm: topProfile })
-  addFlashing(list, c, { id: 'fl-top-back', name: 'Attyka / pas górny tył', lengthM: c.length, developedWidthM: 0.28, position: [0, outerBack - 0.14, -z - 0.03], rotation: [0, Math.PI, 0], direction: [0, 0.4, -1], wall: 'back', profile2Dmm: topProfile })
-  addFlashing(list, c, { id: 'fl-top-left', name: 'Attyka / pas górny bok lewy', lengthM: roofDepth, developedWidthM: 0.28, position: [-x - 0.03, hAvg - 0.14, 0], rotation: [-roofSlope, -Math.PI / 2, 0], direction: [-1, 0.4, 0], wall: 'left', profile2Dmm: topProfile })
-  addFlashing(list, c, { id: 'fl-top-right', name: 'Attyka / pas górny bok prawy', lengthM: roofDepth, developedWidthM: 0.28, position: [x + 0.03, hAvg - 0.14, 0], rotation: [-roofSlope, Math.PI / 2, 0], direction: [1, 0.4, 0], wall: 'right', profile2Dmm: topProfile })
+  // Zdjęcia referencyjne pokazują kasetony do samej góry i tylko cienką koronę attyki.
+  addFlashing(list, c, { id: 'fl-crown-front', name: 'Korona attyki front', lengthM: c.length, developedWidthM: 0.08, position: [0, outerFront, z + 0.025], direction: [0, 0.5, 1], wall: 'front', profile2Dmm: crownProfile, assumptionCodes: ['A-CROWN-FLASHING'] })
+  addFlashing(list, c, { id: 'fl-crown-back', name: 'Korona attyki tył', lengthM: c.length, developedWidthM: 0.08, position: [0, outerBack, -z - 0.025], rotation: [0, Math.PI, 0], direction: [0, 0.5, -1], wall: 'back', profile2Dmm: crownProfile, assumptionCodes: ['A-CROWN-FLASHING'] })
+  addFlashing(list, c, { id: 'fl-crown-left', name: 'Korona attyki bok lewy', lengthM: roofDepth, developedWidthM: 0.08, position: [-x - 0.025, hAvg, 0], rotation: [-roofSlope, -Math.PI / 2, 0], direction: [-1, 0.5, 0], wall: 'left', profile2Dmm: crownProfile, assumptionCodes: ['A-CROWN-FLASHING'] })
+  addFlashing(list, c, { id: 'fl-crown-right', name: 'Korona attyki bok prawy', lengthM: roofDepth, developedWidthM: 0.08, position: [x + 0.025, hAvg, 0], rotation: [-roofSlope, Math.PI / 2, 0], direction: [1, 0.5, 0], wall: 'right', profile2Dmm: crownProfile, assumptionCodes: ['A-CROWN-FLASHING'] })
 
-  addFlashing(list, c, { id: 'fl-roof-front', name: 'Opierzenie dachu front', lengthM: c.length, developedWidthM: 0.185, position: [0, outerFront, z + 0.04], direction: [0, 0.8, 1], profile2Dmm: roofEdgeProfile })
-  addFlashing(list, c, { id: 'fl-roof-back', name: 'Opierzenie dachu tył / okap', lengthM: c.length, developedWidthM: 0.185, position: [0, outerBack, -z - 0.04], direction: [0, 0.8, -1], profile2Dmm: roofEdgeProfile })
-  addFlashing(list, c, { id: 'fl-roof-left', name: 'Opierzenie dachu bok lewy', lengthM: roofDepth, developedWidthM: 0.185, position: [-x - 0.04, hAvg, 0], rotation: [-roofSlope, -Math.PI / 2, 0], direction: [-1, 0.8, 0], profile2Dmm: roofEdgeProfile })
-  addFlashing(list, c, { id: 'fl-roof-right', name: 'Opierzenie dachu bok prawy', lengthM: roofDepth, developedWidthM: 0.185, position: [x + 0.04, hAvg, 0], rotation: [-roofSlope, Math.PI / 2, 0], direction: [1, 0.8, 0], profile2Dmm: roofEdgeProfile })
+  // Szerokie opierzenie/okap występuje tylko wtedy, gdy projekt jawnie go wymaga.
+  if (g.roofEdgeFlashing) {
+    addFlashing(list, c, { id: 'fl-roof-front', name: 'Opierzenie dachu front', lengthM: c.length, developedWidthM: 0.185, position: [0, outerFront, z + 0.04], direction: [0, 0.8, 1], profile2Dmm: roofEdgeProfile })
+    addFlashing(list, c, { id: 'fl-roof-back', name: 'Opierzenie dachu tył / okap', lengthM: c.length, developedWidthM: 0.185, position: [0, outerBack, -z - 0.04], direction: [0, 0.8, -1], profile2Dmm: roofEdgeProfile })
+    addFlashing(list, c, { id: 'fl-roof-left', name: 'Opierzenie dachu bok lewy', lengthM: roofDepth, developedWidthM: 0.185, position: [-x - 0.04, hAvg, 0], rotation: [-roofSlope, -Math.PI / 2, 0], direction: [-1, 0.8, 0], profile2Dmm: roofEdgeProfile })
+    addFlashing(list, c, { id: 'fl-roof-right', name: 'Opierzenie dachu bok prawy', lengthM: roofDepth, developedWidthM: 0.185, position: [x + 0.04, hAvg, 0], rotation: [-roofSlope, Math.PI / 2, 0], direction: [1, 0.8, 0], profile2Dmm: roofEdgeProfile })
+  }
 
   const baseY = Math.max(0.05, floorT / 2)
   ;(['front', 'back', 'left', 'right'] as WallSide[]).forEach((side) => {
@@ -668,28 +962,6 @@ function addFlashings(list: ModelComponent[], c: PavilionConfig, g: ProjectGeome
       const latest = list[list.length - 1]
       latest.sourceAccuracy = source
       latest.parentId = 'joinery-' + opening.id
-    }
-  }
-
-  for (const side of ['front', 'back', 'left', 'right'] as WallSide[]) {
-    const span = wallSpan(side, c)
-    const joints = Math.max(0, Math.ceil(span / WALL_MODULE_M) - 1)
-    for (let i = 1; i <= joints; i++) {
-      const local = -span / 2 + i * WALL_MODULE_M
-      const h = wallHeightAt(side, local, c)
-      const p = wallPosition(side, local, h / 2, c)
-      const sideRot = wallRotation(side)
-      addFlashing(list, c, {
-        id: 'fl-joint-' + side + '-' + i,
-        name: 'Listwa łączenia paneli ' + side + ' ' + i,
-        lengthM: h,
-        developedWidthM: 0.12,
-        position: p,
-        rotation: [0, sideRot[1], Math.PI / 2],
-        direction: wallNormal(side),
-        wall: side,
-        profile2Dmm: [[0, 0], [20, 0], [20, 80], [40, 80], [40, 120], [0, 120]],
-      })
     }
   }
 
@@ -971,6 +1243,36 @@ function addFasteners(list: ModelComponent[], c: PavilionConfig) {
     }
   }
 
+  const facadeParts = list.filter((x) =>
+    x.category === 'decor' &&
+    (x.id.startsWith('facade-cassette-') || x.id.startsWith('corner-cassette-') || x.id.startsWith('facade-ribbed-'))
+  )
+  for (const part of facadeParts) {
+    const count = part.id.startsWith('facade-ribbed-') ? 6 : 4
+    const normal = part.wall ? wallNormal(part.wall) : part.explodeDirection
+    for (let i = 0; i < count; i++) {
+      const sx = i % 2 === 0 ? -0.28 : 0.28
+      const sy = i < 2 ? -0.28 : 0.28
+      const pos: Vec3 = [
+        part.position[0] + (part.wall === 'front' || part.wall === 'back' ? sx * part.dimensions.widthMm / 1000 : 0),
+        part.position[1] + sy * part.dimensions.lengthMm / 1000,
+        part.position[2] + (part.wall === 'left' || part.wall === 'right' ? sx * part.dimensions.widthMm / 1000 : 0),
+      ]
+      list.push(fastenerComponent(
+        'cladding-fastener-' + part.id + '-' + i,
+        'Łącznik okładziny — ' + part.namePL,
+        'cladding',
+        pos,
+        part.rotation,
+        [normal[0] * 1.5, 0.1, normal[2] * 1.5],
+        10,
+        part.color,
+        part.id,
+        ['A-CASSETTE-FASTENERS'],
+      ))
+    }
+  }
+
   const frameParts = list.filter((x) => x.category === 'floor-frame' || x.category === 'corner-posts' || x.category === 'roof-beams')
   for (const part of frameParts.filter((_, i) => i % 2 === 0)) {
     list.push(fastenerComponent(
@@ -1052,12 +1354,14 @@ function assignPositionNumbers(components: ModelComponent[]) {
 export function buildComponentModel(c: PavilionConfig): ComponentModel {
   const components: ModelComponent[] = []
   const g = geometryOf(c)
+  addFoundationBlocks(components, c, g)
   addFloorFrame(components, c)
   addCornerPosts(components, c)
   addRoofStructure(components, c)
   addFloorPanels(components, c)
   addWallPanels(components, c, g)
   addRoofPanels(components, c)
+  addFacadeCladding(components, c, g)
   addFlashings(components, c, g)
   addJoinery(components, c, g)
   addDecor(components, c, g)
@@ -1077,6 +1381,13 @@ export function buildComponentModel(c: PavilionConfig): ComponentModel {
     .filter((x) => x.category === 'flashings')
     .reduce((sum, x) => sum + x.dimensions.lengthMm / 1000, 0)
   const fastenerCount = components.filter((x) => x.category === 'fasteners').length
+  const facadeParts = components.filter((x) =>
+    x.category === 'decor' &&
+    (x.id.startsWith('facade-cassette-') || x.id.startsWith('corner-cassette-') || x.id.startsWith('facade-ribbed-'))
+  )
+  const cassetteParts = facadeParts.filter((x) => x.material === 'Kaseton elewacyjny stalowy' || x.material === 'Kaseton narożny L')
+  const facadeCladdingArea = facadeParts.reduce((sum, x) => sum + (x.dimensions.netAreaM2 ?? 0), 0)
+  const cassetteArea = cassetteParts.reduce((sum, x) => sum + (x.dimensions.netAreaM2 ?? 0), 0)
 
   return {
     components,
@@ -1091,6 +1402,10 @@ export function buildComponentModel(c: PavilionConfig): ComponentModel {
       flashingLengthM: round(flashingLength),
       fastenerCount,
       componentCount: components.length,
+      facadeCladdingAreaM2: round(facadeCladdingArea),
+      facadeCladdingCount: facadeParts.length,
+      cassetteAreaM2: round(cassetteArea),
+      cassetteCount: cassetteParts.length,
     },
   }
 }

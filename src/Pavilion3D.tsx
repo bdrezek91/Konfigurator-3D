@@ -10,6 +10,7 @@ import {
   type ProjectGeometry,
   type WallSide,
 } from './types'
+import { buildComponentModel } from './components'
 
 export type PavilionView = 'perspective' | 'front' | 'front-left' | 'front-right' | 'left' | 'right' | 'back'
 type Props = { config: PavilionConfig; view?: PavilionView }
@@ -523,6 +524,113 @@ function PanelProfileLocal({
   return <>{out}</>
 }
 
+function facadeKindForWall(side: WallSide, config: PavilionConfig, geometry: ProjectGeometry) {
+  const explicit = geometry.facadeCladding?.[side]
+  if (explicit) return explicit.kind
+  const enabled = side === 'front' ? config.facadeFront : side === 'back' ? config.facadeBack : side === 'left' ? config.facadeLeft : config.facadeRight
+  if (!enabled || config.facade === 'plain') return 'none'
+  if (config.facade === 'vertical-ribbed') return 'vertical-ribbed'
+  if (config.facade === 'cassette-grid') return 'cassette-grid'
+  return 'cassette-horizontal'
+}
+
+function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) {
+  const model = useMemo(() => buildComponentModel(config), [config])
+  const pieces = model.components.filter((item) =>
+    item.category === 'decor' &&
+    (item.id.startsWith('facade-cassette-') || item.id.startsWith('corner-cassette-') || item.id.startsWith('facade-ribbed-'))
+  )
+
+  return (
+    <>
+      {pieces.map((item) => {
+        const h = item.dimensions.lengthMm / 1000
+        const w = item.dimensions.widthMm / 1000
+        const depth = item.dimensions.thicknessMm / 1000
+        const color = renderMetalColor(item.color)
+
+        if (item.id.startsWith('corner-cassette-')) {
+          const left = item.id.includes('-fl-') || item.id.includes('-bl-')
+          const front = item.id.includes('-fl-') || item.id.includes('-fr-')
+          const sx = left ? 1 : -1
+          const sz = front ? -1 : 1
+          return (
+            <group key={item.id} position={item.position}>
+              <RoundedPiece
+                size={[0.15, h, depth]}
+                position={[sx * 0.075, 0, front ? 0.010 : -0.010]}
+                color={color}
+                metalness={0.38}
+                roughness={0.48}
+                radius={0.003}
+              />
+              <RoundedPiece
+                size={[depth, h, 0.15]}
+                position={[left ? -0.010 : 0.010, 0, sz * 0.075]}
+                color={color}
+                metalness={0.38}
+                roughness={0.48}
+                radius={0.003}
+              />
+            </group>
+          )
+        }
+
+        if (item.id.startsWith('facade-ribbed-')) {
+          const ribs: ReactNode[] = []
+          for (let x = -w / 2 + 0.06; x < w / 2; x += 0.12) {
+            ribs.push(
+              <Box key={item.id + '-rib-' + x.toFixed(3)} size={[0.018, h, 0.055]} position={[x, 0, 0.020]} color={color} metalness={0.36} roughness={0.50} />,
+            )
+          }
+          return (
+            <group key={item.id} position={item.position} rotation={item.rotation}>
+              <Box size={[w, h, 0.018]} position={[0, 0, 0]} color={color} metalness={0.34} roughness={0.52} />
+              {ribs}
+            </group>
+          )
+        }
+
+        return (
+          <group key={item.id} position={item.position} rotation={item.rotation}>
+            <RoundedPiece
+              size={[w, h, depth]}
+              position={[0, 0, 0]}
+              color={color}
+              metalness={0.38}
+              roughness={0.48}
+              radius={0.003}
+            />
+          </group>
+        )
+      })}
+    </>
+  )
+}
+
+function FoundationSupports({ config, geometry }: { config: PavilionConfig; geometry: ProjectGeometry }) {
+  const gap = geometry.foundationGap ?? 0.12
+  const xs = [-config.length / 2 + 0.45, 0, config.length / 2 - 0.45]
+  return (
+    <>
+      {[-config.width / 2 + 0.28, config.width / 2 - 0.28].flatMap((z) =>
+        xs.map((x, i) => (
+          <RoundedPiece
+            key={'foundation-' + z + '-' + i}
+            size={[0.40, 0.12, 0.20]}
+            position={[x, 0.06, z]}
+            color="#888983"
+            roughness={0.92}
+            radius={0.012}
+          />
+        )),
+      )}
+      <Box size={[config.length, 0.10, 0.10]} position={[0, gap - 0.05, config.width / 2 - 0.05]} color="#15191b" metalness={0.32} roughness={0.55} />
+      <Box size={[config.length, 0.10, 0.10]} position={[0, gap - 0.05, -config.width / 2 + 0.05]} color="#15191b" metalness={0.32} roughness={0.55} />
+    </>
+  )
+}
+
 function DecorLocal({
   decor,
   openings,
@@ -832,32 +940,36 @@ function Wall({
   const { floorT } = envelope(config)
   const depth = PANEL_THICKNESS_M[config.wallPanel]
   const shape = makeWallShape(side, config, transform.span, openings)
+  const facadeKind = facadeKindForWall(side, config, geometry)
+  const hasCladding = facadeKind !== 'none'
 
   return (
     <group position={transform.position} rotation={transform.rotation}>
       <mesh position={[0, 0, -depth / 2]} castShadow receiveShadow>
         <extrudeGeometry args={[shape, { depth, bevelEnabled: false, steps: 1 }]} />
         <meshStandardMaterial
-          color={renderMetalColor(config.exteriorColor)}
-          metalness={0.38}
-          roughness={0.50}
-          normalMap={panelNormalTexture(config.wallProfile)}
+          color={hasCladding ? '#202528' : renderMetalColor(config.exteriorColor)}
+          metalness={hasCladding ? 0.20 : 0.38}
+          roughness={hasCladding ? 0.68 : 0.50}
+          normalMap={hasCladding ? undefined : panelNormalTexture(config.wallProfile)}
           normalScale={[0.18, 0.18]}
-          envMapIntensity={1.05}
+          envMapIntensity={hasCladding ? 0.55 : 1.05}
           transparent={opacity < 1}
           opacity={opacity}
         />
       </mesh>
 
-      <PanelProfileLocal
-        side={side}
-        span={transform.span}
-        config={config}
-        openings={openings}
-        wallDepth={depth}
-      />
+      {!hasCladding && (
+        <PanelProfileLocal
+          side={side}
+          span={transform.span}
+          config={config}
+          openings={openings}
+          wallDepth={depth}
+        />
+      )}
 
-      <DampolFrameLocal side={side} span={transform.span} config={config} wallDepth={depth} />
+      {!hasCladding && <DampolFrameLocal side={side} span={transform.span} config={config} wallDepth={depth} />}
 
       <DecorLocal
         decor={decor}
@@ -1261,18 +1373,23 @@ function ProjectPavilion({ config }: Props) {
   const geometry = config.geometry ?? fallbackGeometry(config)
   const transparent = config.showInterior || config.showStructure
   const opacity = transparent ? 0.20 : 1
+  const foundationGap = geometry.foundationGap ?? 0.12
 
   return (
     <group>
-      <FloorSystem config={config} />
-      <Wall side="front" config={config} geometry={geometry} opacity={opacity} />
-      <Wall side="back" config={config} geometry={geometry} opacity={opacity} />
-      <Wall side="left" config={config} geometry={geometry} opacity={opacity} />
-      <Wall side="right" config={config} geometry={geometry} opacity={opacity} />
-      <RoofSystem config={config} />
-      {config.showStructure && <Structure config={config} />}
-      <Interior config={config} />
-      <ExteriorHVAC config={config} />
+      <FoundationSupports config={config} geometry={geometry} />
+      <group position={[0, foundationGap, 0]}>
+        <FloorSystem config={config} />
+        <Wall side="front" config={config} geometry={geometry} opacity={opacity} />
+        <Wall side="back" config={config} geometry={geometry} opacity={opacity} />
+        <Wall side="left" config={config} geometry={geometry} opacity={opacity} />
+        <Wall side="right" config={config} geometry={geometry} opacity={opacity} />
+        <FacadeCladdingFromModel config={config} />
+        <RoofSystem config={config} />
+        {config.showStructure && <Structure config={config} />}
+        <Interior config={config} />
+        <ExteriorHVAC config={config} />
+      </group>
     </group>
   )
 }
