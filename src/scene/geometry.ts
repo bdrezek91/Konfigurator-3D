@@ -1,4 +1,5 @@
-import { PANEL_THICKNESS_M, type DecorPlacement, type OpeningPlacement, type PavilionConfig, type ProjectGeometry, type WallSide } from '../types'
+import { fallbackGeometry as componentFallbackGeometry } from '../components'
+import { PANEL_THICKNESS_M, type OpeningPlacement, type PavilionConfig, type ProjectGeometry, type WallSide } from '../types'
 import { Path, Shape } from 'three'
 
 export function envelope(config: PavilionConfig) {
@@ -111,122 +112,7 @@ export function overlapsOpening(
 }
 
 
+/** Wspólna z BOM geometria dla konfiguracji własnej (components.ts). */
 export function fallbackGeometry(config: PavilionConfig): ProjectGeometry {
-  const openings: OpeningPlacement[] = []
-  const itemWidths: number[] = []
-  for (let i = 0; i < config.fixedGlazingCount; i++) itemWidths.push(config.fixedGlazingWidth)
-  for (let i = 0; i < config.aluDoorCount; i++) itemWidths.push(config.aluDoorWidth)
-  for (let i = 0; i < config.aluWindowCount; i++) itemWidths.push(config.aluWindowWidth)
-
-  const total = itemWidths.reduce((a, b) => a + b, 0) + Math.max(0, itemWidths.length - 1) * 0.10
-  let cursor = -Math.min(total, config.length - 0.45) / 2
-
-  for (let i = 0; i < config.fixedGlazingCount; i++) {
-    const center = cursor + config.fixedGlazingWidth / 2
-    openings.push({
-      id: 'fg' + i,
-      wall: 'front',
-      center,
-      width: config.fixedGlazingWidth,
-      height: config.fixedGlazingHeight,
-      sill: 0.08,
-      kind: 'fixed-glass',
-      glazing: config.glazing,
-      roller: config.rollers && i < config.rollerCount,
-    })
-    cursor += config.fixedGlazingWidth + 0.10
-  }
-
-  for (let i = 0; i < config.aluDoorCount; i++) {
-    const center = cursor + config.aluDoorWidth / 2
-    openings.push({
-      id: 'ad' + i,
-      wall: 'front',
-      center,
-      width: config.aluDoorWidth,
-      height: config.aluDoorHeight,
-      sill: 0,
-      kind: 'door-glazed',
-      glazing: config.glazing,
-      roller: config.rollers && config.fixedGlazingCount + i < config.rollerCount,
-    })
-    cursor += config.aluDoorWidth + 0.10
-  }
-
-  for (let i = 0; i < config.aluWindowCount; i++) {
-    const center = cursor + config.aluWindowWidth / 2
-    openings.push({
-      id: 'aw' + i,
-      wall: 'front',
-      center,
-      width: config.aluWindowWidth,
-      height: config.aluWindowHeight,
-      sill: 0.08,
-      kind: 'alu-window',
-      glazing: config.glazing,
-    })
-    cursor += config.aluWindowWidth + 0.10
-  }
-
-  for (let i = 0; i < config.pvcWindowCount; i++) {
-    openings.push({
-      id: 'pvc' + i,
-      wall: 'left',
-      center: (i - (config.pvcWindowCount - 1) / 2) * 0.75,
-      width: config.pvcWindowWidth,
-      height: config.pvcWindowHeight,
-      sill: 1.35,
-      kind: 'pvc-window',
-      glazing: config.glazing,
-    })
-  }
-
-  const decor: DecorPlacement[] = []
-  const enabledSides = (['front', 'back', 'left', 'right'] as WallSide[]).filter((side) => {
-    return side === 'front' ? config.facadeFront :
-      side === 'back' ? config.facadeBack :
-      side === 'left' ? config.facadeLeft : config.facadeRight
-  })
-  const fullDecorKind: DecorPlacement['kind'] | null =
-    config.facade === 'lamella-winchester' ? 'lamella-winchester' :
-    config.facade === 'lamella-black' ? 'lamella-black' :
-    config.facade === 'lamella-diagonal-winchester' ? 'lamella-diagonal-winchester' :
-    config.facade === 'wood-horizontal' ? 'board-horizontal-winchester' :
-    config.facade === 'ornament-panel' ? 'ornament-panel' : null
-
-  if (fullDecorKind) {
-    const { outerFront, outerBack } = envelope(config)
-    for (const side of enabledSides) {
-      const span = side === 'front' || side === 'back' ? config.length : config.width
-      const h = side === 'front' ? outerFront : side === 'back' ? outerBack : (outerFront + outerBack) / 2
-      decor.push({
-        id: 'custom-full-' + side,
-        wall: side,
-        center: 0,
-        width: span,
-        yCenter: h / 2,
-        height: h,
-        kind: fullDecorKind,
-        sourceAccuracy: 'drawing-estimate',
-      })
-    }
-  } else if (config.facade === 'cassette-lamella' && config.facadeFront) {
-    const fieldHeight = Math.min(2.40, envelope(config).outerFront - 0.18)
-    const groupWidth = Math.min(total, config.length - 0.50)
-    const sideSpace = Math.max(0.38, Math.min(1.10, (config.length - groupWidth) / 2 - 0.10))
-    if (sideSpace > 0.20) {
-      decor.push(
-        { id:'custom-l', wall:'front', center:-config.length / 2 + sideSpace / 2 + 0.05, width:sideSpace, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'lamella-winchester', sourceAccuracy:'drawing-estimate' },
-        { id:'custom-r', wall:'front', center:config.length / 2 - sideSpace / 2 - 0.05, width:sideSpace, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'lamella-winchester', sourceAccuracy:'drawing-estimate' },
-      )
-    }
-  } else if (config.facade === 'silver-rectangle' && config.facadeFront) {
-    const fieldHeight = Math.min(2.40, envelope(config).outerFront - 0.18)
-    decor.push(
-      { id:'custom-silver-l', wall:'front', center:-config.length / 2 + 0.50, width:0.82, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'silver-rect', sourceAccuracy:'drawing-estimate' },
-      { id:'custom-silver-r', wall:'front', center:config.length / 2 - 0.50, width:0.82, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'silver-rect', sourceAccuracy:'drawing-estimate' },
-    )
-  }
-
-  return { externalHeight: envelope(config).outerFront, foundationGap: 0.12, openings, decor }
+  return componentFallbackGeometry(config)
 }

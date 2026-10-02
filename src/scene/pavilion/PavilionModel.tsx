@@ -6,6 +6,7 @@ import { envelope, fallbackGeometry, makeWallShape, wallTransform } from '../geo
 import { Box, RoundedPiece } from '../materials/primitives'
 import { panelNormalTexture, renderMetalColor } from '../materials/textures'
 import { OpeningFrame } from '../openings/OpeningFrame'
+import { useLighting } from '../environment/lighting'
 import { type ReactNode } from 'react'
 import { Shape } from 'three'
 
@@ -28,6 +29,7 @@ export function Wall({
   const legacyFacadeKinds = new Set(['cassette-black', 'cassette-square-graphite', 'cassette-rect-graphite', 'cassette-white'])
   const decor = geometry.decor.filter((x) => x.wall === side && !(facadeKind !== 'none' && legacyFacadeKinds.has(x.kind)))
   const lights = geometry.exteriorLights?.filter((x) => x.wall === side) ?? []
+  const lampK = useLighting().lampIntensity
   const { floorT } = envelope(config)
   const depth = PANEL_THICKNESS_M[config.wallPanel]
   const shape = makeWallShape(side, config, transform.span, openings)
@@ -82,9 +84,9 @@ export function Wall({
           <RoundedPiece size={[0.13, 0.22, 0.07]} position={[0, 0, 0]} color="#202426" metalness={0.34} roughness={0.40} radius={0.012} />
           <mesh position={[0, 0, 0.044]}>
             <boxGeometry args={[0.074, 0.125, 0.018]} />
-            <meshStandardMaterial color="#ffe8ad" emissive="#f2c96b" emissiveIntensity={1.25} roughness={0.24} />
+            <meshStandardMaterial color="#ffe8ad" emissive="#f2c96b" emissiveIntensity={0.6 + lampK * 1.4} roughness={0.24} />
           </mesh>
-          <pointLight position={[0, -0.03, 0.10]} color="#ffd58a" intensity={0.22} distance={1.6} decay={2} />
+          <pointLight position={[0, -0.03, 0.10]} color="#ffd58a" intensity={lampK * 0.9} distance={lampK > 1 ? 3.2 : 1.6} decay={2} />
         </group>
       ))}
     </group>

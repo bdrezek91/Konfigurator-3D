@@ -1,8 +1,15 @@
 import { useTexture } from '@react-three/drei'
 import { useEffect, useMemo } from 'react'
 import { RepeatWrapping, SRGBColorSpace, Shape, type Texture } from 'three'
+import type { PavilionConfig } from '../../types'
 
-export function GalleryGround() {
+/**
+ * Grunt PBR: trawa z kamieniami (Poly Haven, CC0) + opaska żwirowa wokół pawilonu.
+ * Dla galerii-03 kształt opaski odwzorowuje zdjęcie 03; dla pozostałych projektów
+ * jest liczony z gabarytu pawilonu.
+ */
+export function Ground({ config }: { config: PavilionConfig }) {
+  const gallery03 = config.project === 'GALERIA/03'
   const [
     grassDiffuse,
     grassNormal,
@@ -41,16 +48,31 @@ export function GalleryGround() {
 
   const gravelShape = useMemo(() => {
     const shape = new Shape()
-    shape.moveTo(-5.0, -0.75)
-    shape.lineTo(5.0, -0.70)
-    shape.lineTo(4.6, 0.62)
-    shape.lineTo(2.6, 0.48)
-    shape.lineTo(0.3, 0.66)
-    shape.lineTo(-2.2, 0.45)
-    shape.lineTo(-4.8, 0.64)
+    if (gallery03) {
+      shape.moveTo(-5.0, -0.75)
+      shape.lineTo(5.0, -0.70)
+      shape.lineTo(4.6, 0.62)
+      shape.lineTo(2.6, 0.48)
+      shape.lineTo(0.3, 0.66)
+      shape.lineTo(-2.2, 0.45)
+      shape.lineTo(-4.8, 0.64)
+      shape.closePath()
+      return shape
+    }
+    // opaska żwirowa ~0,9 m wokół obrysu, lekko nieregularna krawędź
+    const hx = config.length / 2 + 0.9
+    const hz = config.width / 2 + 0.9
+    shape.moveTo(-hx, -hz)
+    shape.lineTo(hx * 0.4, -hz - 0.08)
+    shape.lineTo(hx, -hz)
+    shape.lineTo(hx + 0.06, hz * 0.2)
+    shape.lineTo(hx, hz)
+    shape.lineTo(-hx * 0.3, hz + 0.1)
+    shape.lineTo(-hx, hz)
+    shape.lineTo(-hx - 0.05, -hz * 0.3)
     shape.closePath()
     return shape
-  }, [])
+  }, [gallery03, config.length, config.width])
 
   useEffect(() => () => {
     Object.values(textures).forEach((texture) => texture.dispose())
@@ -70,7 +92,7 @@ export function GalleryGround() {
           metalness={0}
         />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.011, 1.95]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.011, gallery03 ? 1.95 : 0]} receiveShadow>
         <shapeGeometry args={[gravelShape]} />
         <meshStandardMaterial
           map={textures.gravelDiffuse}
@@ -83,34 +105,5 @@ export function GalleryGround() {
         />
       </mesh>
     </>
-  )
-}
-
-export function PhotoEnvironment() {
-  const loadedGround = useTexture('./textures/dampol-gravel.jpg')
-  const ground = useMemo(() => {
-    const texture = loadedGround.clone()
-    texture.colorSpace = SRGBColorSpace
-    texture.wrapS = RepeatWrapping
-    texture.wrapT = RepeatWrapping
-    texture.repeat.set(7, 7)
-    texture.needsUpdate = true
-    return texture
-  }, [loadedGround])
-
-  useEffect(() => () => {
-    ground.dispose()
-  }, [ground])
-
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.014, 0]} receiveShadow>
-      <planeGeometry args={[48, 48]} />
-      <meshStandardMaterial
-        color="#d6d2c8"
-        map={ground}
-        roughness={0.98}
-        metalness={0.01}
-      />
-    </mesh>
   )
 }

@@ -223,7 +223,8 @@ function envelope(c: PavilionConfig) {
   return { floorT, roofT, outerFront, outerBack, roofDepth, roofSlope }
 }
 
-function fallbackGeometry(c: PavilionConfig): ProjectGeometry {
+/** Geometria otworów/dekorów dla konfiguracji bez projektu — jedno źródło prawdy dla renderu i BOM. */
+export function fallbackGeometry(c: PavilionConfig): ProjectGeometry {
   const openings: OpeningPlacement[] = []
   const gap = 0.10
   const widths = [
@@ -232,7 +233,7 @@ function fallbackGeometry(c: PavilionConfig): ProjectGeometry {
     ...Array.from({ length: c.aluWindowCount }, () => c.aluWindowWidth),
   ]
   const total = widths.reduce((a, b) => a + b, 0) + Math.max(0, widths.length - 1) * gap
-  let x = -total / 2
+  let x = -Math.min(total, c.length - 0.45) / 2
 
   for (let i = 0; i < c.fixedGlazingCount; i++) {
     openings.push({
@@ -351,7 +352,7 @@ function fallbackGeometry(c: PavilionConfig): ProjectGeometry {
   }
 }
 
-function geometryOf(c: PavilionConfig) {
+export function geometryOf(c: PavilionConfig) {
   return c.geometry ?? fallbackGeometry(c)
 }
 
@@ -644,9 +645,24 @@ function facadeEnabled(side: WallSide, c: PavilionConfig) {
     side === 'left' ? c.facadeLeft : c.facadeRight
 }
 
+export const DEFAULT_BAND_HEIGHT = 0.30
+export const DEFAULT_GRID_HEIGHT = 0.65
+export const DEFAULT_FACADE_GAP = 0.015
+const ATTIC_ROW_H = 0.315
+const ATTIC_MODULE_W = 1.20
+
 function facadeSpecForSide(c: PavilionConfig, g: ProjectGeometry, side: WallSide): FacadeCladdingSpec | null {
   const explicit = g.facadeCladding?.[side]
-  if (explicit) return explicit.kind === 'none' ? null : explicit
+  if (explicit) {
+    if (explicit.kind === 'none') return null
+    // parametry z konfiguratora nadpisują wartości projektu (np. galeria-03), gdy użytkownik je zmieni
+    return {
+      ...explicit,
+      gap: c.facadeGap ?? explicit.gap,
+      bandHeight: explicit.kind === 'cassette-horizontal' ? (c.facadeBandHeight ?? explicit.bandHeight) : explicit.bandHeight,
+      moduleHeight: explicit.kind === 'cassette-grid' ? (c.facadeBandHeight ?? explicit.moduleHeight) : explicit.moduleHeight,
+    }
+  }
   if (!facadeEnabled(side, c) || c.facade === 'plain') return null
   if (
     c.facade === 'lamella-winchester' ||
@@ -656,19 +672,36 @@ function facadeSpecForSide(c: PavilionConfig, g: ProjectGeometry, side: WallSide
     c.facade === 'ornament-panel'
   ) return null
   if (c.facade === 'cassette-grid') {
-    return { kind: 'cassette-grid', gap: 0.012, moduleWidth: 0.80, moduleHeight: 0.65, color: c.exteriorColor }
+    return { kind: 'cassette-grid', gap: c.facadeGap ?? 0.012, moduleWidth: 0.80, moduleHeight: c.facadeBandHeight ?? DEFAULT_GRID_HEIGHT, color: c.exteriorColor }
   }
   if (c.facade === 'vertical-ribbed') {
     return { kind: 'vertical-ribbed', gap: 0.008, moduleWidth: 0.60, color: c.exteriorColor }
   }
+  // Kasetony poziome wg pomiarów ze zdjęć (POMIARY.md): długie pasy na całe pole między
+  // narożnikiem a otworem, bez pionowych podziałów na pełnej ścianie i bez mijanki.
   return {
     kind: 'cassette-horizontal',
-    gap: 0.012,
-    bandHeight: 0.40,
-    moduleWidth: 1.20,
-    staggered: true,
+    gap: c.facadeGap ?? DEFAULT_FACADE_GAP,
+    bandHeight: c.facadeBandHeight ?? DEFAULT_BAND_HEIGHT,
+    moduleWidth: 3.0,
+    staggered: false,
     color: c.exteriorColor,
   }
+}
+
+/** Rzędy kasetonów poziomych: pasy korpusu + (opcjonalnie) 2 rzędy attyki. */
+function horizontalBandRows(maxHeight: number, bandHeight: number, attic: boolean) {
+  const rows: Array<{ y0: number; y1: number; attic: boolean; index: number }> = []
+  const atticStart = attic ? maxHeight - ATTIC_ROW_H * 2 : maxHeight
+  const bodyRows = Math.max(1, Math.round(atticStart / bandHeight))
+  const pitch = atticStart / bodyRows
+  for (let row = 0; row < bodyRows; row++) rows.push({ y0: row * pitch, y1: (row + 1) * pitch, attic: false, index: row })
+  if (attic) for (let row = 0; row < 2; row++) rows.push({ y0: atticStart + row * ATTIC_ROW_H, y1: atticStart + (row + 1) * ATTIC_ROW_H, attic: true, index: row })
+  return rows
+}
+
+function hasAtticBand(c: PavilionConfig) {
+  return c.attic || c.project === 'GALERIA/03'
 }
 
 function visibleIntervalsForBand(
@@ -756,7 +789,7 @@ function pushFacadePiece(
 }
 
 
-function visibleIntervalsForGallery03Band(
+function visibleIntervalsForCassetteBand(
   side: WallSide,
   a: number,
   b: number,
@@ -775,7 +808,8 @@ function visibleIntervalsForGallery03Band(
     }
   }
 
-  for (const d of g.decor.filter((x) => x.wall === side && x.id === 'gallery03-lamella')) {
+  // okładziny (lamele, deski, ornament) zastępują kaseton w swoim polu
+  for (const d of g.decor.filter((x) => x.wall === side && x.kind !== 'led-strip')) {
     const dy0 = d.yCenter - d.height / 2
     const dy1 = d.yCenter + d.height / 2
     if (Math.min(y1, dy1) - Math.max(y0, dy0) > 0.001) {
@@ -808,41 +842,34 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
     const gap = spec.gap ?? 0.012
     const maxHeight = Math.max(wallHeightAt(side, -span / 2, c), wallHeightAt(side, span / 2, c))
 
-    if (c.project === 'GALERIA/03' && side === 'front' && spec.kind === 'cassette-horizontal') {
-      const bodyPitch = 0.24
-      const atticRowH = 0.315
-      const atticModuleW = 1.20
-      const atticShift = 0.60
-      const atticStart = maxHeight - atticRowH * 2
-      const bodyRows = Math.floor(atticStart / bodyPitch + 1e-6)
-
-      for (let row = 0; row < bodyRows; row++) {
-        const y0 = row * bodyPitch
-        const y1 = y0 + bodyPitch
-        const visible = visibleIntervalsForGallery03Band(side, -span / 2, span / 2, y0, y1, floorT, g)
-        for (let part = 0; part < visible.length; part++) {
-          const [v0, v1] = visible[part]
-          const leftShrink = Math.abs(v0 + span / 2) < 0.001 ? 0 : gap / 2
-          const rightShrink = Math.abs(v1 - span / 2) < 0.001 ? 0 : gap / 2
-          pushFacadePiece(
-            list, c, side, 'facade-cassette-gallery03-body-' + row + '-' + part,
-            spec.kind, v0 + leftShrink, v1 - rightShrink, y0 + gap / 2, y1 - gap / 2, spec.color ?? c.exteriorColor,
-          )
+    if (spec.kind === 'cassette-horizontal' && spec.staggered === false) {
+      const rows = horizontalBandRows(maxHeight, spec.bandHeight ?? DEFAULT_BAND_HEIGHT, hasAtticBand(c))
+      for (const row of rows) {
+        const { y0, y1 } = row
+        if (!row.attic) {
+          // korpus: pas ciągły, dzielony tylko przez otwory i okładziny (lamele)
+          const visible = visibleIntervalsForCassetteBand(side, -span / 2, span / 2, y0, y1, floorT, g)
+          for (let part = 0; part < visible.length; part++) {
+            const [v0, v1] = visible[part]
+            const leftShrink = Math.abs(v0 + span / 2) < 0.001 ? 0 : gap / 2
+            const rightShrink = Math.abs(v1 - span / 2) < 0.001 ? 0 : gap / 2
+            pushFacadePiece(
+              list, c, side, 'facade-cassette-' + side + '-body-' + row.index + '-' + part,
+              spec.kind, v0 + leftShrink, v1 - rightShrink, y0 + gap / 2, y1 - gap / 2, spec.color ?? c.exteriorColor,
+            )
+          }
+          continue
         }
-      }
-
-      for (let row = 0; row < 2; row++) {
-        const y0 = atticStart + row * atticRowH
-        const y1 = y0 + atticRowH
-        const shift = row % 2 === 1 ? atticShift : 0
-        for (let col = -1, x0 = -span / 2 - shift; x0 < span / 2 - 0.001; col++, x0 += atticModuleW) {
+        // attyka: moduł 1200 mm, mijanka co 600 mm
+        const shift = row.index % 2 === 1 ? ATTIC_MODULE_W / 2 : 0
+        for (let col = -1, x0 = -span / 2 - shift; x0 < span / 2 - 0.001; col++, x0 += ATTIC_MODULE_W) {
           const cell0 = Math.max(-span / 2, x0)
-          const cell1 = Math.min(span / 2, x0 + atticModuleW)
+          const cell1 = Math.min(span / 2, x0 + ATTIC_MODULE_W)
           if (cell1 - cell0 <= 0.025) continue
           const leftShrink = Math.abs(cell0 + span / 2) < 0.001 ? 0 : gap / 2
           const rightShrink = Math.abs(cell1 - span / 2) < 0.001 ? 0 : gap / 2
           pushFacadePiece(
-            list, c, side, 'facade-cassette-gallery03-attic-' + row + '-' + col,
+            list, c, side, 'facade-cassette-' + side + '-attic-' + row.index + '-' + col,
             spec.kind, cell0 + leftShrink, cell1 - rightShrink, y0 + gap / 2, y1 - gap / 2, spec.color ?? c.exteriorColor,
           )
         }
@@ -923,16 +950,19 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
     const specs = corner.sides.map((side) => facadeSpecForSide(c, g, side)).filter(Boolean) as FacadeCladdingSpec[]
     const cassetteSpec = specs.find((spec) => spec.kind === 'cassette-horizontal' || spec.kind === 'cassette-grid')
     if (!cassetteSpec) continue
-    const bandH = cassetteSpec.kind === 'cassette-grid' ? (cassetteSpec.moduleHeight ?? 0.65) : (cassetteSpec.bandHeight ?? 0.40)
-    const gap = cassetteSpec.gap ?? 0.012
+    const gap = cassetteSpec.gap ?? DEFAULT_FACADE_GAP
     const h = Math.min(
       wallHeightAt(corner.sides[0], corner.sides[0] === 'front' || corner.sides[0] === 'back' ? corner.x : corner.z, c),
       wallHeightAt(corner.sides[1], corner.sides[1] === 'front' || corner.sides[1] === 'back' ? corner.x : corner.z, c),
     )
-    const rows = Math.ceil(h / bandH)
-    for (let row = 0; row < rows; row++) {
-      const y0 = row * bandH
-      const y1 = Math.min(h, y0 + bandH)
+    const cornerRows = cassetteSpec.kind === 'cassette-grid'
+      ? Array.from({ length: Math.ceil(h / (cassetteSpec.moduleHeight ?? DEFAULT_GRID_HEIGHT)) }, (_, i) => {
+          const mh = cassetteSpec.moduleHeight ?? DEFAULT_GRID_HEIGHT
+          return { y0: i * mh, y1: Math.min(h, (i + 1) * mh) }
+        })
+      : horizontalBandRows(h, cassetteSpec.bandHeight ?? DEFAULT_BAND_HEIGHT, hasAtticBand(c))
+    for (let row = 0; row < cornerRows.length; row++) {
+      const { y0, y1 } = cornerRows[row]
       const pieceH = Math.max(0.025, y1 - y0 - gap)
       list.push({
         id: 'corner-cassette-' + corner.id + '-' + row,

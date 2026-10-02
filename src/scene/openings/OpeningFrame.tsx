@@ -1,7 +1,59 @@
-import { type OpeningPlacement } from '../../types'
+import type { OpeningHandle, OpeningPlacement, OpeningProfile } from '../../types'
+import { defaultHandle, defaultProfile } from './openingDefaults'
 import { openingSill } from '../geometry'
 import { Box, RoundedPiece } from '../materials/primitives'
-import { glassReflectionTexture } from '../materials/textures'
+
+/** Widoczna szerokość ramy [m] dla systemu profili. */
+const PROFILE_FACE: Record<OpeningProfile, number> = {
+  'alu-slim': 0.05,
+  'alu-standard': 0.062,
+  pvc: 0.075,
+}
+
+const STEEL = { color: '#c3c7c8', metalness: 0.88, roughness: 0.2 }
+
+/** Szyba zespolona: ciemny pakiet odbijający HDRI. Za szybą ciemne wnętrze — kontrast dla odbić. */
+function GlassPane({ width, height }: { width: number; height: number }) {
+  return (
+    <>
+      <Box size={[width * 0.99, height * 0.99, 0.025]} position={[0, 0, -0.205]} color="#16191b" metalness={0} roughness={0.94} />
+      <Box size={[width * 0.99, 0.055, 0.26]} position={[0, -height / 2 + 0.03, -0.105]} color="#292a28" metalness={0} roughness={0.9} />
+      <mesh position={[0, 0, -0.011]}>
+        <boxGeometry args={[width, height, 0.012]} />
+        <meshPhysicalMaterial
+          color="#1a2228"
+          roughness={0.02}
+          metalness={0}
+          envMapIntensity={2.7}
+          ior={1.5}
+          clearcoat={0.3}
+          clearcoatRoughness={0.025}
+        />
+      </mesh>
+    </>
+  )
+}
+
+function Handle({ kind, x, height, side }: { kind: OpeningHandle; x: number; height: number; side: 1 | -1 }) {
+  if (kind === 'none') return null
+  if (kind === 'lever') {
+    return (
+      <>
+        <Box size={[0.03, 0.17, 0.012]} position={[x, 0.0, 0.07]} {...STEEL} />
+        <Box size={[0.13, 0.019, 0.019]} position={[x - side * 0.055, 0.03, 0.09]} {...STEEL} />
+      </>
+    )
+  }
+  const length = Math.min(1.2, height * 0.48)
+  return (
+    <>
+      <Box size={[0.026, length, 0.026]} position={[x, 0.02, 0.095]} {...STEEL} />
+      {[-1, 1].map((k) => (
+        <Box key={k} size={[0.016, 0.016, 0.05]} position={[x, 0.02 + k * (length / 2 - 0.08), 0.07]} {...STEEL} />
+      ))}
+    </>
+  )
+}
 
 export function OpeningFrame({
   opening,
@@ -14,147 +66,84 @@ export function OpeningFrame({
 }) {
   const sill = openingSill(opening)
   const y = floorOffset + sill + opening.height / 2
-  const frame = opening.frameColor ?? '#17191b'
+  const frame = opening.frameColor ?? '#2b3033'
   const isDoor = opening.kind.startsWith('door-')
-  const gallery03Opening = opening.id.startsWith('G03-')
-  const rail = gallery03Opening ? 0.060 : Math.min(0.068, Math.max(0.052, opening.width * 0.055))
-  const frameDepth = gallery03Opening ? 0.070 : 0.060
+  const profile = defaultProfile(opening)
+  const rail = PROFILE_FACE[profile]
+  const frameDepth = 0.07
   const innerW = Math.max(0.12, opening.width - rail * 2)
   const innerH = Math.max(0.12, opening.height - rail * 2)
   const z = depth / 2 + 0.018
+  const hingeSide: 1 | -1 = opening.hinge === 'right' ? 1 : -1
+  const handle = defaultHandle(opening)
+  const frameMat = { color: frame, metalness: profile === 'pvc' ? 0.05 : 0.3, roughness: profile === 'pvc' ? 0.62 : 0.52 }
 
   if (opening.kind === 'door-full') {
     return (
       <group position={[opening.center, y, z]}>
         <RoundedPiece size={[opening.width, opening.height, 0.058]} position={[0, 0, 0]} color={frame} metalness={0.34} roughness={0.46} radius={0.004} />
-        <Box size={[0.12, 0.018, 0.018]} position={[opening.width * 0.28, 0.02, 0.052]} color="#24282a" metalness={0.72} roughness={0.22} />
-        <Box size={[0.020, 0.020, 0.045]} position={[opening.width * 0.23, 0.02, 0.035]} color="#24282a" metalness={0.72} roughness={0.22} />
+        <Handle kind={handle} x={-hingeSide * (opening.width / 2 - 0.1)} height={opening.height} side={hingeSide} />
         {[-0.62, 0, 0.62].map((hy) => (
-          <Box key={'full-hinge-' + hy} size={[0.028, 0.085, 0.028]} position={[opening.width / 2 - 0.025, hy, 0.045]} color="#202426" metalness={0.56} roughness={0.30} />
+          <Box key={'full-hinge-' + hy} size={[0.028, 0.085, 0.028]} position={[hingeSide * (opening.width / 2 - 0.025), hy, 0.045]} color="#202426" metalness={0.56} roughness={0.3} />
         ))}
-        <Box size={[opening.width, 0.035, 0.075]} position={[0, -opening.height / 2 + 0.018, -0.005]} color="#111315" metalness={0.42} roughness={0.40} />
+        <Box size={[opening.width, 0.035, 0.075]} position={[0, -opening.height / 2 + 0.018, -0.005]} color="#111315" metalness={0.42} roughness={0.4} />
       </group>
     )
   }
 
+  // skrzydło drzwi: widoczna rama skrzydła wewnątrz ościeżnicy, cofnięta o kilka mm
+  const sash = isDoor ? 0.055 : 0
+  const glassW = Math.max(0.1, innerW - sash * 2)
+  const glassH = Math.max(0.1, innerH - sash * 2)
+
   return (
     <group position={[opening.center, y, z]}>
-      {gallery03Opening && (
+      <GlassPane width={glassW} height={glassH} />
+      {/* ościeżnica */}
+      <Box size={[rail, opening.height, frameDepth]} position={[-opening.width / 2 + rail / 2, 0, 0.02]} {...frameMat} />
+      <Box size={[rail, opening.height, frameDepth]} position={[opening.width / 2 - rail / 2, 0, 0.02]} {...frameMat} />
+      <Box size={[innerW, rail, frameDepth]} position={[0, opening.height / 2 - rail / 2, 0.02]} {...frameMat} />
+      <Box size={[innerW, rail, frameDepth]} position={[0, -opening.height / 2 + rail / 2, 0.02]} {...frameMat} />
+      {/* skrzydło (drzwi) */}
+      {isDoor && (
         <>
-          <Box
-            size={[innerW * 0.99, innerH * 0.99, 0.025]}
-            position={[0, 0, -0.205]}
-            color="#16191b"
-            metalness={0}
-            roughness={0.94}
-          />
-          <Box
-            size={[innerW * 0.99, 0.055, 0.26]}
-            position={[0, -innerH / 2 + 0.030, -0.105]}
-            color="#292a28"
-            metalness={0}
-            roughness={0.90}
-          />
+          <Box size={[sash, innerH, 0.06]} position={[-innerW / 2 + sash / 2, 0, 0.012]} {...frameMat} />
+          <Box size={[sash, innerH, 0.06]} position={[innerW / 2 - sash / 2, 0, 0.012]} {...frameMat} />
+          <Box size={[innerW - sash * 2, sash, 0.06]} position={[0, innerH / 2 - sash / 2, 0.012]} {...frameMat} />
+          <Box size={[innerW - sash * 2, sash * 1.6, 0.06]} position={[0, -innerH / 2 + sash * 0.8, 0.012]} {...frameMat} />
         </>
       )}
-      <mesh position={[0, 0, gallery03Opening ? -0.011 : -0.002]} castShadow receiveShadow>
-        <boxGeometry args={[innerW, innerH, gallery03Opening ? 0.012 : 0.016]} />
-        {gallery03Opening ? (
-          <meshPhysicalMaterial
-            color="#1a2228"
-            roughness={0.02}
-            metalness={0}
-            envMapIntensity={2.7}
-            ior={1.5}
-            clearcoat={0.30}
-            clearcoatRoughness={0.025}
-          />
-        ) : (
-          <meshPhysicalMaterial
-            color="#526975"
-            transparent
-            opacity={0.38}
-            roughness={0.08}
-            metalness={0.02}
-            transmission={0.50}
-            ior={1.46}
-            thickness={0.014}
-            clearcoat={0.52}
-            clearcoatRoughness={0.06}
-            envMapIntensity={1.85}
-          />
-        )}
-      </mesh>
-      {!gallery03Opening && (
-        <mesh position={[0, 0, 0.010]}>
-          <planeGeometry args={[innerW * 0.985, innerH * 0.985]} />
-          <meshBasicMaterial
-            map={glassReflectionTexture()}
-            transparent
-            opacity={0.14}
-            depthWrite={false}
-            toneMapped={false}
-          />
-        </mesh>
-      )}
-      <Box size={[rail, opening.height, frameDepth]} position={[-opening.width / 2 + rail / 2, 0, 0.020]} color={frame} metalness={gallery03Opening ? 0.30 : 0.42} roughness={gallery03Opening ? 0.55 : 0.44} />
-      <Box size={[rail, opening.height, frameDepth]} position={[opening.width / 2 - rail / 2, 0, 0.020]} color={frame} metalness={gallery03Opening ? 0.30 : 0.42} roughness={gallery03Opening ? 0.55 : 0.44} />
-      <Box size={[innerW, rail, frameDepth]} position={[0, opening.height / 2 - rail / 2, 0.020]} color={frame} metalness={gallery03Opening ? 0.30 : 0.42} roughness={gallery03Opening ? 0.55 : 0.44} />
-      <Box size={[innerW, rail, frameDepth]} position={[0, -opening.height / 2 + rail / 2, 0.020]} color={frame} metalness={gallery03Opening ? 0.30 : 0.42} roughness={gallery03Opening ? 0.55 : 0.44} />
-      {opening.kind === 'door-double' && <Box size={[0.052, innerH, 0.064]} position={[0, 0, 0.024]} color={frame} metalness={0.42} roughness={0.44} />}
-      {opening.kind === 'alu-window' && <Box size={[0.046, innerH, 0.064]} position={[opening.width * 0.18, 0, 0.024]} color={frame} metalness={0.42} roughness={0.44} />}
+      {opening.kind === 'door-double' && <Box size={[0.06, innerH, 0.066]} position={[0, 0, 0.024]} {...frameMat} />}
+      {opening.kind === 'alu-window' && <Box size={[0.05, innerH, 0.066]} position={[opening.width * 0.18, 0, 0.024]} {...frameMat} />}
       {opening.kind === 'pvc-window' && (
         <>
-          <Box size={[0.042, innerH, 0.064]} position={[0, 0, 0.024]} color={frame} metalness={0.30} roughness={0.48} />
-          <Box size={[innerW, 0.042, 0.064]} position={[0, 0, 0.024]} color={frame} metalness={0.30} roughness={0.48} />
+          <Box size={[0.042, innerH, 0.064]} position={[0, 0, 0.024]} {...frameMat} />
+          <Box size={[innerW, 0.042, 0.064]} position={[0, 0, 0.024]} {...frameMat} />
         </>
       )}
       {isDoor && (
-        gallery03Opening ? (
-          <>
+        <>
+          {opening.kind === 'door-double' ? (
+            <>
+              <Handle kind={handle} x={-0.08} height={opening.height} side={1} />
+              <Handle kind={handle} x={0.08} height={opening.height} side={-1} />
+            </>
+          ) : (
+            <Handle kind={handle} x={-hingeSide * (opening.width / 2 - rail - 0.09)} height={opening.height} side={hingeSide} />
+          )}
+          {[-0.62, 0, 0.62].map((hy) => (
             <Box
-              size={[0.018, 1.00, 0.026]}
-              position={[opening.width / 2 - 0.11, 0.02, 0.082]}
-              color="#c6c9c8"
-              metalness={0.86}
-              roughness={0.18}
+              key={'hinge-' + hy}
+              size={[0.03, 0.09, 0.03]}
+              position={[hingeSide * (opening.width / 2 - rail * 0.5), hy, 0.062]}
+              color="#8f989d"
+              metalness={0.7}
+              roughness={0.24}
             />
-            <Box
-              size={[0.035, 0.028, 0.050]}
-              position={[opening.width / 2 - 0.11, -0.49, 0.060]}
-              color="#b7bcbd"
-              metalness={0.78}
-              roughness={0.20}
-            />
-            {[-0.62, 0, 0.62].map((hy) => (
-              <Box
-                key={'hinge-gallery03-' + hy}
-                size={[0.030, 0.085, 0.030]}
-                position={[-opening.width / 2 + rail * 0.46, hy, 0.060]}
-                color="#8f989d"
-                metalness={0.70}
-                roughness={0.24}
-              />
-            ))}
-          </>
-        ) : (
-          <>
-            <Box size={[0.12, 0.018, 0.018]} position={[opening.width * 0.28, 0.02, 0.070]} color="#24282a" metalness={0.72} roughness={0.22} />
-            <Box size={[0.020, 0.020, 0.045]} position={[opening.width * 0.23, 0.02, 0.053]} color="#24282a" metalness={0.72} roughness={0.22} />
-            {[-0.62, 0, 0.62].map((hy) => (
-              <Box
-                key={'hinge-' + hy}
-                size={[0.028, 0.085, 0.028]}
-                position={[opening.width / 2 - rail * 0.45, hy, 0.058]}
-                color="#202426"
-                metalness={0.56}
-                roughness={0.30}
-              />
-            ))}
-          </>
-        )
+          ))}
+          <Box size={[opening.width, 0.035, 0.075]} position={[0, -opening.height / 2 + 0.018, 0.006]} color="#111315" metalness={0.45} roughness={0.38} />
+        </>
       )}
-      {isDoor && <Box size={[opening.width, 0.035, 0.075]} position={[0, -opening.height / 2 + 0.018, 0.006]} color="#111315" metalness={0.45} roughness={0.38} />}
       {opening.roller && (
         <RoundedPiece
           size={[opening.width + 0.09, 0.14, 0.105]}

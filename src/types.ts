@@ -66,7 +66,17 @@ export type OpeningPlacement = {
   roller?: boolean
   label?: string
   sourceAccuracy?: 'dimensioned' | 'drawing-estimate'
+  /** Strona zawiasów (patrząc z zewnątrz). Domyślnie: lewa. */
+  hinge?: OpeningHinge
+  /** Rodzaj pochwytu / klamki. Domyślnie: pochwyt dla drzwi przeszklonych, klamka dla pełnych. */
+  handle?: OpeningHandle
+  /** System profili — wpływa na szerokość widocznej ramy. */
+  profile?: OpeningProfile
 }
+
+export type OpeningHinge = 'left' | 'right'
+export type OpeningHandle = 'bar' | 'lever' | 'none'
+export type OpeningProfile = 'alu-slim' | 'alu-standard' | 'pvc'
 
 export type DecorPlacement = {
   id: string
@@ -166,6 +176,10 @@ export type PavilionConfig = {
   hvacColor: HvacColor
   gutter: boolean
   attic: boolean
+  /** Wysokość pasa kasetonu poziomego / wysokość modułu siatki [m]. Domyślnie 0,30 (poziome) / 0,65 (siatka). */
+  facadeBandHeight?: number
+  /** Szerokość fugi między kasetonami [m]. Domyślnie 0,015. */
+  facadeGap?: number
   showStructure: boolean
   showInterior: boolean
   geometry?: ProjectGeometry

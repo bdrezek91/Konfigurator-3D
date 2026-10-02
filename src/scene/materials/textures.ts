@@ -145,11 +145,10 @@ export function glassReflectionTexture() {
 }
 
 
+/**
+ * Kolor blachy do renderu. Przy oświetleniu HDRI używamy prawdziwego koloru RAL —
+ * bez rozjaśniania, żeby RAL 7016 był neutralnym antracytem (wcześniej #545c61 dawał stalowy, niebieski ton).
+ */
 export function renderMetalColor(color: string) {
-  if (color === '#3a3f43') return '#545c61'
-  if (color === '#121315') return '#272a2c'
-  if (color === '#f2f0e7') return '#f3f1e9'
-  if (color === '#a5a5a3') return '#b4b4b1'
-  if (color === '#7d7d7a') return '#8d8d89'
   return color
 }
