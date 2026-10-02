@@ -113,7 +113,8 @@ function sections(config: PavilionConfig, lv: Record<string, number>): Record<'A
       camera: { position: [-L / 2 + 0.16, 2.6, zf - 0.16], target: [-L / 2 + 0.16, 1.2, zf - 0.16], fov: 13, up: [0, 0, -1], viewHeight: 0.42 },
       labels: [
         { at: [-L / 2, 1.2, zf], text: 'Słup: kątownik 50×50×4, piętka w narożu' },
-        { at: [-L / 2 + 0.2, 1.2, zf - 0.054], text: 'Ściana przednia przykręcona do słupa' },
+        { at: [-L / 2 + 0.2, 1.2, zf - 0.054], text: 'Blacha ściany przedniej oparta o ramię słupa (przykręcona)' },
+        { at: [-L / 2 + 0.004, 1.2, zf - 0.03], text: 'Czoło płyty (rdzeń/zamek) dotyka drugiego ramienia' },
         { at: [-L / 2 + 0.054, 1.2, zf - 0.25], text: 'Ściana boczna między przednią a tylną' },
       ],
     },
@@ -130,7 +131,7 @@ function sections(config: PavilionConfig, lv: Record<string, number>): Record<'A
       title: 'D — górna konstrukcja: słup ponad dachem + górna rama (bez obróbek)', plane: null, hide: ['flashings', 'decor', 'fasteners'],
       camera: { position: [-L / 2 - 0.7, lv.yTopF + 0.55, zf + 0.75], target: [-L / 2 + 0.15, lv.yTopF - 0.05, zf - 0.2], fov: 30 },
       labels: [
-        { at: [-L / 2, lv.postTopF, zf], text: 'Słup kończy się na górze górnej ramy' },
+        { at: [-L / 2, lv.postTopF, zf], text: 'Słup wystaje ~5 cm nad dach — do dospawania górnej ramy' },
         { at: [-L / 2 + 0.6, lv.yTopF + 0.05, zf], text: 'Górna rama (kątownik) zespawana ze słupami' },
       ],
     },

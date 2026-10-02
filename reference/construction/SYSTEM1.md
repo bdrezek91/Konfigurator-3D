@@ -38,13 +38,22 @@ Na razie tylko System 1. `ConstructionSystemId` przewiduje `system_2` i `system_
 |---|---|---|---|
 | ściana boczna | **2752 mm** | 2960 − 2·4 − 2·100 | ✓ produkcja 2740–2760 mm |
 | element dachowy | **2942 mm** | 2960 − 2·4 − 2·6 (po skosie) | ✓ produkcja ≈ 2940 mm |
-| ściana przednia / tylna | 6022 mm | 6030 − 2·4 | ✗ przy module 1000 mm daje 6 płyt + 22 mm (moduł albo długość ramy inne) |
+| ściana przednia / tylna | 6022 mm między słupami = 6 × 1000 + 22 mm | 6030 − 2·4 | ✓ produkcja: 6 płyt w module metrowym; 22 mm = zamek/tolerancja płyt skrajnych |
+| ściana boczna — płyty | 2 × 1000 + docięta 752 mm | 2752 / 1000 | do potwierdzenia |
 | płyty podłogowe | 3 szt. | ⌈2952 / 1000⌉, ostatnia 952 mm | zgodne z opisem „np. 3” |
 | poziom podłogi | 104 mm nad spodem ramy | 4 + 100 | — |
-| słup przedni / tylny | 2874 / 2774 mm | 4 + 100 + ściana + 100 + 50 | LOW |
+| słup przedni / tylny | 2874 / 2774 mm | 4 + 100 + ściana + 100 + 50 | ✓ produkcja: słup wystaje ~5 cm nad dach pod dospawanie górnej ramy |
 | obróbka narożna — ramię boczne | 124 mm | 4 + 100 + 20 (zakłada czoło ściany przedniej) | MEDIUM |
 
 **Wniosek:** nominalny pawilon „3 m” ma ramę zewnętrzną **2,96 m**. Przy 3,00 m ściana boczna miałaby 2792 mm, czyli poza zakresem produkcji.
+
+## Potwierdzenia produkcji (2026-10-02)
+
+- Rama zewnętrzna **6030 × 2960 mm** (VERIFIED).
+- Płyty ścienne w **module 1000 mm**; front pawilonu 6 × 3 = **6 płyt** (VERIFIED).
+- Dach zakrywa górę ściany przedniej i bocznej. Słup narożny wystaje **~5 cm nad dach**, do dospawania górnej ramy.
+- Narożnik: blacha płyty skrajnej opiera się o jedno ramię kątownika, a czoło (rdzeń albo zamek, jeśli nie był odcięty) dotyka drugiego ramienia.
+- Rysunek gięcia obróbek: zapowiedziany.
 
 ## Niewiadome
 

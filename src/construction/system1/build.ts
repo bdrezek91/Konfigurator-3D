@@ -219,11 +219,11 @@ export function buildSystem1(config: PavilionConfig, finish: FinishVariant): Con
   ]
   for (const wdef of walls) {
     const ops = openings.filter((o) => o.wall === wdef.side).map((o) => toWallOpening(o, wdef))
-    const count = Math.ceil(wdef.length / wallModule - 1e-6)
+    const lay = panelLayout(wdef.length, wallModule)
     const explode = mul(wdef.inward, -1.4)
-    for (let i = 0; i < count; i++) {
-      const u0 = i * wallModule
-      const u1 = Math.min(wdef.length, u0 + wallModule)
+    for (let i = 0; i < lay.count; i++) {
+      const u0 = lay.start + i * wallModule
+      const u1 = i === lay.count - 1 ? wdef.length : u0 + wallModule
       const rects = cutRects(u0, u1, wdef.top, ops)
       rects.forEach((poly, k) => {
         sandwich(ctx, 'wall-' + wdef.side + '-' + i + '-' + k, 'Płyta ścienna ' + wdef.side + ' ' + (i + 1), wdef.stage, 'walls',
@@ -313,12 +313,22 @@ export function buildSystem1(config: PavilionConfig, finish: FinishVariant): Con
     },
     (() => {
       const len = L - 2 * t
-      const n = Math.ceil(len / wallModule - 1e-6)
-      const last = Math.round((len - (n - 1) * wallModule) * 1000)
+      const lay = panelLayout(len, wallModule)
       return {
-        key: 'wallModules', label: 'Płyty ściany przedniej', valueMm: n, formula: `⌈${Math.round(len * 1000)} / ${Math.round(wallModule * 1000)}⌉, ostatnia ${last} mm`,
+        key: 'wallModules', label: 'Płyty ściany przedniej', valueMm: lay.count,
+        formula: lay.cut
+          ? `⌈${Math.round(len * 1000)} / ${Math.round(wallModule * 1000)}⌉, ostatnia docięta ${Math.round(lay.last * 1000)} mm`
+          : `${Math.round(len * 1000)} mm między słupami = ${lay.count} × ${Math.round(wallModule * 1000)} + ${Math.round(lay.rest * 1000)} mm (zamek/tolerancja płyty skrajnej)`,
+        confidence: 'VERIFIED' as Confidence,
+        check: { expected: 'produkcja: 6 płyt dla 6 × 3', ok: Math.abs(config.length - 6.03) > 0.01 || lay.count === 6 },
+      }
+    })(),
+    (() => {
+      const lay = panelLayout(W - 2 * t - 2 * tw, wallModule)
+      return {
+        key: 'sideWallPanels', label: 'Płyty ściany bocznej', valueMm: lay.count,
+        formula: lay.cut ? `${lay.count - 1} × ${Math.round(wallModule * 1000)} + docięta ${Math.round(lay.last * 1000)} mm` : `${lay.count} × ${Math.round(wallModule * 1000)}`,
         confidence: 'MEDIUM' as Confidence,
-        check: { expected: 'ostatnia płyta ≥ 100 mm (inaczej moduł lub długość ramy są inne)', ok: last >= 100 },
       }
     })(),
     {
@@ -327,9 +337,9 @@ export function buildSystem1(config: PavilionConfig, finish: FinishVariant): Con
       check: { expected: 'produkcja: ≈ 2940 mm', ok: Math.abs(roofLen - 2.94) <= 0.012 },
     },
     { key: 'roofCount', label: 'Liczba płyt dachowych', valueMm: roofCount, formula: `⌈${Math.round(roofSpanX * 1000)} / ${Math.round(roofModule * 1000)}⌉`, confidence: 'MEDIUM' },
-    { key: 'postFront', label: 'Słup narożny przedni — długość', valueMm: Math.round((postTopF - yFrame) * 1000), formula: 't + podłoga + ściana przednia + dach + 50 (ponad dach)', confidence: 'LOW' },
-    { key: 'postBack', label: 'Słup narożny tylny — długość', valueMm: Math.round((postTopB - yFrame) * 1000), formula: 't + podłoga + ściana tylna + dach + 50', confidence: 'LOW' },
-    { key: 'postAboveRoof', label: 'Wysunięcie słupa ponad dach', valueMm: Math.round(a * 1000), formula: '= wysokość górnego kątownika (WA0019)', confidence: 'LOW' },
+    { key: 'postFront', label: 'Słup narożny przedni — długość', valueMm: Math.round((postTopF - yFrame) * 1000), formula: 't + podłoga + ściana przednia + dach + 50 (ponad dach)', confidence: 'MEDIUM' },
+    { key: 'postBack', label: 'Słup narożny tylny — długość', valueMm: Math.round((postTopB - yFrame) * 1000), formula: 't + podłoga + ściana tylna + dach + 50', confidence: 'MEDIUM' },
+    { key: 'postAboveRoof', label: 'Wysunięcie słupa ponad dach', valueMm: Math.round(a * 1000), formula: 'produkcja „~5 cm” pod dospawanie górnej ramy; WA0019 ≈ 55 mm', confidence: 'HIGH' },
     { key: 'outerHeightFront', label: 'Wysokość zewn. front (spód ramy → góra górnej ramy)', valueMm: Math.round((postTopF - yFrame) * 1000), formula: 'konstrukcja; + prześwit ' + Math.round(y0 * 1000) + ' mm do gruntu', confidence: 'MEDIUM' },
   ]
 
@@ -339,6 +349,19 @@ export function buildSystem1(config: PavilionConfig, finish: FinishVariant): Con
     derived,
     levels: { yFrame, yFloorTop, wallTopFront: yFloorTop + hF, wallTopBack: yFloorTop + hB, yTopF, yTopB, postTopF, postTopB },
   }
+}
+
+/**
+ * Układ płyt w module. Jeśli reszta ≤ 30 mm, nie ma docinanej płyty: płyty skrajne dotykają ramion słupów
+ * (czoło — rdzeń albo zamek, produkcja 2026-10-02), a reszta to zamek + tolerancja na płycie skrajnej.
+ * Przykład: 6022 mm między słupami → 6 płyt w module 1000 (produkcja: 6 płyt na froncie 6 × 3), 22 mm w zamku/tolerancji.
+ */
+export function panelLayout(available: number, module: number, tolerance = 0.03) {
+  const full = Math.floor(available / module + 1e-6)
+  const rest = available - full * module
+  if (full > 0 && rest <= tolerance) return { count: full, start: 0, last: module + rest, rest, cut: false }
+  const count = Math.ceil(available / module - 1e-6)
+  return { count, start: 0, last: available - (count - 1) * module, rest: 0, cut: true }
 }
 
 function toWallOpening(o: OpeningPlacement, w: WallDef) {

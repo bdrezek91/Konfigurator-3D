@@ -51,14 +51,16 @@ ${derived.join('\n')}
 
 | klucz | stan | co rozstrzygnie |
 |---|---|---|
-| topFramePosition | LOW — kątownik leżący na płycie dachowej (WA0019: ciemny pas ≈ 55 mm nad obróbką) | zdjęcie górnego narożnika przed obróbką |
-| cornerAngleHeight | LOW — słup do góry górnej ramy (dach + 50 mm) | pomiar słupa |
+| topFramePosition | MEDIUM — dospawana do słupów wystających ~5 cm nad dach (produkcja 2026-10-02, WA0019); orientacja ramienia poziomego nadal do potwierdzenia | zdjęcie górnego narożnika przed obróbką |
+| cornerAngleHeight | HIGH — słup = rama + podłoga + ściana + dach + ~50 mm (produkcja: „jakieś 5 cm” nad dach) | — |
 | roofSupportDetail | MEDIUM — dach leży na ścianach, luz 6 mm/stronę z danych 2,94 m | przekrój/rysunek oparcia dachu |
 | sideWallCalculatedLength | HIGH — 2752 mm = W − 2·4 − 2·100, zgodne z produkcją 2740–2760 | — |
 | flashingOffset | UNKNOWN — „1,5 / 2,5” bez jednostki; przyjęto 15 mm (zdjęcie 11: daszek ≈ 15–20 mm) | rysunek gięcia obróbki |
 | squareFlashing („na kwadraty”) | UNKNOWN — brak przykładu na zdjęciach | zdjęcie/rysunek |
 | intermediateFloorSupports | UNKNOWN — opis wymienia tylko obwód | potwierdzenie produkcji |
-| wallModuleVsFrameLength | ✗ — 6022 mm / 1000 → 6 płyt + 22 mm; moduł lub długość ramy inne | WZ płyt / pomiar ramy |
+| wallModuleVsFrameLength | ROZSTRZYGNIĘTE — rama 6030 × 2960 (produkcja), 6 płyt × 1000 na froncie; 22 mm = zamek/tolerancja płyt skrajnych (czoła dotykają słupów) | która płyta skrajna ma zamek, a która jest docinana |
+| cornerContact | VERIFIED — blacha płyty skrajnej o ramię słupa, czoło (rdzeń/zamek) o drugie ramię | — |
+| flashingBendDrawing | czeka na rysunek gięcia (zapowiedziany przez produkcję) | rysunek gięcia obróbek A/B i „na kwadraty” |
 | screwSpacing (podłoga, słupy) | UNKNOWN — wizualizacja co 600 / 500 mm | technologia montażu |
 | system_2, system_3 | nie modelowane | opis produkcji |
 

@@ -48,11 +48,10 @@ export const PHYS = {
   },
   panel: {
     wallModule: P({
-      element: 'Moduł płyty ściennej (rozstaw styków)', value: 1000, rank: 2,
-      source: 'Film WA0018/WA0019: styki ≈ 1,0 m; WA0017: 0,97–1,0 m przy typowym FOV telefonu',
-      confidence: 'MEDIUM', status: 'OK',
-      conflict: 'Katalog Paneltech PW PIR-S: standard 1130 mm (opcjonalnie 1000 / 1050). Film wskazuje 1000 — przyjęto film (źródło wyższe).',
-      todo: 'Potwierdzić zamówieniem/WZ płyt (1000 czy 1050).',
+      element: 'Moduł płyty ściennej (rozstaw styków)', value: 1000, rank: 5,
+      source: 'Produkcja Dampol (2026-10-02): płyty w module metrowym, ściana przednia 6 × 3 = 6 płyt; filmy WA0017/18/19: styki ≈ 1,0 m',
+      confidence: 'VERIFIED', status: 'OK',
+      conflict: 'Katalog Paneltech PW PIR-S: standard 1130 mm (opcjonalnie 1000 / 1050) — Dampol zamawia 1000.',
     }),
     roofModule: P({
       element: 'Moduł płyty dachowej', value: 1050, rank: 5, source: 'Standard zakupowy konfiguratora (dotychczasowe zakupy)',
@@ -183,9 +182,9 @@ export const PHYS = {
       confidence: 'HIGH', status: 'OK',
     }),
     outerFrameWidth: P({
-      element: 'Zewnętrzny wymiar ramy (pawilon „3 m”)', value: 2960, rank: 6,
-      source: 'Presety/projekty: 2,96 m. Potwierdzone pośrednio: ściana boczna wyliczona 2,752 m mieści się w danych produkcji 2,74–2,76 m',
-      confidence: 'HIGH', status: 'OK',
+      element: 'Zewnętrzny wymiar ramy (pawilon „6 × 3”)', value: 2960, rank: 5,
+      source: 'Produkcja Dampol (2026-10-02): rama 6030 × 2960 mm; zgodne z wyliczoną ścianą boczną 2752 mm (produkcja 2740–2760)',
+      confidence: 'VERIFIED', status: 'OK',
       conflict: 'Nominał handlowy 3,00 m dałby ścianę boczną 2,792 m — poza zakresem produkcji.',
     }),
     floorModule: P({
@@ -208,14 +207,22 @@ export const PHYS = {
       confidence: 'MEDIUM', status: 'OK', todo: 'Potwierdzić sposób oparcia dachu i kierunek ułożenia.',
     }),
     topFrameOnRoof: P({
-      element: 'Górna rama: kątownik leżący na płycie dachowej (ramię poziome do środka)', value: 1, unit: '-', rank: 2,
-      source: 'Film WA0019: ciemny pas ≈ 55 mm nad obróbką korony, słupy kończą się na jego górze',
-      confidence: 'LOW', status: 'OPEN', todo: 'topFramePosition — zdjęcie z bliska górnego narożnika przed obróbką.',
+      element: 'Górna rama: dospawana do słupów wystających ponad dach (kątownik na dachu, ramię poziome do środka)', value: 1, unit: '-', rank: 5,
+      source: 'Produkcja Dampol (2026-10-02): kątownik wystaje nad dach ~5 cm, „żeby potem dospawać górę”; film WA0019: ciemny pas ≈ 55 mm nad obróbką',
+      confidence: 'MEDIUM', status: 'OK', todo: 'Orientacja ramienia poziomego górnej ramy (na dachu / nad dachem) — zdjęcie przed obróbką.',
     }),
     postAboveRoof: P({
-      element: 'Wysunięcie słupa ponad płytę dachową (= wysokość górnego kątownika)', value: 50, rank: 2,
-      source: 'Film WA0019: słup sięga góry ciemnego pasa ≈ 55 mm nad koroną', confidence: 'LOW', status: 'OPEN',
-      todo: 'cornerAngleHeight — pomiar na produkcji.',
+      element: 'Wysunięcie słupa ponad płytę dachową', value: 50, rank: 5,
+      source: 'Produkcja Dampol (2026-10-02): „jakieś 5 cm”; film WA0019: ≈ 55 mm', confidence: 'HIGH', status: 'OK',
+    }),
+    wallLockTolerance: P({
+      element: 'Ściana przednia/tylna: nadwyżka ponad 6 × 1000 (zamek + tolerancja płyt skrajnych)', value: 22, rank: 5,
+      source: 'Wyliczona: między ramionami słupów 6030 − 2·4 = 6022 mm; produkcja: 6 płyt w module 1000, czoła płyt skrajnych dotykają ramion słupów',
+      confidence: 'HIGH', status: 'OK', todo: 'Na której płycie zostaje zamek (pióro), a która jest docinana na czole?',
+    }),
+    cornerContact: P({
+      element: 'Narożnik: blacha płyty skrajnej oparta o jedno ramię słupa, czoło (rdzeń/zamek) dotyka drugiego ramienia', value: 1, unit: '-', rank: 5,
+      source: 'Produkcja Dampol (2026-10-02)', confidence: 'VERIFIED', status: 'OK',
     }),
     crownFlashingFace: P({
       element: 'Obróbka korony A (goły PIR) — wysokość lica', value: 215, rank: 2,
