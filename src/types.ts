@@ -208,8 +208,8 @@ export const DEFAULT_CONFIG: PavilionConfig = {
   floorFinish: 'wood',
   mfpThickness: 12,
   construction: 'angle50',
-  exteriorColor: '#3a3f43',
-  flashingColor: '#3a3f43',
+  exteriorColor: '#383e42',
+  flashingColor: '#383e42',
   facade: 'cassette-lamella',
   facadeFront: true,
   facadeLeft: false,
@@ -265,7 +265,7 @@ export const DEFAULT_CONFIG: PavilionConfig = {
 }
 
 export const RAL_COLORS = [
-  { name: 'RAL 7016 — grafit/antracyt', value: '#3a3f43' },
+  { name: 'RAL 7016 — grafit/antracyt', value: '#383e42' },
   { name: 'Czarny mat', value: '#121315' },
   { name: 'RAL 9010 — biały', value: '#f2f0e7' },
   { name: 'RAL 9006 — aluminium', value: '#a5a5a3' },

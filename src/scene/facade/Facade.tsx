@@ -5,6 +5,7 @@ import { Path, Shape } from 'three'
 import { Box, RoundedPiece } from '../materials/primitives'
 import { renderMetalColor, woodTexture } from '../materials/textures'
 import { type ReactNode, useMemo } from 'react'
+import { m, PHYS } from '../../physical/spec'
 
 export function PanelProfileLocal({
   side,
@@ -133,7 +134,9 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
 }
 
 export function FoundationSupports({ config, geometry }: { config: PavilionConfig; geometry: ProjectGeometry }) {
-  const gap = geometry.foundationGap ?? 0.12
+  // prześwit pod ramą wg zdjęć realizacji (03/11 ≈ 30 mm, film WA0019 50–100 mm) — podkłady mają wysokość prześwitu
+  const gap = geometry.foundationGap ?? m(PHYS.base.groundGap)
+  if (gap < 0.015) return null
   const xs = [-config.length / 2 + 0.45, 0, config.length / 2 - 0.45]
   return (
     <>
@@ -141,16 +144,14 @@ export function FoundationSupports({ config, geometry }: { config: PavilionConfi
         xs.map((x, i) => (
           <RoundedPiece
             key={'foundation-' + z + '-' + i}
-            size={[0.40, 0.12, 0.20]}
-            position={[x, 0.06, z]}
+            size={[0.40, gap, 0.20]}
+            position={[x, gap / 2, z]}
             color="#888983"
             roughness={0.92}
-            radius={0.012}
+            radius={Math.min(0.012, gap / 4)}
           />
         )),
       )}
-      <Box size={[config.length, 0.10, 0.10]} position={[0, gap - 0.05, config.width / 2 - 0.05]} color="#15191b" metalness={0.32} roughness={0.55} />
-      <Box size={[config.length, 0.10, 0.10]} position={[0, gap - 0.05, -config.width / 2 + 0.05]} color="#15191b" metalness={0.32} roughness={0.55} />
     </>
   )
 }
@@ -229,8 +230,10 @@ export function DecorLocal({
         segment.kind === 'lamella-black' ? '#1d2022' :
         segment.kind === 'lamella-graphite' ? '#3d4448' :
         segment.kind === 'lamella-palisander' ? '#5f3f2b' : '#a57245'
-      const step = gallery03Lamella ? 0.058 : 0.072
-      const slatWidth = 0.040
+      // rozstaw i czoło lameli ze zdjęć 03 (28 lameli co 82 mm) i 11 (aluminiowe, 80,6 mm)
+      const step = m(PHYS.lamella.pitch)
+      const slatWidth = m(PHYS.lamella.face)
+      const slatDepth = m(PHYS.lamella.depth)
       const diagonal = segment.kind === 'lamella-diagonal-winchester'
       const woodPalette =
         segment.kind === 'lamella-palisander'
@@ -274,7 +277,7 @@ export function DecorLocal({
           out.push(
             <RoundedPiece
               key={segment.id + '-l-' + x.toFixed(2)}
-              size={[slatWidth, localH, gallery03Lamella ? 0.015 : 0.052]}
+              size={[slatWidth, localH, gallery03Lamella ? 0.015 : slatDepth]}
               position={[x, localY, gallery03Lamella ? z : z + 0.010]}
               rotation={[0, 0, diagonal ? -0.35 : 0]}
               color={gallery03Lamella ? '#826f66' : (slatMap ? '#ffffff' : slatColor)}
@@ -328,9 +331,9 @@ export function DecorLocal({
     }
 
     if (segment.kind === 'board-natural' || segment.kind === 'board-horizontal-winchester') {
-      // deska drewnopodobna wg nagrania WA0016: ≈ 140 mm, szczelina cieniowa ≈ 12 mm
-      const boardH = 0.14
-      for (let y = y0 + boardH / 2; y < y0 + effectiveHeight; y += boardH + 0.012) {
+      // deska drewnopodobna wg nagrania WA0016
+      const boardH = m(PHYS.board.height)
+      for (let y = y0 + boardH / 2; y < y0 + effectiveHeight; y += boardH + m(PHYS.board.gap)) {
         if (!overlapsOpening(segment.center, y, segment.width, boardH, openings, floorOffset)) {
           out.push(
             <RoundedPiece
@@ -479,10 +482,10 @@ export function DampolFrameLocal({
 }) {
   const { roofT, floorT } = envelope(config)
   const [topLeft, topRight] = wallTopHeights(side, config)
-  // Widoczna rama wg nagrań z produkcji (WA0016/WA0019): obróbka korony ≈ 0,22 m, rygiel dolny ≈ 0,15 m.
+  // Widoczna rama wg nagrań z produkcji (WA0016/WA0017/WA0019): korona i rygiel dolny — PHYS.base.
   // Szerokość słupa narożnego zależy od konstrukcji: kątownik 50 — wąski, profil 100×100/statyka — szerszy.
-  const topBand = Math.max(0.22, roofT + 0.13)
-  const bottomBand = Math.max(0.15, floorT + 0.05)
+  const topBand = Math.max(m(PHYS.base.crownBand), roofT + 0.115)
+  const bottomBand = Math.max(m(PHYS.base.bottomRail), floorT + 0.04)
   const sidePost =
     config.construction === 'angle50' ? 0.07 :
     config.construction === 'truss' ? 0.12 : 0.105

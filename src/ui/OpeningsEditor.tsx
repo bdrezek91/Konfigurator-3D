@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { DEFAULT_FRAME_COLOR } from '../components'
 import { PANEL_THICKNESS_M, type OpeningKind, type OpeningPlacement, type PavilionConfig, type WallSide } from '../types'
 import {
   editableGeometry,
@@ -14,8 +15,7 @@ import { NumberField, Segmented, SelectField, Swatches, Switch } from './control
 import { Icon } from './icons'
 
 const FRAME_COLORS = [
-  { value: '#2b3033', name: 'Antracyt (jak elewacja)' },
-  { value: '#383e42', name: 'RAL 7016' },
+  { value: DEFAULT_FRAME_COLOR, name: 'RAL 7016 — jak elewacja (zdjęcia realizacji)' },
   { value: '#17191b', name: 'Czarny mat' },
   { value: '#f2f0e7', name: 'Biały RAL 9010' },
   { value: '#a5a5a3', name: 'Srebrny RAL 9006' },
@@ -45,7 +45,7 @@ export function OpeningsEditor({ config, onChange }: { config: PavilionConfig; o
     const id = nextOpeningId(openings, addKind)
     commit([...openings, {
       id, wall: addWall, center: slot.center, width: d.width, height: d.height, sill: d.sill,
-      kind: addKind, glazing: config.glazing, frameColor: '#2b3033', sourceAccuracy: 'drawing-estimate',
+      kind: addKind, glazing: config.glazing, frameColor: DEFAULT_FRAME_COLOR, sourceAccuracy: 'drawing-estimate',
     }])
     setOpenId(id)
   }
@@ -108,7 +108,7 @@ export function OpeningsEditor({ config, onChange }: { config: PavilionConfig; o
                         options={[{ value: 'bar', label: 'Pochwyt' }, { value: 'lever', label: 'Klamka' }, { value: 'none', label: 'Brak' }]} />
                     </div>
                   )}
-                  <Swatches label="Kolor ramy" value={o.frameColor ?? '#2b3033'} options={FRAME_COLORS} onChange={(frameColor) => patch(o.id, { frameColor })} />
+                  <Swatches label="Kolor ramy" value={o.frameColor ?? DEFAULT_FRAME_COLOR} options={FRAME_COLORS} onChange={(frameColor) => patch(o.id, { frameColor })} />
                   <Switch label="Roleta zewnętrzna" checked={!!o.roller} onChange={(roller) => patch(o.id, { roller })} />
                   <div className="opening-actions">
                     <button type="button" className="btn ghost" onClick={() => {

@@ -2,11 +2,14 @@ import type { OpeningHandle, OpeningPlacement, OpeningProfile } from '../../type
 import { defaultHandle, defaultProfile } from './openingDefaults'
 import { openingSill } from '../geometry'
 import { Box, RoundedPiece } from '../materials/primitives'
+import { m, PHYS } from '../../physical/spec'
+import { DEFAULT_FRAME_COLOR } from '../../components'
 
 /** Widoczna szerokość ramy [m] dla systemu profili. */
 const PROFILE_FACE: Record<OpeningProfile, number> = {
   'alu-slim': 0.05,
-  'alu-standard': 0.062,
+  // zdjęcie 11: widoczna rama FIX 55–75 mm
+  'alu-standard': m(PHYS.joinery.fixFrameFace),
   pvc: 0.075,
 }
 
@@ -77,7 +80,7 @@ export function OpeningFrame({
   floorOffset,
   depth = 0.10,
   revealDepth = 0,
-  revealColor = '#2b3033',
+  revealColor = DEFAULT_FRAME_COLOR,
 }: {
   opening: OpeningPlacement
   floorOffset: number
@@ -88,11 +91,11 @@ export function OpeningFrame({
 }) {
   const sill = openingSill(opening)
   const y = floorOffset + sill + opening.height / 2
-  const frame = opening.frameColor ?? '#2b3033'
+  const frame = opening.frameColor ?? DEFAULT_FRAME_COLOR
   const isDoor = opening.kind.startsWith('door-')
   const profile = defaultProfile(opening)
   const rail = PROFILE_FACE[profile]
-  const frameDepth = 0.07
+  const frameDepth = m(PHYS.joinery.frameDepth)
   const innerW = Math.max(0.12, opening.width - rail * 2)
   const innerH = Math.max(0.12, opening.height - rail * 2)
   // rama osadzona w otworze: lico ramy ≈ lico płyty, szyba cofnięta (cień w ościeżu jak na nagraniach)
@@ -116,7 +119,7 @@ export function OpeningFrame({
   }
 
   // skrzydło drzwi: widoczna rama skrzydła wewnątrz ościeżnicy, cofnięta o kilka mm
-  const sash = isDoor ? 0.055 : 0
+  const sash = isDoor ? m(PHYS.joinery.doorSashFace) : 0
   const glassW = Math.max(0.1, innerW - sash * 2)
   const glassH = Math.max(0.1, innerH - sash * 2)
 

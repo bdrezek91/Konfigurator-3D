@@ -7,6 +7,7 @@ import type {
   WallSide,
 } from './types'
 import { CONSTRUCTION_LABELS, PANEL_LABELS, PANEL_THICKNESS_M } from './types'
+import { m, PHYS, RAL_7016_HEX } from './physical/spec'
 
 export type ComponentCategory =
   | 'floor-frame'
@@ -117,9 +118,11 @@ export const CATEGORY_COLORS: Record<ComponentCategory, string> = {
   interior: '#b8b0a3',
 }
 
-const WALL_MODULE_M = 1.0
-const ROOF_MODULE_M = 1.05
-const FLOOR_MODULE_M = 1.0
+const WALL_MODULE_M = m(PHYS.panel.wallModule)
+const ROOF_MODULE_M = m(PHYS.panel.roofModule)
+const FLOOR_MODULE_M = m(PHYS.panel.wallModule)
+/** Rama stolarki w kolorze elewacji (RAL 7016) — zdjęcia 03, 09, 11. */
+export const DEFAULT_FRAME_COLOR = RAL_7016_HEX
 const STEEL_DENSITY = 7850
 const SHEET_THICKNESS_M = 0.0005
 
@@ -168,7 +171,7 @@ const ASSUMPTIONS: ComponentAssumption[] = [
   },
   {
     code: 'A-CASSETTE-LAYOUT',
-    description: 'Kasetony poziome: fuga cieniowa 12 mm, pas bazowy 400 mm, moduł poziomy 1200 mm z mijanką. Wartości wynikają ze zdjęć referencyjnych i wymagają potwierdzenia dokumentacją Dampol.',
+    description: 'Kasetony poziome: fuga 15 mm, pas korpusu 240 mm, attyka 2 × 330 mm z modułem ≈ 1,1 m bez mijanki — pomiary zdjęć 03 i 11 (src/physical/spec.ts).',
     source: 'assumption',
   },
   {
@@ -193,7 +196,7 @@ const ASSUMPTIONS: ComponentAssumption[] = [
   },
   {
     code: 'A-FOUNDATION-BLOCKS',
-    description: 'Posadowienie pokazano na 6 bloczkach betonowych 400×200×120 mm i szczelinie około 120 mm pod ramą. Liczbę i wymiary należy potwierdzić dla konkretnego montażu.',
+    description: 'Posadowienie: 6 podkładów 400×200 mm o wysokości prześwitu (domyślnie 60 mm wg zdjęć 03/11 i filmu WA0019). Liczbę i wymiary należy potwierdzić dla konkretnego montażu.',
     source: 'assumption',
   },
   {
@@ -344,7 +347,7 @@ export function fallbackGeometry(c: PavilionConfig): ProjectGeometry {
 
   return {
     externalHeight: envelope(c).outerFront,
-    foundationGap: 0.12,
+    foundationGap: m(PHYS.base.groundGap),
     openings,
     decor,
     exteriorLights: [],
@@ -388,8 +391,9 @@ function wallRotation(side: WallSide): Vec3 {
 function wallPosition(side: WallSide, localCenter: number, y: number, c: PavilionConfig): Vec3 {
   if (side === 'front') return [localCenter, y, c.width / 2]
   if (side === 'back') return [-localCenter, y, -c.width / 2]
-  if (side === 'left') return [-c.length / 2, y, -localCenter]
-  return [c.length / 2, y, localCenter]
+  // zgodnie z wallTransform renderu (scene/geometry.ts): lewa — lokalne +x → świat +z, prawa — lokalne +x → świat −z
+  if (side === 'left') return [-c.length / 2, y, localCenter]
+  return [c.length / 2, y, -localCenter]
 }
 
 function openingSill(o: OpeningPlacement) {
@@ -645,11 +649,11 @@ function facadeEnabled(side: WallSide, c: PavilionConfig) {
     side === 'left' ? c.facadeLeft : c.facadeRight
 }
 
-export const DEFAULT_BAND_HEIGHT = 0.30
+export const DEFAULT_BAND_HEIGHT = m(PHYS.cassette.bodyBandHeight)
 export const DEFAULT_GRID_HEIGHT = 0.65
-export const DEFAULT_FACADE_GAP = 0.015
-const ATTIC_ROW_H = 0.315
-const ATTIC_MODULE_W = 1.20
+export const DEFAULT_FACADE_GAP = m(PHYS.cassette.gap)
+const ATTIC_ROW_H = m(PHYS.cassette.atticRowHeight)
+const ATTIC_MODULE_TARGET = m(PHYS.cassette.atticModuleTarget)
 
 function facadeSpecForSide(c: PavilionConfig, g: ProjectGeometry, side: WallSide): FacadeCladdingSpec | null {
   const explicit = g.facadeCladding?.[side]
@@ -758,8 +762,9 @@ function pushFacadePiece(
   const p = wallPosition(side, center, y0 + height / 2, c)
   const isRibbed = kind === 'vertical-ribbed'
   const gallery03 = c.project === 'GALERIA/03'
-  const thicknessMm = isRibbed ? 35 : gallery03 ? 22 : 30
-  const facadeOffset = gallery03 ? 0.073 : 0.075
+  // galeria-03: wartości dopasowane do nakładki zdjęcia 03; pozostałe: PHYS (grubość i odsunięcie — niepotwierdzone)
+  const thicknessMm = isRibbed ? 35 : gallery03 ? 22 : PHYS.cassette.thickness.value
+  const facadeOffset = gallery03 ? 0.073 : m(PHYS.cassette.offsetFromPanel)
   list.push({
     id,
     positionNo: 0,
@@ -860,11 +865,12 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
           }
           continue
         }
-        // attyka: moduł 1200 mm, mijanka co 600 mm
-        const shift = row.index % 2 === 1 ? ATTIC_MODULE_W / 2 : 0
-        for (let col = -1, x0 = -span / 2 - shift; x0 < span / 2 - 0.001; col++, x0 += ATTIC_MODULE_W) {
-          const cell0 = Math.max(-span / 2, x0)
-          const cell1 = Math.min(span / 2, x0 + ATTIC_MODULE_W)
+        // attyka: długość podzielona na równe moduły ≈ 1,1 m, łączenia obu rzędów w jednej linii (zdjęcia 03 i 11)
+        const atticCount = Math.max(1, Math.round(span / ATTIC_MODULE_TARGET))
+        const atticModule = span / atticCount
+        for (let col = 0; col < atticCount; col++) {
+          const cell0 = -span / 2 + col * atticModule
+          const cell1 = cell0 + atticModule
           if (cell1 - cell0 <= 0.025) continue
           const leftShrink = Math.abs(cell0 + span / 2) < 0.001 ? 0 : gap / 2
           const rightShrink = Math.abs(cell1 - span / 2) < 0.001 ? 0 : gap / 2
@@ -991,7 +997,7 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
 }
 
 function addFoundationBlocks(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry) {
-  const gap = g.foundationGap ?? 0.12
+  const gap = g.foundationGap ?? m(PHYS.base.groundGap)
   const xs = [-c.length / 2 + 0.45, 0, c.length / 2 - 0.45]
   for (const z of [-c.width / 2 + 0.28, c.width / 2 - 0.28]) {
     xs.forEach((x, i) => {
@@ -1003,7 +1009,7 @@ function addFoundationBlocks(list: ModelComponent[], c: PavilionConfig, g: Proje
         primitive: 'beam',
         material: 'Beton',
         color: '#8d8d88',
-        dimensions: { lengthMm: 400, widthMm: 200, thicknessMm: 120 },
+        dimensions: { lengthMm: 400, widthMm: 200, thicknessMm: Math.round(gap * 1000) },
         quantity: 1,
         massKg: 18,
         position: [x, -gap / 2, z],
@@ -1195,7 +1201,7 @@ function addJoinery(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometr
       category: 'joinery',
       primitive: 'joinery',
       material,
-      color: o.frameColor ?? '#17191b',
+      color: o.frameColor ?? DEFAULT_FRAME_COLOR,
       dimensions: { lengthMm: Math.round(o.height * 1000), widthMm: Math.round(o.width * 1000), thicknessMm: 70 },
       quantity: 1,
       position: [pos[0] + normal[0] * 0.055, pos[1], pos[2] + normal[2] * 0.055],
@@ -1359,7 +1365,7 @@ function addFasteners(list: ModelComponent[], c: PavilionConfig) {
       if (side === 'front' || side === 'back') {
         pos = [panel.position[0] + (side === 'back' ? -dx : dx), panel.position[1] + dy, panel.position[2] + normal[2] * 0.065]
       } else {
-        pos = [panel.position[0] + normal[0] * 0.065, panel.position[1] + dy, panel.position[2] + (side === 'left' ? -dx : dx)]
+        pos = [panel.position[0] + normal[0] * 0.065, panel.position[1] + dy, panel.position[2] + (side === 'left' ? dx : -dx)]
       }
       list.push(fastenerComponent(
         'screw-wall-' + panel.id + '-' + i,
