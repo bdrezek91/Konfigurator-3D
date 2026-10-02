@@ -23,10 +23,10 @@ import {
   Vector3,
 } from 'three'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import type { ComponentCategory, ComponentModel, ModelComponent, Vec3 } from './components'
-import { CATEGORY_COLORS } from './components'
-import type { PavilionConfig } from './types'
-import { PANEL_THICKNESS_M } from './types'
+import type { ComponentCategory, ComponentModel, ModelComponent, Vec3 } from '../components'
+import { CATEGORY_COLORS } from '../components'
+import type { PavilionConfig } from '../types'
+import { PANEL_THICKNESS_M } from '../types'
 
 export type TechnicalView =
   | 'axon'

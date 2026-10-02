@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import Pavilion3D, { type PavilionView } from './Pavilion3D'
-import TechnicalPavilion3D, { type ClipAxis, type TechnicalView } from './TechnicalPavilion3D'
+import Pavilion3D, { type PavilionView } from './scene/Pavilion3D'
+import TechnicalPavilion3D, { type ClipAxis, type TechnicalView } from './technical/TechnicalPavilion3D'
 import { PRESETS } from './presets'
 import { buildBom, validateConfig } from './logic'
 import { buildComponentModel, CATEGORY_COLORS, componentModelToCsv, type ComponentCategory } from './components'
