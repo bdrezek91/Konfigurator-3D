@@ -5,7 +5,7 @@
 Hierarchia źródeł: 1 zdjęcie gotowego pawilonu · 2 film · 3 pomiar zdjęcia ze skalą · 4 katalog · 5 produkcja · 6 rysunek · 7 szkic · 8 założenie.
 Przy sprzeczności wygrywa źródło wyżej; sprzeczność opisana w kolumnie „problem”.
 
-Pewność: VERIFIED 15 · HIGH 11 · MEDIUM 14 · LOW 6 · UNKNOWN 7
+Pewność: VERIFIED 16 · HIGH 16 · MEDIUM 15 · LOW 5 · UNKNOWN 7
 
 ## Wartości fizyczne
 
@@ -30,7 +30,11 @@ Pewność: VERIFIED 15 · HIGH 11 · MEDIUM 14 · LOW 6 · UNKNOWN 7
 | `board.gap` Deska — szczelina cieniowa | 12 mm | film: Film WA0016 (ocena wizualna) | **LOW** | — | — | OK |
 | `joinery.fixFrameFace` Widoczna szerokość ramy FIX (ALU) | 62 mm | pomiar zdjęcia: Zdjęcie 11: 55–75 mm (bok 70, góra 70, prawa 50 + cień ościeża) | **MEDIUM** | System profili (Aluprof/Ponzio?) — karta przekroju. | — | OK |
 | `joinery.doorSashFace` Widoczne skrzydło drzwi (ponad ościeżnicę) | 45 mm | pomiar zdjęcia: Zdjęcie 11: ościeżnica + skrzydło 95 mm (bok), 125 mm (góra) | **MEDIUM** | — | było 55 → 45 mm | CHANGED |
-| `joinery.frameDepth` Głębokość profilu ramy | 70 mm | założenie: Założenie (typowe systemy ALU 60–75 mm) | **LOW** | Karta systemu profili. | zmierzyć | OPEN |
+| `joinery.frameDepth` Głębokość ościeżnicy — Ponzio PE52 (system domyślny) | 52 mm | katalog: Produkcja Dampol (2026-10-02): profile aluminiowe PE52 albo PE78; PE52: ościeżnica 52 mm, skrzydło 60 mm (opisy systemu u dystrybutorów Ponzio) | **HIGH** | Widoczna szerokość ościeżnicy/skrzydła PE52 i PE78 z karty przekrojów (teraz z pomiaru zdjęcia 11). | było 70 → 52 mm | CHANGED |
+| `joinery.sashDepthPE52` Głębokość skrzydła — Ponzio PE52 | 60 mm | katalog: Opisy systemu PE52 (dystrybutorzy Ponzio) | **HIGH** | — | — | OK |
+| `joinery.frameDepthPE78` Głębokość ościeżnicy — Ponzio PE78N (wariant ciepły) | 78 mm | katalog: Opisy systemu PE78N: drzwi ościeżnica/skrzydło 78/78 mm, okna 78/86 mm | **HIGH** | — | — | OK |
+| `joinery.slidingDoorPSK` Drzwi przesuwne PSK — typ stolarki | 1 | produkcja: Produkcja Dampol (2026-10-02) | **HIGH** | Dodać typ PSK w edytorze stolarki (wymiary skrzydeł, prowadnice). | zmierzyć | OPEN |
+| `joinery.pvcWindows` Okna PCV — pakiet dwuszybowy standard (bez ciepłej ramki), czasem trzyszybowy | 2 | produkcja: Produkcja Dampol (2026-10-02) | **VERIFIED** | — | — | OK |
 | `joinery.glazingTop` Góra ramy przeszklenia nad dołem okładziny | 2110 mm | pomiar zdjęcia: Zdjęcie 03: 2,11 m; zdjęcie 11: 2,17 m | **HIGH** | — | — | OK |
 | `base.groundGap` Prześwit pod ramą (domyślny) | 60 mm | zdjęcie: Zdjęcia 03 i 11: ≈ 30 mm; film WA0019: 50–100 mm; zdjęcie 09: widoczny cokół ≈ 150 mm | **MEDIUM** | Zależy od montażu (podkłady/bloczki). Wysokie bloczki 120 mm z modelu nie występują na zdjęciach gotowych pawilonów. | było 120 → 60 mm | CHANGED |
 | `base.bottomRail` Widoczny rygiel dolny (goły PIR) | 140 mm | film: Film WA0017: 4,8% H ≈ 135 mm; WA0016: 0,15 m | **MEDIUM** | — | było 150 → 140 mm | CHANGED |
@@ -59,6 +63,8 @@ Pewność: VERIFIED 15 · HIGH 11 · MEDIUM 14 · LOW 6 · UNKNOWN 7
 | `system1.baseFlashingFace` Obróbka cokołowa — wysokość lica | 140 mm | film: Film WA0017: 135–140 mm (kątownik 50 + krawędź podłogi + zakład) | **MEDIUM** | — | — | OK |
 | `system1.intermediateFloorSupports` Podpory pośrednie podłogi (poprzeczki) | 0 | założenie: Opis produkcji wymienia tylko obwód; brak danych o poprzeczkach | **UNKNOWN** | — | zmierzyć | OPEN |
 | `system1.squareFlashing` Obróbka „na kwadraty” — geometria: przez ostatnie żebro dachu, lico pionowe, powrót poziomy do ściany, kapinos | 1 | produkcja: Szkic produkcji (2026-10-02). Stosowana, gdy deska/lamele/dekor wymagają większego odsunięcia | **HIGH** | Długość powrotu i kapinosu (mm). | — | CHANGED |
+| `floor.board` Płyta podłogowa na PIR — MFP (nie OSB) | 12 mm | produkcja: Produkcja Dampol (2026-10-02): płyta MFP; grubość 12 mm z konfiguratora (mfpThickness) | **HIGH** | Potwierdzić grubość MFP (12 / 15 / 18 mm). | — | OK |
+| `floor.covering` Wykładzina PVC — Tarkett, kolekcja Intero (produkcja Serbia), odcień „Aurora Activia Lator 3” (zapis z przekazu ustnego) | 1 | produkcja: Produkcja Dampol (2026-10-02) | **MEDIUM** | Dokładna nazwa/kod odcienia i zdjęcie próbki — kolor podłogi w renderze jest nadal przybliżony. | zmierzyć | OPEN |
 | `coating.panelOuter` Płyta warstwowa — okładzina zewn.: RAL 7016 półmat (lekki połysk), poliester 25 µm | 25 | produkcja: Produkcja Dampol (2026-10-02): „zwykła 25 mikronów”, półmat | **VERIFIED** | — | — | OK |
 | `coating.flashings` Obróbki blacharskie — RAL 7016M (faktura, mat) | 7016 | produkcja: Produkcja Dampol (2026-10-02): „wszystkie obróbki w fakturze 7016M” | **VERIFIED** | Faktura (struktura powłoki) — w renderze tylko wyższa chropowatość, bez mapy struktury. | — | OK |
 | `coating.panelInner` Okładzina wewnętrzna ścian i dachu — zawsze RAL 9010, gładka (PIR); w płycie styropianowej — linia | 9010 | produkcja: Produkcja Dampol (2026-10-02) | **VERIFIED** | — | — | OK |

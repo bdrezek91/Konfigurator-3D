@@ -142,8 +142,25 @@ export const PHYS = {
       confidence: 'MEDIUM', status: 'CHANGED', previous: 55,
     }),
     frameDepth: P({
-      element: 'Głębokość profilu ramy', value: 70, rank: 8, source: 'Założenie (typowe systemy ALU 60–75 mm)',
-      confidence: 'LOW', status: 'OPEN', todo: 'Karta systemu profili.',
+      element: 'Głębokość ościeżnicy — Ponzio PE52 (system domyślny)', value: 52, rank: 4,
+      source: 'Produkcja Dampol (2026-10-02): profile aluminiowe PE52 albo PE78; PE52: ościeżnica 52 mm, skrzydło 60 mm (opisy systemu u dystrybutorów Ponzio)',
+      confidence: 'HIGH', status: 'CHANGED', previous: 70,
+      todo: 'Widoczna szerokość ościeżnicy/skrzydła PE52 i PE78 z karty przekrojów (teraz z pomiaru zdjęcia 11).',
+    }),
+    sashDepthPE52: P({
+      element: 'Głębokość skrzydła — Ponzio PE52', value: 60, rank: 4, source: 'Opisy systemu PE52 (dystrybutorzy Ponzio)', confidence: 'HIGH', status: 'OK',
+    }),
+    frameDepthPE78: P({
+      element: 'Głębokość ościeżnicy — Ponzio PE78N (wariant ciepły)', value: 78, rank: 4,
+      source: 'Opisy systemu PE78N: drzwi ościeżnica/skrzydło 78/78 mm, okna 78/86 mm', confidence: 'HIGH', status: 'OK',
+    }),
+    slidingDoorPSK: P({
+      element: 'Drzwi przesuwne PSK — typ stolarki', value: 1, unit: '-', rank: 5, source: 'Produkcja Dampol (2026-10-02)',
+      confidence: 'HIGH', status: 'OPEN', todo: 'Dodać typ PSK w edytorze stolarki (wymiary skrzydeł, prowadnice).',
+    }),
+    pvcWindows: P({
+      element: 'Okna PCV — pakiet dwuszybowy standard (bez ciepłej ramki), czasem trzyszybowy', value: 2, unit: '-', rank: 5,
+      source: 'Produkcja Dampol (2026-10-02)', confidence: 'VERIFIED', status: 'OK',
     }),
     glazingTop: P({
       element: 'Góra ramy przeszklenia nad dołem okładziny', value: 2110, rank: 3,
@@ -275,6 +292,18 @@ export const PHYS = {
       element: 'Obróbka „na kwadraty” — geometria: przez ostatnie żebro dachu, lico pionowe, powrót poziomy do ściany, kapinos', value: 1, unit: '-', rank: 5,
       source: 'Szkic produkcji (2026-10-02). Stosowana, gdy deska/lamele/dekor wymagają większego odsunięcia',
       confidence: 'HIGH', status: 'CHANGED', todo: 'Długość powrotu i kapinosu (mm).',
+    }),
+  },
+  floor: {
+    board: P({
+      element: 'Płyta podłogowa na PIR — MFP (nie OSB)', value: 12, rank: 5,
+      source: 'Produkcja Dampol (2026-10-02): płyta MFP; grubość 12 mm z konfiguratora (mfpThickness)', confidence: 'HIGH', status: 'OK',
+      todo: 'Potwierdzić grubość MFP (12 / 15 / 18 mm).',
+    }),
+    covering: P({
+      element: 'Wykładzina PVC — Tarkett, kolekcja Intero (produkcja Serbia), odcień „Aurora Activia Lator 3” (zapis z przekazu ustnego)', value: 1, unit: '-', rank: 5,
+      source: 'Produkcja Dampol (2026-10-02)', confidence: 'MEDIUM', status: 'OPEN',
+      todo: 'Dokładna nazwa/kod odcienia i zdjęcie próbki — kolor podłogi w renderze jest nadal przybliżony.',
     }),
   },
   /** Powłoki i kolory wg produkcji Dampol (2026-10-02). */
