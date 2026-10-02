@@ -105,8 +105,8 @@ function woodTexture(kind: 'winchester' | 'palisander' | 'natural') {
     kind === 'palisander'
       ? ['#473126', '#5b3c2b', '#38261f', '#6a4932']
       : kind === 'natural'
-        ? ['#8b684b', '#a77c55', '#79593f', '#b1845a']
-        : ['#8f633f', '#aa7547', '#775035', '#bd8751']
+        ? ['#80634b', '#967154', '#70533e', '#a37b58']
+        : ['#7c593d', '#916745', '#684932', '#9f7049']
   const grad = ctx.createLinearGradient(0, 0, 128, 0)
   palette.forEach((c, i) => grad.addColorStop(i / (palette.length - 1), c))
   ctx.fillStyle = grad
@@ -150,6 +150,15 @@ function RoundedPiece({
       <meshStandardMaterial color={color} map={map} metalness={metalness} roughness={roughness} envMapIntensity={1.15} />
     </RoundedBox>
   )
+}
+
+function renderMetalColor(color: string) {
+  if (color === '#3a3f43') return '#545c61'
+  if (color === '#121315') return '#272a2c'
+  if (color === '#f2f0e7') return '#f3f1e9'
+  if (color === '#a5a5a3') return '#b4b4b1'
+  if (color === '#7d7d7a') return '#8d8d89'
+  return color
 }
 
 function envelope(config: PavilionConfig) {
@@ -225,17 +234,17 @@ function OpeningFrame({
       <mesh position={[0, 0, -0.002]} castShadow receiveShadow>
         <boxGeometry args={[innerW, innerH, 0.016]} />
         <meshPhysicalMaterial
-          color="#48606b"
+          color="#607b86"
           transparent
-          opacity={0.48}
+          opacity={0.42}
           roughness={0.10}
           metalness={0.02}
-          transmission={0.36}
+          transmission={0.46}
           ior={1.46}
           thickness={0.014}
           clearcoat={0.42}
           clearcoatRoughness={0.08}
-          envMapIntensity={1.35}
+          envMapIntensity={1.65}
         />
       </mesh>
       <Box size={[rail, opening.height, 0.060]} position={[-opening.width / 2 + rail / 2, 0, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
@@ -412,8 +421,8 @@ function DecorLocal({
 
     if (segment.kind.startsWith('lamella-')) {
       const color =
-        segment.kind === 'lamella-black' ? '#141618' :
-        segment.kind === 'lamella-graphite' ? '#34393d' :
+        segment.kind === 'lamella-black' ? '#1d2022' :
+        segment.kind === 'lamella-graphite' ? '#3d4448' :
         segment.kind === 'lamella-palisander' ? '#5f3f2b' : '#a57245'
       const step = 0.072
       const slatWidth = 0.032
@@ -534,10 +543,10 @@ function DecorLocal({
       const cellH = isSquare ? 0.66 : Math.min(0.40, effectiveHeight - 0.02)
       const gap = 0.009
       const color =
-        segment.kind === 'cassette-black' ? '#151719' :
+        segment.kind === 'cassette-black' ? '#232629' :
         segment.kind === 'cassette-white' ? '#e7e6df' :
         segment.kind === 'cassette-winchester' ? '#ffffff' :
-        segment.kind === 'silver-rect' ? '#aeb3b5' : '#343a3f'
+        segment.kind === 'silver-rect' ? '#aeb3b5' : '#3f474c'
       const metalness =
         segment.kind === 'cassette-winchester' ? 0.02 :
         segment.kind === 'silver-rect' ? 0.42 : 0.32
@@ -627,7 +636,7 @@ function DampolFrameLocal({
         size={[railLength, topBand, 0.052]}
         position={[0, railY, z]}
         rotation={[0, 0, angle]}
-        color={config.flashingColor}
+        color={renderMetalColor(config.flashingColor)}
         metalness={metalness}
         roughness={roughness}
         envMapIntensity={1.1}
@@ -636,7 +645,7 @@ function DampolFrameLocal({
         size={[railLength + 0.035, 0.024, 0.105]}
         position={[0, railY - topBand / 2 + 0.012, z + 0.012]}
         rotation={[0, 0, angle]}
-        color={config.flashingColor}
+        color={renderMetalColor(config.flashingColor)}
         metalness={metalness}
         roughness={0.40}
       />
@@ -650,28 +659,28 @@ function DampolFrameLocal({
       <Box
         size={[sidePost, topLeft, 0.052]}
         position={[-span / 2 + sidePost / 2, topLeft / 2, z]}
-        color={config.flashingColor}
+        color={renderMetalColor(config.flashingColor)}
         metalness={metalness}
         roughness={roughness}
       />
       <Box
         size={[0.030, topLeft, 0.112]}
         position={[-span / 2 + 0.015, topLeft / 2, z - 0.025]}
-        color={config.flashingColor}
+        color={renderMetalColor(config.flashingColor)}
         metalness={metalness}
         roughness={roughness}
       />
       <Box
         size={[sidePost, topRight, 0.052]}
         position={[span / 2 - sidePost / 2, topRight / 2, z]}
-        color={config.flashingColor}
+        color={renderMetalColor(config.flashingColor)}
         metalness={metalness}
         roughness={roughness}
       />
       <Box
         size={[0.030, topRight, 0.112]}
         position={[span / 2 - 0.015, topRight / 2, z - 0.025]}
-        color={config.flashingColor}
+        color={renderMetalColor(config.flashingColor)}
         metalness={metalness}
         roughness={roughness}
       />
@@ -703,7 +712,7 @@ function Wall({
       <mesh position={[0, 0, -depth / 2]} castShadow receiveShadow>
         <extrudeGeometry args={[shape, { depth, bevelEnabled: false, steps: 1 }]} />
         <meshStandardMaterial
-          color={config.exteriorColor}
+          color={renderMetalColor(config.exteriorColor)}
           metalness={0.38}
           roughness={0.50}
           normalMap={panelNormalTexture(config.wallProfile)}
@@ -741,9 +750,13 @@ function Wall({
       ))}
 
       {lights.map((lamp, i) => (
-        <group key={'light-' + i} position={[lamp.center, lamp.y, depth / 2 + 0.12]}>
-          <Box size={[0.16, 0.24, 0.08]} position={[0, 0, 0]} color="#202426" metalness={0.12} roughness={0.42} />
-          <Box size={[0.08, 0.13, 0.025]} position={[0, 0, 0.055]} color="#f4e6a8" roughness={0.24} />
+        <group key={'light-' + i} position={[lamp.center, lamp.y, depth / 2 + 0.105]}>
+          <RoundedPiece size={[0.13, 0.22, 0.07]} position={[0, 0, 0]} color="#202426" metalness={0.34} roughness={0.40} radius={0.012} />
+          <mesh position={[0, 0, 0.044]}>
+            <boxGeometry args={[0.074, 0.125, 0.018]} />
+            <meshStandardMaterial color="#ffe8ad" emissive="#f2c96b" emissiveIntensity={1.25} roughness={0.24} />
+          </mesh>
+          <pointLight position={[0, -0.03, 0.10]} color="#ffd58a" intensity={0.22} distance={1.6} decay={2} />
         </group>
       ))}
     </group>
@@ -754,10 +767,12 @@ function RoofRib({
   x,
   depth,
   y,
+  color,
 }: {
   x: number
   depth: number
   y: number
+  color: string
 }) {
   const shape = new Shape()
   shape.moveTo(-0.060, 0)
@@ -769,7 +784,7 @@ function RoofRib({
   return (
     <mesh position={[x, y, -depth / 2]} castShadow receiveShadow>
       <extrudeGeometry args={[shape, { depth, bevelEnabled: false, steps: 1 }]} />
-      <meshStandardMaterial color="#373c40" metalness={0.14} roughness={0.48} />
+      <meshStandardMaterial color={color} metalness={0.34} roughness={0.44} envMapIntensity={1.05} />
     </mesh>
   )
 }
@@ -777,11 +792,11 @@ function RoofRib({
 function RoofSystem({ config }: Props) {
   const { roofT, outerFront, outerBack, slope, roofDepth } = envelope(config)
   const centerY = (outerFront + outerBack) / 2 - roofT / 2
-  const roofColor = config.flashingColor
+  const roofColor = renderMetalColor(config.flashingColor)
   const ribSpacing = 0.35
   const ribs: ReactNode[] = []
   for (let x = -config.length / 2 + 0.18; x < config.length / 2; x += ribSpacing) {
-    ribs.push(<RoofRib key={'roof-rib-' + x.toFixed(2)} x={x} depth={roofDepth + 0.04} y={roofT / 2} />)
+    ribs.push(<RoofRib key={'roof-rib-' + x.toFixed(2)} x={x} depth={roofDepth + 0.04} y={roofT / 2} color={roofColor} />)
   }
 
   const joints: ReactNode[] = []
@@ -798,31 +813,52 @@ function RoofSystem({ config }: Props) {
   }
 
   return (
-    <group position={[0, centerY, 0]} rotation={[-slope, 0, 0]}>
-      <Box
-        size={[config.length + 0.06, roofT, roofDepth + 0.06]}
-        position={[0, 0, 0]}
-        color={roofColor}
-        metalness={0.10}
-        roughness={0.58}
-      />
-      {config.roofProfile === 'trapezoid' && ribs}
-      {joints}
-      <Box
-        size={[config.length + 0.10, 0.045, 0.055]}
-        position={[0, roofT / 2 + 0.020, roofDepth / 2 + 0.020]}
-        color={roofColor}
-        metalness={0.18}
-        roughness={0.44}
-      />
-      <Box
-        size={[config.length + 0.10, 0.045, 0.055]}
-        position={[0, roofT / 2 + 0.020, -roofDepth / 2 - 0.020]}
-        color={roofColor}
-        metalness={0.18}
-        roughness={0.44}
-      />
-    </group>
+    <>
+      <group position={[0, centerY, 0]} rotation={[-slope, 0, 0]}>
+        <Box
+          size={[config.length + 0.08, roofT, roofDepth + 0.08]}
+          position={[0, 0, 0]}
+          color={roofColor}
+          metalness={0.34}
+          roughness={0.48}
+          envMapIntensity={1.05}
+        />
+        {config.roofProfile === 'trapezoid' && ribs}
+        {joints}
+        <Box
+          size={[config.length + 0.12, 0.034, 0.070]}
+          position={[0, roofT / 2 + 0.014, roofDepth / 2 + 0.028]}
+          color={roofColor}
+          metalness={0.42}
+          roughness={0.40}
+        />
+        <Box
+          size={[config.length + 0.12, 0.034, 0.070]}
+          position={[0, roofT / 2 + 0.014, -roofDepth / 2 - 0.028]}
+          color={roofColor}
+          metalness={0.42}
+          roughness={0.40}
+        />
+        {config.gutter && (
+          <mesh position={[0, -roofT / 2 - 0.015, -roofDepth / 2 - 0.045]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <cylinderGeometry args={[0.035, 0.035, config.length + 0.10, 14]} />
+            <meshStandardMaterial color="#24282a" metalness={0.42} roughness={0.42} />
+          </mesh>
+        )}
+      </group>
+      {config.gutter && (
+        <group position={[config.length / 2 - 0.08, outerBack / 2 - 0.10, -config.width / 2 - 0.045]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.030, 0.030, Math.max(0.5, outerBack - 0.22), 14]} />
+            <meshStandardMaterial color="#24282a" metalness={0.42} roughness={0.42} />
+          </mesh>
+          <mesh position={[0, -(outerBack - 0.22) / 2 - 0.05, 0.045]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+            <torusGeometry args={[0.055, 0.028, 10, 20, Math.PI / 2]} />
+            <meshStandardMaterial color="#24282a" metalness={0.42} roughness={0.42} />
+          </mesh>
+        </group>
+      )}
+    </>
   )
 }
 
@@ -916,14 +952,32 @@ function SlopedCeiling({ config }: Props) {
 
 function ExteriorHVAC({ config }: Props) {
   if (!config.airConditioning) return null
-  const color = config.hvacColor === 'white' ? '#e7e7e3' : config.hvacColor === 'black' ? '#17191b' : '#596168'
+  const color = config.hvacColor === 'white' ? '#e8e8e3' : config.hvacColor === 'black' ? '#1b1d1f' : '#5d656b'
+  const blades = Array.from({ length: 12 }, (_, i) => {
+    const a = (Math.PI * 2 * i) / 12
+    return (
+      <Box
+        key={'fan-' + i}
+        size={[0.015, 0.13, 0.012]}
+        position={[Math.cos(a) * 0.07, Math.sin(a) * 0.07, 0.145]}
+        rotation={[0, 0, a]}
+        color="#313538"
+        metalness={0.28}
+        roughness={0.38}
+      />
+    )
+  })
   return (
-    <group position={[config.length / 2 + 0.22, 0.58, -config.width / 2 + 0.58]} rotation={[0, Math.PI / 2, 0]}>
-      <Box size={[0.72, 0.52, 0.22]} position={[0, 0, 0]} color={color} metalness={0.12} roughness={0.48} />
-      <mesh position={[0, 0, 0.125]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.18, 0.18, 0.025, 32]} />
-        <meshStandardMaterial color="#262a2d" metalness={0.18} roughness={0.42} />
+    <group position={[config.length / 2 + 0.20, 0.58, -config.width / 2 + 0.58]} rotation={[0, Math.PI / 2, 0]}>
+      <RoundedPiece size={[0.70, 0.50, 0.22]} position={[0, 0, 0]} color={color} metalness={0.20} roughness={0.48} radius={0.035} />
+      <mesh position={[0, 0, 0.133]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.175, 0.012, 10, 36]} />
+        <meshStandardMaterial color="#3a3e41" metalness={0.28} roughness={0.42} />
       </mesh>
+      {blades}
+      <Box size={[0.48, 0.018, 0.012]} position={[0, -0.20, 0.135]} color="#b8bcbd" metalness={0.45} roughness={0.34} />
+      <Box size={[0.08, 0.06, 0.016]} position={[0.26, 0.16, 0.136]} color="#aeb3b5" metalness={0.18} roughness={0.50} />
+      <Box size={[0.62, 0.035, 0.08]} position={[0, -0.30, -0.045]} color="#33373a" metalness={0.44} roughness={0.42} />
     </group>
   )
 }
@@ -1116,17 +1170,17 @@ export default function Pavilion3D({ config, view = 'perspective' }: Props) {
       camera={{ position: cameraPosition, fov: 32 }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping
-        gl.toneMappingExposure = 1.04
+        gl.toneMappingExposure = 1.18
         gl.outputColorSpace = SRGBColorSpace
       }}
     >
       <SoftShadows size={24} samples={10} focus={0.55} />
       <color attach="background" args={['#dfe2e2']} />
-      <hemisphereLight color="#eef4f7" groundColor="#9a958a" intensity={0.54} />
-      <ambientLight intensity={0.34} />
+      <hemisphereLight color="#f1f6f8" groundColor="#aaa49a" intensity={0.72} />
+      <ambientLight intensity={0.44} />
       <directionalLight
         position={[8, 10, 7]}
-        intensity={2.35}
+        intensity={2.65}
         color="#fff7ea"
         castShadow
         shadow-mapSize-width={2048}
@@ -1151,6 +1205,7 @@ export default function Pavilion3D({ config, view = 'perspective' }: Props) {
       />
       <Environment resolution={128}>
         <Lightformer form="rect" intensity={1.8} color="#eef5ff" position={[0, 7, -8]} scale={[12, 5, 1]} />
+        <Lightformer form="rect" intensity={1.35} color="#e9f2f6" position={[0, 3.2, 8]} scale={[10, 4.5, 1]} rotation={[0, Math.PI, 0]} />
         <Lightformer form="rect" intensity={1.15} color="#fff3de" position={[8, 4, 5]} scale={[5, 5, 1]} rotation={[0, -Math.PI / 2, 0]} />
         <Lightformer form="rect" intensity={0.9} color="#d9e7f2" position={[-8, 3, 2]} scale={[5, 4, 1]} rotation={[0, Math.PI / 2, 0]} />
       </Environment>
