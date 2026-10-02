@@ -1,5 +1,6 @@
 import type { PavilionConfig, ValidationItem } from './types'
-import { CONSTRUCTION_LABELS, PANEL_LABELS, PANEL_THICKNESS_M, SURFACE_PROFILE_LABELS } from './types'
+import { PANEL_THICKNESS_M } from './types'
+import { buildComponentModel, groupComponentsForBom } from './components'
 
 export type BomRow = {
   category: string
@@ -65,80 +66,11 @@ export function validateConfig(c: PavilionConfig): ValidationItem[] {
 }
 
 export function buildBom(c: PavilionConfig): BomRow[] {
-  const floorT = PANEL_THICKNESS_M[c.floorPanel]
-  const roofT = PANEL_THICKNESS_M[c.roofPanel]
-  const outerFront = floorT + c.frontHeight + roofT
-  const outerBack = floorT + c.backHeight + roofT
-  const wallArea = (c.length + c.width) * (outerFront + outerBack)
-  const floorArea = c.length * c.width
-  const roofArea = c.length * Math.hypot(c.width, outerFront - outerBack)
-  const roofModules1050 = Math.ceil(c.length / 1.05)
-  const rows: BomRow[] = [
-    { category: 'Konstrukcja', item: CONSTRUCTION_LABELS[c.construction], quantity: '1 kpl.', basis: 'dokładne' },
-    { category: 'Ściany', item: PANEL_LABELS[c.wallPanel] + ' · ' + SURFACE_PROFILE_LABELS[c.wallProfile], quantity: wallArea.toFixed(1) + ' m² brutto', basis: 'szacunkowe' },
-    { category: 'Dach', item: PANEL_LABELS[c.roofPanel] + ' · ' + SURFACE_PROFILE_LABELS[c.roofProfile], quantity: roofArea.toFixed(1) + ' m²', basis: 'szacunkowe' },
-    { category: 'Dach', item: 'Moduły dachowe 1050 mm — orientacyjnie', quantity: roofModules1050 + ' szt.', basis: 'szacunkowe' },
-    { category: 'Podłoga', item: PANEL_LABELS[c.floorPanel], quantity: floorArea.toFixed(1) + ' m²', basis: 'szacunkowe' },
-    { category: 'Podłoga', item: 'MFP/OSB ' + c.mfpThickness + ' mm', quantity: floorArea.toFixed(1) + ' m²', basis: 'szacunkowe' },
-  ]
-  if (c.geometry) {
-    const groups = new Map<string, { item: string; count: number }>()
-    for (const opening of c.geometry.openings) {
-      const type =
-        opening.kind === 'fixed-glass' ? 'Szyba/FIX' :
-        opening.kind === 'alu-window' ? 'Okno ALU' :
-        opening.kind === 'pvc-window' ? 'Okno PVC' :
-        opening.kind === 'door-double' ? 'Drzwi ALU podwójne' :
-        opening.kind === 'door-full' ? 'Drzwi ALU pełne' : 'Drzwi ALU przeszklone'
-      const item = type + ' ' + Math.round(opening.width * 100) + '×' + Math.round(opening.height * 100) + ' · ' + opening.wall
-      const key = opening.kind + ':' + opening.wall + ':' + opening.width + ':' + opening.height
-      const current = groups.get(key)
-      if (current) current.count += 1
-      else groups.set(key, { item, count: 1 })
-    }
-    for (const group of groups.values()) {
-      rows.push({ category: 'Stolarka', item: group.item, quantity: group.count + ' szt.', basis: 'dokładne' })
-    }
-    const rollerCount = c.geometry.openings.filter((x) => x.roller).length
-    if (rollerCount) rows.push({ category: 'Stolarka', item: 'Roleta elektryczna', quantity: rollerCount + ' szt.', basis: 'dokładne' })
-  } else {
-    if (c.aluDoorCount > 0) rows.push({ category: 'Stolarka', item: 'Drzwi ALU ' + Math.round(c.aluDoorWidth * 100) + '×' + Math.round(c.aluDoorHeight * 100), quantity: c.aluDoorCount + ' szt.', basis: 'dokładne' })
-    if (c.fixedGlazingCount > 0) rows.push({ category: 'Stolarka', item: 'Szyba/FIX ' + Math.round(c.fixedGlazingWidth * 100) + '×' + Math.round(c.fixedGlazingHeight * 100), quantity: c.fixedGlazingCount + ' szt.', basis: 'dokładne' })
-    if (c.aluWindowCount > 0) rows.push({ category: 'Stolarka', item: 'Okno ALU ' + Math.round(c.aluWindowWidth * 100) + '×' + Math.round(c.aluWindowHeight * 100), quantity: c.aluWindowCount + ' szt.', basis: 'dokładne' })
-    if (c.pvcWindowCount > 0) rows.push({ category: 'Stolarka', item: 'Okno PVC ' + Math.round(c.pvcWindowWidth * 100) + '×' + Math.round(c.pvcWindowHeight * 100), quantity: c.pvcWindowCount + ' szt.', basis: 'dokładne' })
-    if (c.rollers && c.rollerCount > 0) rows.push({ category: 'Stolarka', item: 'Roleta elektryczna', quantity: c.rollerCount + ' szt.', basis: 'dokładne' })
-  }
-
-  if (c.electrical !== 'none') {
-    rows.push({ category: 'Elektryka', item: c.electrical === '3p400' ? 'Instalacja 3-fazowa 400 V' : 'Instalacja 1-fazowa 230 V', quantity: '1 kpl.', basis: 'dokładne' })
-    if (c.doubleSockets) rows.push({ category: 'Elektryka', item: 'Gniazdo podwójne', quantity: c.doubleSockets + ' szt.', basis: 'dokładne' })
-    if (c.singleSockets) rows.push({ category: 'Elektryka', item: 'Gniazdo pojedyncze', quantity: c.singleSockets + ' szt.', basis: 'dokładne' })
-    if (c.ledCeiling) rows.push({ category: 'Elektryka', item: 'Lampa LED sufitowa', quantity: c.ledCeiling + ' szt.', basis: 'dokładne' })
-    if (c.switches) rows.push({ category: 'Elektryka', item: 'Włącznik', quantity: c.switches + ' szt.', basis: 'dokładne' })
-    if (c.externalLights) rows.push({ category: 'Elektryka', item: 'Lampa zewnętrzna', quantity: c.externalLights + ' szt.', basis: 'dokładne' })
-    if (c.distributionBoard) rows.push({ category: 'Elektryka', item: 'Rozdzielnica', quantity: '1 szt.', basis: 'dokładne' })
-    if (c.externalConnection) rows.push({ category: 'Elektryka', item: 'Przyłącze zewnętrzne', quantity: '1 szt.', basis: 'dokładne' })
-    if (c.forceSocket) rows.push({ category: 'Elektryka', item: 'Gniazdo siłowe', quantity: '1 szt.', basis: 'dokładne' })
-  }
-  if (c.waterConnection) rows.push({ category: 'Hydraulika', item: 'Przyłącze wody', quantity: '1 szt.', basis: 'dokładne' })
-  if (c.sewerConnection) rows.push({ category: 'Hydraulika', item: 'Odpływ / kanalizacja', quantity: '1 szt.', basis: 'dokładne' })
-  if (c.kitchenWaterPoint) rows.push({ category: 'Hydraulika', item: 'Punkt wodny pod aneks', quantity: '1 szt.', basis: 'dokładne' })
-  if (c.toiletCompact) rows.push({ category: 'Sanitariaty', item: 'WC kompakt', quantity: '1 szt.', basis: 'dokładne' })
-  if (c.washbasin) rows.push({ category: 'Sanitariaty', item: 'Umywalka + szafka', quantity: '1 kpl.', basis: 'dokładne' })
-  if (c.shower) rows.push({ category: 'Sanitariaty', item: 'Prysznic', quantity: '1 kpl.', basis: 'dokładne' })
-  if (c.boilerLiters > 0) rows.push({ category: 'Sanitariaty', item: 'Bojler ' + c.boilerLiters + ' l', quantity: '1 szt.', basis: 'dokładne' })
-  if (c.heater) rows.push({ category: 'Sanitariaty', item: 'Grzejnik', quantity: '1 szt.', basis: 'dokładne' })
-  if (c.ventilationGrille) rows.push({ category: 'Wentylacja', item: 'Kratka wentylacyjna', quantity: '1 szt.', basis: 'dokładne' })
-
-  if (c.kitchen) {
-    rows.push({ category: 'Aneks', item: 'Aneks kuchenny', quantity: Math.round(c.kitchenLength * 100) + ' cm', basis: 'dokładne' })
-    if (c.induction) rows.push({ category: 'Aneks', item: 'Płyta indukcyjna', quantity: '1 szt.', basis: 'dokładne' })
-    if (c.fridge) rows.push({ category: 'Aneks', item: 'Lodówka', quantity: '1 szt.', basis: 'dokładne' })
-  }
-
-  if (c.airConditioning) rows.push({ category: 'HVAC', item: 'Klimatyzacja ' + c.hvacPower.toFixed(1) + ' kW ' + c.hvacColor, quantity: '1 kpl.', basis: 'dokładne' })
-  if (c.partitionWall) rows.push({ category: 'Wnętrze', item: 'Ścianka działowa', quantity: '1 kpl.', basis: 'szacunkowe' })
-  if (c.internalDoorCount > 0) rows.push({ category: 'Wnętrze', item: 'Drzwi wewnętrzne', quantity: c.internalDoorCount + ' szt.', basis: 'dokładne' })
-  if (c.gutter) rows.push({ category: 'Dach', item: 'Rynna', quantity: '1 kpl.', basis: 'dokładne' })
-  return rows
+  const model = buildComponentModel(c)
+  return groupComponentsForBom(model).map((row) => ({
+    category: row.category,
+    item: row.name + ' · ' + row.material + ' · ' + row.dimensions + (row.massKg > 0 ? ' · ' + row.massKg.toFixed(2) + ' kg' : ''),
+    quantity: row.quantity + ' szt.',
+    basis: row.basis,
+  }))
 }
