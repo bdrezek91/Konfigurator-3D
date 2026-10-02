@@ -184,6 +184,7 @@ function ConfigControls({ config, update }: { config: PavilionConfig; update: Se
           { value: 'cassette-black', label: 'Kaseton czarny mat' },
           { value: 'lamella-winchester', label: 'Lamele Winchester' },
           { value: 'lamella-black', label: 'Lamele czarne' },
+          { value: 'lamella-diagonal-winchester', label: 'Lamele ukośne · Winchester' },
           { value: 'cassette-lamella', label: 'Kaseton + lamele' },
           { value: 'silver-rectangle', label: 'Srebrny prostokąt' },
           { value: 'cassette-horizontal', label: 'Kasetony poziome · fuga cieniowa' },

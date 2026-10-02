@@ -231,6 +231,7 @@ function PhotoEnvironment() {
 function RoundedPiece({
   size,
   position,
+  rotation = [0, 0, 0],
   color,
   map,
   metalness = 0.10,
@@ -239,6 +240,7 @@ function RoundedPiece({
 }: {
   size: [number, number, number]
   position: [number, number, number]
+  rotation?: [number, number, number]
   color: string
   map?: Texture
   metalness?: number
@@ -246,7 +248,7 @@ function RoundedPiece({
   radius?: number
 }) {
   return (
-    <RoundedBox args={size} position={position} radius={Math.min(radius, size[0] / 5, size[1] / 5)} smoothness={2} castShadow receiveShadow>
+    <RoundedBox args={size} position={position} rotation={rotation} radius={Math.min(radius, size[0] / 5, size[1] / 5)} smoothness={2} castShadow receiveShadow>
       <meshStandardMaterial color={color} map={map} metalness={metalness} roughness={roughness} envMapIntensity={1.15} />
     </RoundedBox>
   )
@@ -529,6 +531,13 @@ function facadeKindForWall(side: WallSide, config: PavilionConfig, geometry: Pro
   if (explicit) return explicit.kind
   const enabled = side === 'front' ? config.facadeFront : side === 'back' ? config.facadeBack : side === 'left' ? config.facadeLeft : config.facadeRight
   if (!enabled || config.facade === 'plain') return 'none'
+  if (
+    config.facade === 'lamella-winchester' ||
+    config.facade === 'lamella-black' ||
+    config.facade === 'lamella-diagonal-winchester' ||
+    config.facade === 'wood-horizontal' ||
+    config.facade === 'ornament-panel'
+  ) return 'none'
   if (config.facade === 'vertical-ribbed') return 'vertical-ribbed'
   if (config.facade === 'cassette-grid') return 'cassette-grid'
   return 'cassette-horizontal'
@@ -646,9 +655,8 @@ function DecorLocal({
 
   decor.forEach((segment) => {
     const fullWallCassette = segment.kind === 'cassette-black' && segment.height >= 2.8
-    const isBody = !fullWallCassette && segment.height > 1.0 && segment.yCenter < 2.2
-    const effectiveHeight = fullWallCassette ? 2.76 : isBody ? Math.min(segment.height, 2.26) : segment.height
-    const effectiveY = fullWallCassette ? 1.39 : isBody ? 1.31 : Math.min(segment.yCenter, 2.82 - effectiveHeight / 2)
+    const effectiveHeight = fullWallCassette ? 2.76 : segment.height
+    const effectiveY = fullWallCassette ? 1.39 : Math.min(segment.yCenter, 2.82 - effectiveHeight / 2)
     const z = wallDepth / 2 + 0.070
     const x0 = segment.center - segment.width / 2
     const y0 = effectiveY - effectiveHeight / 2
@@ -659,14 +667,15 @@ function DecorLocal({
         segment.kind === 'lamella-graphite' ? '#3d4448' :
         segment.kind === 'lamella-palisander' ? '#5f3f2b' : '#a57245'
       const step = 0.072
-      const slatWidth = 0.032
+      const slatWidth = 0.040
+      const diagonal = segment.kind === 'lamella-diagonal-winchester'
       const woodPalette =
         segment.kind === 'lamella-palisander'
           ? ['#5a3a28', '#694630', '#4f3324', '#74503a']
           : ['#9a693f', '#b27a49', '#8f603a', '#a97044']
       const slatMap =
         segment.kind === 'lamella-palisander' ? woodTexture('palisander') :
-        segment.kind === 'lamella-winchester' ? woodTexture('winchester') : undefined
+        segment.kind === 'lamella-winchester' || diagonal ? woodTexture('winchester') : undefined
       let slatIndex = 0
 
       if (!segment.shape || segment.shape === 'rect') {
@@ -698,6 +707,7 @@ function DecorLocal({
               key={segment.id + '-l-' + x.toFixed(2)}
               size={[slatWidth, localH, 0.052]}
               position={[x, localY, z + 0.010]}
+              rotation={[0, 0, diagonal ? -0.35 : 0]}
               color={slatMap ? '#ffffff' : slatColor}
               map={slatMap}
               roughness={0.68}
@@ -742,8 +752,8 @@ function DecorLocal({
       return
     }
 
-    if (segment.kind === 'board-natural') {
-      const boardH = 0.16
+    if (segment.kind === 'board-natural' || segment.kind === 'board-horizontal-winchester') {
+      const boardH = 0.275
       for (let y = y0 + boardH / 2; y < y0 + effectiveHeight; y += boardH + 0.018) {
         if (!overlapsOpening(segment.center, y, segment.width, boardH, openings, floorOffset)) {
           out.push(
@@ -752,13 +762,53 @@ function DecorLocal({
               size={[segment.width, boardH, 0.060]}
               position={[segment.center, y, z]}
               color="#ffffff"
-              map={woodTexture('natural')}
+              map={woodTexture(segment.kind === 'board-horizontal-winchester' ? 'winchester' : 'natural')}
               roughness={0.72}
               radius={0.006}
             />,
           )
         }
       }
+      return
+    }
+
+    if (segment.kind === 'ornament-panel') {
+      const border = 0.032
+      const pattern: ReactNode[] = []
+      pattern.push(
+        <Box key={segment.id + '-top'} size={[segment.width, border, 0.055]} position={[segment.center, y0 + effectiveHeight - border / 2, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
+        <Box key={segment.id + '-bottom'} size={[segment.width, border, 0.055]} position={[segment.center, y0 + border / 2, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
+        <Box key={segment.id + '-left'} size={[border, effectiveHeight, 0.055]} position={[x0 + border / 2, effectiveY, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
+        <Box key={segment.id + '-right'} size={[border, effectiveHeight, 0.055]} position={[x0 + segment.width - border / 2, effectiveY, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
+      )
+      for (let x = x0 + 0.18; x < x0 + segment.width - 0.10; x += 0.34) {
+        for (let y = y0 + 0.22; y < y0 + effectiveHeight - 0.12; y += 0.42) {
+          if (overlapsOpening(x, y, 0.28, 0.36, openings, floorOffset)) continue
+          pattern.push(
+            <RoundedPiece
+              key={segment.id + '-orn-a-' + x.toFixed(2) + '-' + y.toFixed(2)}
+              size={[0.034, 0.42, 0.052]}
+              position={[x, y, z + 0.008]}
+              rotation={[0, 0, 0.62]}
+              color="#22272a"
+              metalness={0.30}
+              roughness={0.48}
+              radius={0.006}
+            />,
+            <RoundedPiece
+              key={segment.id + '-orn-b-' + x.toFixed(2) + '-' + y.toFixed(2)}
+              size={[0.034, 0.42, 0.052]}
+              position={[x + 0.12, y, z + 0.008]}
+              rotation={[0, 0, -0.62]}
+              color="#22272a"
+              metalness={0.30}
+              roughness={0.48}
+              radius={0.006}
+            />,
+          )
+        }
+      }
+      out.push(<group key={segment.id + '-ornament'}>{pattern}</group>)
       return
     }
 
@@ -935,12 +985,13 @@ function Wall({
 }) {
   const transform = wallTransform(side, config)
   const openings = geometry.openings.filter((x) => x.wall === side)
-  const decor = geometry.decor.filter((x) => x.wall === side)
+  const facadeKind = facadeKindForWall(side, config, geometry)
+  const legacyFacadeKinds = new Set(['cassette-black', 'cassette-square-graphite', 'cassette-rect-graphite', 'cassette-white'])
+  const decor = geometry.decor.filter((x) => x.wall === side && !(facadeKind !== 'none' && legacyFacadeKinds.has(x.kind)))
   const lights = geometry.exteriorLights?.filter((x) => x.wall === side) ?? []
   const { floorT } = envelope(config)
   const depth = PANEL_THICKNESS_M[config.wallPanel]
   const shape = makeWallShape(side, config, transform.span, openings)
-  const facadeKind = facadeKindForWall(side, config, geometry)
   const hasCladding = facadeKind !== 'none'
 
   return (
@@ -1333,40 +1384,53 @@ function fallbackGeometry(config: PavilionConfig): ProjectGeometry {
   }
 
   const decor: DecorPlacement[] = []
-  const fieldHeight = 2.24
-  const fieldY = 1.30
-  const sideSpace = Math.max(0.45, Math.min(1.25, (config.length - Math.min(total, config.length - 0.5)) / 2 - 0.12))
-  const leftCenter = -config.length / 2 + sideSpace / 2 + 0.16
-  const rightCenter = config.length / 2 - sideSpace / 2 - 0.16
+  const enabledSides = (['front', 'back', 'left', 'right'] as WallSide[]).filter((side) => {
+    return side === 'front' ? config.facadeFront :
+      side === 'back' ? config.facadeBack :
+      side === 'left' ? config.facadeLeft : config.facadeRight
+  })
+  const fullDecorKind: DecorPlacement['kind'] | null =
+    config.facade === 'lamella-winchester' ? 'lamella-winchester' :
+    config.facade === 'lamella-black' ? 'lamella-black' :
+    config.facade === 'lamella-diagonal-winchester' ? 'lamella-diagonal-winchester' :
+    config.facade === 'wood-horizontal' ? 'board-horizontal-winchester' :
+    config.facade === 'ornament-panel' ? 'ornament-panel' : null
 
-  if (config.facade === 'cassette-lamella' || config.facade === 'lamella-winchester') {
+  if (fullDecorKind) {
+    const { outerFront, outerBack } = envelope(config)
+    for (const side of enabledSides) {
+      const span = side === 'front' || side === 'back' ? config.length : config.width
+      const h = side === 'front' ? outerFront : side === 'back' ? outerBack : (outerFront + outerBack) / 2
+      decor.push({
+        id: 'custom-full-' + side,
+        wall: side,
+        center: 0,
+        width: span,
+        yCenter: h / 2,
+        height: h,
+        kind: fullDecorKind,
+        sourceAccuracy: 'drawing-estimate',
+      })
+    }
+  } else if (config.facade === 'cassette-lamella' && config.facadeFront) {
+    const fieldHeight = Math.min(2.40, envelope(config).outerFront - 0.18)
+    const groupWidth = Math.min(total, config.length - 0.50)
+    const sideSpace = Math.max(0.38, Math.min(1.10, (config.length - groupWidth) / 2 - 0.10))
+    if (sideSpace > 0.20) {
+      decor.push(
+        { id:'custom-l', wall:'front', center:-config.length / 2 + sideSpace / 2 + 0.05, width:sideSpace, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'lamella-winchester', sourceAccuracy:'drawing-estimate' },
+        { id:'custom-r', wall:'front', center:config.length / 2 - sideSpace / 2 - 0.05, width:sideSpace, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'lamella-winchester', sourceAccuracy:'drawing-estimate' },
+      )
+    }
+  } else if (config.facade === 'silver-rectangle' && config.facadeFront) {
+    const fieldHeight = Math.min(2.40, envelope(config).outerFront - 0.18)
     decor.push(
-      { id:'custom-l', wall:'front', center:leftCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'lamella-winchester' },
-      { id:'custom-r', wall:'front', center:rightCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'lamella-winchester' },
-    )
-  } else if (config.facade === 'lamella-black') {
-    decor.push(
-      { id:'custom-l', wall:'front', center:leftCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'lamella-black' },
-      { id:'custom-r', wall:'front', center:rightCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'lamella-black' },
-    )
-  } else if (config.facade === 'cassette-graphite') {
-    decor.push(
-      { id:'custom-l', wall:'front', center:leftCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'cassette-square-graphite' },
-      { id:'custom-r', wall:'front', center:rightCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'cassette-square-graphite' },
-    )
-  } else if (config.facade === 'cassette-black') {
-    decor.push(
-      { id:'custom-l', wall:'front', center:leftCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'cassette-black' },
-      { id:'custom-r', wall:'front', center:rightCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'cassette-black' },
-    )
-  } else if (config.facade === 'silver-rectangle') {
-    decor.push(
-      { id:'custom-l', wall:'front', center:leftCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'silver-rect' },
-      { id:'custom-r', wall:'front', center:rightCenter, width:sideSpace, yCenter:fieldY, height:fieldHeight, kind:'silver-rect' },
+      { id:'custom-silver-l', wall:'front', center:-config.length / 2 + 0.50, width:0.82, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'silver-rect', sourceAccuracy:'drawing-estimate' },
+      { id:'custom-silver-r', wall:'front', center:config.length / 2 - 0.50, width:0.82, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'silver-rect', sourceAccuracy:'drawing-estimate' },
     )
   }
 
-  return { externalHeight: envelope(config).outerFront, openings, decor }
+  return { externalHeight: envelope(config).outerFront, foundationGap: 0.12, openings, decor }
 }
 
 function ProjectPavilion({ config }: Props) {

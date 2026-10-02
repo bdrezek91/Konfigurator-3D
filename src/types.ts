@@ -9,6 +9,7 @@ export type FacadeStyle =
   | 'cassette-black'
   | 'lamella-winchester'
   | 'lamella-black'
+  | 'lamella-diagonal-winchester'
   | 'cassette-lamella'
   | 'silver-rectangle'
   | 'cassette-horizontal'

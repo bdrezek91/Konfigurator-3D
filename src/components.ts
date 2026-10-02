@@ -295,10 +295,57 @@ function fallbackGeometry(c: PavilionConfig): ProjectGeometry {
     })
   }
 
+  const decor: DecorPlacement[] = []
+  const enabledSides = (['front', 'back', 'left', 'right'] as WallSide[]).filter((side) => facadeEnabled(side, c))
+  const fullDecorKind: DecorPlacement['kind'] | null =
+    c.facade === 'lamella-winchester' ? 'lamella-winchester' :
+    c.facade === 'lamella-black' ? 'lamella-black' :
+    c.facade === 'lamella-diagonal-winchester' ? 'lamella-diagonal-winchester' :
+    c.facade === 'wood-horizontal' ? 'board-horizontal-winchester' :
+    c.facade === 'ornament-panel' ? 'ornament-panel' : null
+
+  if (fullDecorKind) {
+    for (const side of enabledSides) {
+      const span = wallSpan(side, c)
+      const h = side === 'front'
+        ? envelope(c).outerFront
+        : side === 'back'
+          ? envelope(c).outerBack
+          : (envelope(c).outerFront + envelope(c).outerBack) / 2
+      decor.push({
+        id: 'custom-full-' + side,
+        wall: side,
+        center: 0,
+        width: span,
+        yCenter: h / 2,
+        height: h,
+        kind: fullDecorKind,
+        sourceAccuracy: 'drawing-estimate',
+      })
+    }
+  } else if (c.facade === 'cassette-lamella' && c.facadeFront) {
+    const fieldHeight = Math.min(2.40, envelope(c).outerFront - 0.18)
+    const groupWidth = Math.min(total, c.length - 0.50)
+    const sideSpace = Math.max(0.38, Math.min(1.10, (c.length - groupWidth) / 2 - 0.10))
+    if (sideSpace > 0.20) {
+      decor.push(
+        { id:'custom-l', wall:'front', center:-c.length / 2 + sideSpace / 2 + 0.05, width:sideSpace, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'lamella-winchester', sourceAccuracy:'drawing-estimate' },
+        { id:'custom-r', wall:'front', center:c.length / 2 - sideSpace / 2 - 0.05, width:sideSpace, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'lamella-winchester', sourceAccuracy:'drawing-estimate' },
+      )
+    }
+  } else if (c.facade === 'silver-rectangle' && c.facadeFront) {
+    const fieldHeight = Math.min(2.40, envelope(c).outerFront - 0.18)
+    decor.push(
+      { id:'custom-silver-l', wall:'front', center:-c.length / 2 + 0.50, width:0.82, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'silver-rect', sourceAccuracy:'drawing-estimate' },
+      { id:'custom-silver-r', wall:'front', center:c.length / 2 - 0.50, width:0.82, yCenter:fieldHeight / 2 + 0.08, height:fieldHeight, kind:'silver-rect', sourceAccuracy:'drawing-estimate' },
+    )
+  }
+
   return {
     externalHeight: envelope(c).outerFront,
+    foundationGap: 0.12,
     openings,
-    decor: [],
+    decor,
     exteriorLights: [],
     notes: ['Geometria wygenerowana z parametrów własnej konfiguracji.'],
   }
@@ -601,6 +648,13 @@ function facadeSpecForSide(c: PavilionConfig, g: ProjectGeometry, side: WallSide
   const explicit = g.facadeCladding?.[side]
   if (explicit) return explicit.kind === 'none' ? null : explicit
   if (!facadeEnabled(side, c) || c.facade === 'plain') return null
+  if (
+    c.facade === 'lamella-winchester' ||
+    c.facade === 'lamella-black' ||
+    c.facade === 'lamella-diagonal-winchester' ||
+    c.facade === 'wood-horizontal' ||
+    c.facade === 'ornament-panel'
+  ) return null
   if (c.facade === 'cassette-grid') {
     return { kind: 'cassette-grid', gap: 0.012, moduleWidth: 0.80, moduleHeight: 0.65, color: c.exteriorColor }
   }
@@ -1038,6 +1092,15 @@ function addJoinery(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometr
 
 function addDecor(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry) {
   for (const d of g.decor) {
+    const facadeSpec = facadeSpecForSide(c, g, d.wall)
+    const legacyFacadeCassette = [
+      'cassette-black',
+      'cassette-square-graphite',
+      'cassette-rect-graphite',
+      'cassette-white',
+    ].includes(d.kind)
+    if (facadeSpec && legacyFacadeCassette) continue
+
     const normal = wallNormal(d.wall)
     const p = wallPosition(d.wall, d.center, d.yCenter, c)
     const isWood = d.kind.includes('winchester') || d.kind.includes('palisander') || d.kind === 'board-natural'
