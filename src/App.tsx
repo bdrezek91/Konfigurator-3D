@@ -179,13 +179,18 @@ function ConfigControls({ config, update }: { config: PavilionConfig; update: Se
           </label>
         </div>
         <Select label="Styl elewacji" value={config.facade} onChange={(v) => update('facade', v)} options={[
-          { value: 'plain', label: 'Bez dekoru / gładka' },
+          { value: 'plain', label: 'Goły panel PIR / techniczny' },
           { value: 'cassette-graphite', label: 'Kaseton grafit' },
           { value: 'cassette-black', label: 'Kaseton czarny mat' },
           { value: 'lamella-winchester', label: 'Lamele Winchester' },
           { value: 'lamella-black', label: 'Lamele czarne' },
           { value: 'cassette-lamella', label: 'Kaseton + lamele' },
           { value: 'silver-rectangle', label: 'Srebrny prostokąt' },
+          { value: 'cassette-horizontal', label: 'Kasetony poziome · fuga cieniowa' },
+          { value: 'cassette-grid', label: 'Kasetony · siatka prostokątna' },
+          { value: 'vertical-ribbed', label: 'Blacha pionowa · wysoki profil' },
+          { value: 'wood-horizontal', label: 'Deska drewnopodobna · pozioma' },
+          { value: 'ornament-panel', label: 'Panel ażurowy · ornament' },
         ]} />
         <div className="toggle-pair">
           <Toggle label="Front" checked={config.facadeFront} onChange={(v) => update('facadeFront', v)} />
