@@ -34,6 +34,35 @@ const g = (
 ): ProjectGeometry => ({ externalHeight: 2.86, openings, decor, exteriorLights, notes })
 
 export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
+  'GALERIA/03': {
+    externalHeight: 2.82,
+    foundationGap: 0.03,
+    roofEdgeFlashing: false,
+    facadeCladding: {
+      front: {
+        kind: 'cassette-horizontal',
+        color: '#34495b',
+        gap: 0.015,
+        bandHeight: 0.24,
+        moduleWidth: 1.20,
+        staggered: false,
+      },
+    },
+    openings: [
+      o('G03-FIX-L','front',-1.38,1.20,2.05,'fixed-glass',{sill:0.04,frameColor:'#34495b',sourceAccuracy:'dimensioned'}),
+      o('G03-DOOR','front',-0.24,1.05,2.08,'door-glazed',{sill:0,frameColor:'#34495b',sourceAccuracy:'dimensioned'}),
+      o('G03-FIX-R','front',0.82,1.07,2.05,'fixed-glass',{sill:0.04,frameColor:'#34495b',sourceAccuracy:'dimensioned'}),
+    ],
+    decor: [
+      d('gallery03-lamella','front',2.08,1.30,1.145,2.05,'lamella-winchester',{sourceAccuracy:'dimensioned'}),
+    ],
+    exteriorLights: [],
+    notes: [
+      'Wzorzec foto 03: 9 pasów kasetonów ~240 mm, fuga 15 mm, bez pionowych podziałów na pełnych polach.',
+      'Attyka: 2 rzędy po 315 mm, moduł 1200 mm z mijanką 600 mm.',
+      'Stolarka: trzy pola, profil 50–60 mm w kolorze antracytowym; lamele 40 mm / szczelina 18 mm.',
+    ],
+  },
   '722/08/26': g(
     [
       o('W2','front',-0.75,0.97,2.00,'fixed-glass',{roller:true}),

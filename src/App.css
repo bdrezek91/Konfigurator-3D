@@ -1038,3 +1038,58 @@ select {
     width: 190px;
   }
 }
+
+/* Gallery 03 calibration: photo and render share the same 4:3 viewport. */
+.gallery-compare {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px;
+  background: #111517;
+}
+
+.gallery-reference-pane,
+.gallery-render-pane {
+  position: relative;
+  margin: 0;
+  min-width: 0;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #dfe2e2;
+}
+
+.gallery-reference-pane img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-reference-pane figcaption,
+.gallery-pane-label {
+  position: absolute;
+  z-index: 5;
+  left: 10px;
+  top: 10px;
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: rgba(8, 11, 13, .78);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  pointer-events: none;
+}
+
+.gallery-render-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+}
+
+@media (max-width: 900px) {
+  .gallery-compare {
+    grid-template-columns: 1fr;
+  }
+}

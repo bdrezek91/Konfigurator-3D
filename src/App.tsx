@@ -410,6 +410,7 @@ export default function App() {
     if (!preset) return
     setConfig({ ...preset.config })
     setViewMode('perspective')
+    if (id === 'galeria-03') setSceneMode('realistic')
     setTechnicalView('axon')
     setSelectedId(undefined)
     setHoveredId(undefined)
@@ -430,7 +431,7 @@ export default function App() {
 
   const exportConfig = () => {
     const payload = JSON.stringify({
-      version: 5,
+      version: 6,
       generatedAt: new Date().toISOString(),
       config,
       validation,
@@ -473,9 +474,9 @@ export default function App() {
       <header className="topbar">
         <div>
           <div className="brand-row"><span className="brand-mark">D</span><strong>DAMPOL 3D</strong></div>
-          <p>Konfigurator techniczno-sprzedażowy · 14 projektów referencyjnych</p>
+          <p>Konfigurator techniczno-sprzedażowy · 15 projektów referencyjnych</p>
         </div>
-        <span className="status-pill">V5</span>
+        <span className="status-pill">V6</span>
       </header>
 
       <section className="preset-bar">
@@ -597,9 +598,24 @@ export default function App() {
             )}
 
             {sceneMode === 'realistic' ? (
-              <div className="canvas-wrap">
-                <Pavilion3D key={sceneKey} config={config} view={viewMode} />
-              </div>
+              config.project === 'GALERIA/03' ? (
+                <div className="gallery-compare">
+                  <figure className="gallery-reference-pane">
+                    <img src="./reference/gallery-03.jpg" alt="Zdjęcie referencyjne 03 z galerii Dampol" />
+                    <figcaption>ZDJĘCIE 03 · REFERENCJA</figcaption>
+                  </figure>
+                  <div className="gallery-render-pane">
+                    <div className="gallery-pane-label">RENDER · GALERIA-03</div>
+                    <div className="canvas-wrap gallery-render-canvas">
+                      <Pavilion3D key={sceneKey} config={config} view={viewMode} />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="canvas-wrap">
+                  <Pavilion3D key={sceneKey} config={config} view={viewMode} />
+                </div>
+              )
             ) : (
               <div className="technical-workspace">
                 <aside className="technical-tree">

@@ -316,7 +316,8 @@ function OpeningFrame({
   const y = floorOffset + sill + opening.height / 2
   const frame = opening.frameColor ?? '#17191b'
   const isDoor = opening.kind.startsWith('door-')
-  const rail = Math.min(0.068, Math.max(0.052, opening.width * 0.055))
+  const gallery03Opening = opening.id.startsWith('G03-')
+  const rail = gallery03Opening ? 0.055 : Math.min(0.068, Math.max(0.052, opening.width * 0.055))
   const innerW = Math.max(0.12, opening.width - rail * 2)
   const innerH = Math.max(0.12, opening.height - rail * 2)
   const z = depth / 2 + 0.018
@@ -340,17 +341,17 @@ function OpeningFrame({
       <mesh position={[0, 0, -0.002]} castShadow receiveShadow>
         <boxGeometry args={[innerW, innerH, 0.016]} />
         <meshPhysicalMaterial
-          color="#526975"
+          color={gallery03Opening ? '#91bed3' : '#526975'}
           transparent
-          opacity={0.38}
+          opacity={gallery03Opening ? 0.16 : 0.38}
           roughness={0.08}
           metalness={0.02}
-          transmission={0.50}
+          transmission={gallery03Opening ? 0.80 : 0.50}
           ior={1.46}
           thickness={0.014}
           clearcoat={0.52}
           clearcoatRoughness={0.06}
-          envMapIntensity={1.85}
+          envMapIntensity={gallery03Opening ? 2.50 : 1.85}
         />
       </mesh>
       <mesh position={[0, 0, 0.010]}>
@@ -358,7 +359,7 @@ function OpeningFrame({
         <meshBasicMaterial
           map={glassReflectionTexture()}
           transparent
-          opacity={0.14}
+          opacity={gallery03Opening ? 0.36 : 0.14}
           depthWrite={false}
           toneMapped={false}
         />
@@ -376,20 +377,49 @@ function OpeningFrame({
         </>
       )}
       {isDoor && (
-        <>
-          <Box size={[0.12, 0.018, 0.018]} position={[opening.width * 0.28, 0.02, 0.070]} color="#24282a" metalness={0.72} roughness={0.22} />
-          <Box size={[0.020, 0.020, 0.045]} position={[opening.width * 0.23, 0.02, 0.053]} color="#24282a" metalness={0.72} roughness={0.22} />
-          {[-0.62, 0, 0.62].map((hy) => (
+        gallery03Opening ? (
+          <>
             <Box
-              key={'hinge-' + hy}
-              size={[0.028, 0.085, 0.028]}
-              position={[opening.width / 2 - rail * 0.45, hy, 0.058]}
-              color="#202426"
-              metalness={0.56}
-              roughness={0.30}
+              size={[0.018, 0.72, 0.024]}
+              position={[opening.width / 2 - 0.11, 0.05, 0.078]}
+              color="#c6c9c8"
+              metalness={0.86}
+              roughness={0.18}
             />
-          ))}
-        </>
+            <Box
+              size={[0.035, 0.028, 0.050]}
+              position={[opening.width / 2 - 0.11, -0.34, 0.058]}
+              color="#b7bcbd"
+              metalness={0.78}
+              roughness={0.20}
+            />
+            {[-0.62, 0, 0.62].map((hy) => (
+              <Box
+                key={'hinge-gallery03-' + hy}
+                size={[0.030, 0.085, 0.030]}
+                position={[-opening.width / 2 + rail * 0.46, hy, 0.060]}
+                color="#8f989d"
+                metalness={0.70}
+                roughness={0.24}
+              />
+            ))}
+          </>
+        ) : (
+          <>
+            <Box size={[0.12, 0.018, 0.018]} position={[opening.width * 0.28, 0.02, 0.070]} color="#24282a" metalness={0.72} roughness={0.22} />
+            <Box size={[0.020, 0.020, 0.045]} position={[opening.width * 0.23, 0.02, 0.053]} color="#24282a" metalness={0.72} roughness={0.22} />
+            {[-0.62, 0, 0.62].map((hy) => (
+              <Box
+                key={'hinge-' + hy}
+                size={[0.028, 0.085, 0.028]}
+                position={[opening.width / 2 - rail * 0.45, hy, 0.058]}
+                color="#202426"
+                metalness={0.56}
+                roughness={0.30}
+              />
+            ))}
+          </>
+        )
       )}
       {isDoor && <Box size={[opening.width, 0.035, 0.075]} position={[0, -opening.height / 2 + 0.018, 0.006]} color="#111315" metalness={0.45} roughness={0.38} />}
       {opening.roller && (
@@ -602,14 +632,24 @@ function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) {
 
         return (
           <group key={item.id} position={item.position} rotation={item.rotation}>
-            <RoundedPiece
-              size={[w, h, depth]}
-              position={[0, 0, 0]}
-              color={color}
-              metalness={0.38}
-              roughness={0.48}
-              radius={0.003}
-            />
+            {config.project === 'GALERIA/03' ? (
+              <Box
+                size={[w, h, depth]}
+                position={[0, 0, 0]}
+                color={color}
+                metalness={0.34}
+                roughness={0.46}
+              />
+            ) : (
+              <RoundedPiece
+                size={[w, h, depth]}
+                position={[0, 0, 0]}
+                color={color}
+                metalness={0.38}
+                roughness={0.48}
+                radius={0.003}
+              />
+            )}
           </group>
         )
       })}
@@ -657,7 +697,8 @@ function DecorLocal({
     const fullWallCassette = segment.kind === 'cassette-black' && segment.height >= 2.8
     const effectiveHeight = fullWallCassette ? 2.76 : segment.height
     const effectiveY = fullWallCassette ? 1.39 : Math.min(segment.yCenter, 2.82 - effectiveHeight / 2)
-    const z = wallDepth / 2 + 0.070
+    const gallery03Lamella = segment.id === 'gallery03-lamella'
+    const z = gallery03Lamella ? wallDepth / 2 + 0.025 : wallDepth / 2 + 0.070
     const x0 = segment.center - segment.width / 2
     const y0 = effectiveY - effectiveHeight / 2
 
@@ -666,7 +707,7 @@ function DecorLocal({
         segment.kind === 'lamella-black' ? '#1d2022' :
         segment.kind === 'lamella-graphite' ? '#3d4448' :
         segment.kind === 'lamella-palisander' ? '#5f3f2b' : '#a57245'
-      const step = 0.072
+      const step = gallery03Lamella ? 0.058 : 0.072
       const slatWidth = 0.040
       const diagonal = segment.kind === 'lamella-diagonal-winchester'
       const woodPalette =
@@ -682,8 +723,8 @@ function DecorLocal({
         out.push(
           <Box
             key={segment.id + '-base'}
-            size={[segment.width, effectiveHeight, 0.040]}
-            position={[segment.center, effectiveY, z - 0.015]}
+            size={[segment.width, effectiveHeight, gallery03Lamella ? 0.012 : 0.040]}
+            position={[segment.center, effectiveY, z - (gallery03Lamella ? 0.013 : 0.015)]}
             color="#111315"
             roughness={0.62}
           />,
@@ -705,11 +746,11 @@ function DecorLocal({
           out.push(
             <RoundedPiece
               key={segment.id + '-l-' + x.toFixed(2)}
-              size={[slatWidth, localH, 0.052]}
-              position={[x, localY, z + 0.010]}
+              size={[slatWidth, localH, gallery03Lamella ? 0.015 : 0.052]}
+              position={[x, localY, gallery03Lamella ? z : z + 0.010]}
               rotation={[0, 0, diagonal ? -0.35 : 0]}
-              color={slatMap ? '#ffffff' : slatColor}
-              map={slatMap}
+              color={gallery03Lamella ? '#826f66' : (slatMap ? '#ffffff' : slatColor)}
+              map={gallery03Lamella ? undefined : slatMap}
               roughness={0.68}
               radius={0.005}
             />,
@@ -999,7 +1040,7 @@ function Wall({
       <mesh position={[0, 0, -depth / 2]} castShadow receiveShadow>
         <extrudeGeometry args={[shape, { depth, bevelEnabled: false, steps: 1 }]} />
         <meshStandardMaterial
-          color={hasCladding ? '#202528' : renderMetalColor(config.exteriorColor)}
+          color={hasCladding ? (config.project === 'GALERIA/03' ? '#070a0d' : '#202528') : renderMetalColor(config.exteriorColor)}
           metalness={hasCladding ? 0.20 : 0.38}
           roughness={hasCladding ? 0.68 : 0.50}
           normalMap={hasCladding ? undefined : panelNormalTexture(config.wallProfile)}
@@ -1449,7 +1490,7 @@ function ProjectPavilion({ config }: Props) {
         <Wall side="left" config={config} geometry={geometry} opacity={opacity} />
         <Wall side="right" config={config} geometry={geometry} opacity={opacity} />
         <FacadeCladdingFromModel config={config} />
-        <RoofSystem config={config} />
+        {config.project !== 'GALERIA/03' && <RoofSystem config={config} />}
         {config.showStructure && <Structure config={config} />}
         <Interior config={config} />
         <ExteriorHVAC config={config} />
@@ -1478,11 +1519,13 @@ function RealExportBridge() {
 }
 
 export default function Pavilion3D({ config, view = 'perspective' }: Props) {
+  const gallery03 = config.project === 'GALERIA/03'
   const cameraDistance = Math.max(9.0, config.length * 1.28)
   const { outerFront, outerBack } = envelope(config)
-  const targetHeight = Math.min(1.34, (outerFront + outerBack) * 0.245)
-  const cameraHeight = 1.68
+  const targetHeight = gallery03 ? 1.30 : Math.min(1.34, (outerFront + outerBack) * 0.245)
+  const cameraHeight = gallery03 ? 1.28 : 1.68
   const cameraPosition: [number, number, number] =
+    gallery03 && view === 'perspective' ? [-2.05, 1.28, 7.45] :
     view === 'front' ? [0, cameraHeight, cameraDistance] :
     view === 'back' ? [0, cameraHeight, -cameraDistance] :
     view === 'left' ? [-cameraDistance, cameraHeight, 0] :
@@ -1495,7 +1538,7 @@ export default function Pavilion3D({ config, view = 'perspective' }: Props) {
     <Canvas
       shadows
       dpr={[1, 1.75]}
-      camera={{ position: cameraPosition, fov: 32 }}
+      camera={{ position: cameraPosition, fov: gallery03 ? 37 : 32 }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping
         gl.toneMappingExposure = 1.18
@@ -1547,7 +1590,7 @@ export default function Pavilion3D({ config, view = 'perspective' }: Props) {
 
       <OrbitControls
         makeDefault
-        target={[0, targetHeight, 0]}
+        target={gallery03 ? [0.08, 1.25, 0] : [0, targetHeight, 0]}
         minDistance={Math.max(6.3, config.length * 0.78)}
         maxDistance={Math.max(24, config.length * 2.4)}
         minPolarAngle={Math.PI * 0.25}

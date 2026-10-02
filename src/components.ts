@@ -724,6 +724,9 @@ function pushFacadePiece(
   const normal = wallNormal(side)
   const p = wallPosition(side, center, y0 + height / 2, c)
   const isRibbed = kind === 'vertical-ribbed'
+  const gallery03 = c.project === 'GALERIA/03'
+  const thicknessMm = isRibbed ? 35 : gallery03 ? 15 : 30
+  const facadeOffset = 0.075
   list.push({
     id,
     positionNo: 0,
@@ -736,20 +739,62 @@ function pushFacadePiece(
     dimensions: {
       lengthMm: Math.round(height * 1000),
       widthMm: Math.round(width * 1000),
-      thicknessMm: isRibbed ? 35 : 30,
+      thicknessMm,
       netAreaM2: round(width * height),
     },
     quantity: 1,
-    position: [p[0] + normal[0] * 0.075, p[1], p[2] + normal[2] * 0.075],
+    position: [p[0] + normal[0] * facadeOffset, p[1], p[2] + normal[2] * facadeOffset],
     rotation: wallRotation(side),
     explodeDirection: [normal[0] * 1.4, 0.1, normal[2] * 1.4],
     assemblyStage: 9,
     wall: side,
-    sourceAccuracy: 'assumption',
+    sourceAccuracy: gallery03 ? 'project-estimate' : 'assumption',
     assumptionCodes: isRibbed
       ? ['A-RIBBED-FACADE', 'A-CASSETTE-SUBSTRUCTURE']
       : ['A-CASSETTE-LAYOUT', 'A-CASSETTE-SUBSTRUCTURE'],
   })
+}
+
+
+function visibleIntervalsForGallery03Band(
+  side: WallSide,
+  a: number,
+  b: number,
+  y0: number,
+  y1: number,
+  floorT: number,
+  g: ProjectGeometry,
+) {
+  const cuts: Array<[number, number]> = []
+
+  for (const o of g.openings.filter((x) => x.wall === side)) {
+    const oy0 = floorT + openingSill(o)
+    const oy1 = oy0 + o.height
+    if (Math.min(y1, oy1) - Math.max(y0, oy0) > 0.001) {
+      cuts.push([o.center - o.width / 2, o.center + o.width / 2])
+    }
+  }
+
+  for (const d of g.decor.filter((x) => x.wall === side && x.id === 'gallery03-lamella')) {
+    const dy0 = d.yCenter - d.height / 2
+    const dy1 = d.yCenter + d.height / 2
+    if (Math.min(y1, dy1) - Math.max(y0, dy0) > 0.001) {
+      cuts.push([d.center - d.width / 2, d.center + d.width / 2])
+    }
+  }
+
+  cuts.sort((x, y) => x[0] - y[0])
+  const out: Array<[number, number]> = []
+  let cursor = a
+  for (const [c0, c1] of cuts) {
+    if (c1 <= cursor || c0 >= b) continue
+    const left = Math.max(a, c0)
+    if (left > cursor) out.push([cursor, Math.min(left, b)])
+    cursor = Math.max(cursor, c1)
+    if (cursor >= b) break
+  }
+  if (cursor < b) out.push([cursor, b])
+  return out.filter(([x0, x1]) => x1 - x0 > 0.025)
 }
 
 function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry) {
@@ -762,6 +807,46 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
     const span = wallSpan(side, c)
     const gap = spec.gap ?? 0.012
     const maxHeight = Math.max(wallHeightAt(side, -span / 2, c), wallHeightAt(side, span / 2, c))
+
+    if (c.project === 'GALERIA/03' && side === 'front' && spec.kind === 'cassette-horizontal') {
+      const bodyPitch = 0.24
+      const atticRowH = 0.315
+      const atticModuleW = 1.20
+      const atticShift = 0.60
+      const atticStart = maxHeight - atticRowH * 2
+      const bodyRows = Math.floor(atticStart / bodyPitch + 1e-6)
+
+      for (let row = 0; row < bodyRows; row++) {
+        const y0 = row * bodyPitch
+        const y1 = y0 + bodyPitch
+        const visible = visibleIntervalsForGallery03Band(side, -span / 2, span / 2, y0, y1, floorT, g)
+        for (let part = 0; part < visible.length; part++) {
+          const [v0, v1] = visible[part]
+          const shrink = gap / 2
+          pushFacadePiece(
+            list, c, side, 'facade-cassette-gallery03-body-' + row + '-' + part,
+            spec.kind, v0 + shrink, v1 - shrink, y0 + shrink, y1 - shrink, spec.color ?? c.exteriorColor,
+          )
+        }
+      }
+
+      for (let row = 0; row < 2; row++) {
+        const y0 = atticStart + row * atticRowH
+        const y1 = y0 + atticRowH
+        const shift = row % 2 === 1 ? atticShift : 0
+        for (let col = -1, x0 = -span / 2 - shift; x0 < span / 2 - 0.001; col++, x0 += atticModuleW) {
+          const cell0 = Math.max(-span / 2, x0)
+          const cell1 = Math.min(span / 2, x0 + atticModuleW)
+          if (cell1 - cell0 <= 0.025) continue
+          const shrink = gap / 2
+          pushFacadePiece(
+            list, c, side, 'facade-cassette-gallery03-attic-' + row + '-' + col,
+            spec.kind, cell0 + shrink, cell1 - shrink, y0 + shrink, y1 - shrink, spec.color ?? c.exteriorColor,
+          )
+        }
+      }
+      continue
+    }
 
     if (spec.kind === 'vertical-ribbed') {
       const moduleW = spec.moduleWidth ?? 0.60
@@ -816,6 +901,8 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
       }
     }
   }
+
+  if (c.project === 'GALERIA/03') return
 
   const corners: Array<{
     id: string
