@@ -1,5 +1,5 @@
 import { geometryOf } from '../../components'
-import { m, PHYS, RAL_7016_HEX, type Confidence } from '../../physical/spec'
+import { m, PHYS, RAL_7016_HEX, RAL_9010_HEX, RENDER, type Confidence } from '../../physical/spec'
 import { ROOF_TRAPEZOIDS } from '../../scene/materials/profiles'
 import { PANEL_THICKNESS_M, type OpeningPlacement, type PavilionConfig, type WallSide } from '../../types'
 import type { ConstructionModel, DerivedDimension, FinishVariant, Layer, MaterialKind, Part, Stage, Vec3 } from '../types'
@@ -20,7 +20,7 @@ import type { ConstructionModel, DerivedDimension, FinishVariant, Layer, Materia
  */
 
 const SHEET = 0.0006
-const FLASH_T = 0.0007
+const FLASH_T = RENDER.flashingSheetRenderMm.value / 1000
 
 type Ctx = { parts: Part[] }
 
@@ -126,7 +126,7 @@ export function buildSystem1(config: PavilionConfig, finish: FinishVariant): Con
   const geo = geometryOf(config)
   const y0 = geo.foundationGap ?? m(PHYS.base.groundGap)
   const outer = config.exteriorColor || RAL_7016_HEX
-  const inner = '#f1f0eb'
+  const inner = RAL_9010_HEX // okładzina wewn. zawsze 9010 gładka
   const steelUp: Vec3 = [0, 1, 0]
 
   // ---- poziomy wynikające z montażu
@@ -299,6 +299,7 @@ export function buildSystem1(config: PavilionConfig, finish: FinishVariant): Con
 
   // ---- 10. elewacja (tylko wariant pod kasetony) — osobna warstwa, nie zmienia konstrukcji
   if (finish === 'cassette') addCassettes(ctx, { L, W, y0, yFloorTop, yTopF, yTopB, t, walls, openings: geo.openings, color: outer })
+  if (finish === 'squares') addBoards(ctx, { L, W, y0, yFloorTop, yTopF, yTopB, t, walls, openings: geo.openings, color: outer })
 
   // ---- wymiary wyliczone
   const derived: DerivedDimension[] = [
@@ -415,20 +416,37 @@ function thicken(path: Array<[number, number]>, th: number): Array<[number, numb
 
 function addFlashings(ctx: Ctx, f: FlashCtx, finish: FinishVariant) {
   const face = m(PHYS.system1.crownFlashingFace)
-  const drip = m(PHYS.system1.flashingDrip)
   const baseFace = m(PHYS.system1.baseFlashingFace)
   const o = 0.0012 // odsunięcie blachy od lica kątownika
-  // korona: od wnętrza nad górną ramą, przez górę, w dół po licu; A — z kapinosem, B — płaska techniczna (pod kaseton)
-  const crown: Array<[number, number]> = finish === 'bare'
-    ? [[-0.02, -0.03], [-0.02, 0.002], [o, 0.002], [o, -face + drip], [o + drip, -face]]
-    : [[-0.02, -0.03], [-0.02, 0.002], [o, 0.002], [o, -(f.a + 0.10)]]
-  const base: Array<[number, number]> = finish === 'bare'
-    ? [[o + drip * 0.7, -0.012], [o, 0], [o, baseFace], [-f.t - 0.002, baseFace + 0.004]]
-    : [[o, 0], [o, baseFace], [-f.t - 0.002, baseFace + 0.004]]
+  const uWall = -f.t + 0.0008 // lico ściany (4 mm za płaszczyzną kątownika)
+  // układ przekroju: u — na zewnątrz od płaszczyzny kątownika, v — od góry górnej ramy; wierzch dachu przy krawędzi: v = −a
+  const cap: Array<[number, number]> = [[-0.09, -f.a + 0.003], [-0.065, 0.003]]
+  let crown: Array<[number, number]>
+  let label: string
+  let conf: Confidence
+  if (finish === 'bare') {
+    // „półtorówka”: lico 15 mm od ściany, na dole załamanie do ściany i kołnierz przykręcany (szkic produkcji)
+    const uF = uWall + m(PHYS.system1.flashingOffsetPoltorowka)
+    const step = uF - uWall
+    crown = [...cap, [uF, 0.003], [uF, -face + step], [uWall, -face], [uWall, -face - 0.04]]
+    label = 'Obróbka „półtorówka” 15 mm'
+    conf = 'HIGH'
+  } else if (finish === 'squares') {
+    // „na kwadraty”: lico 25 mm od ściany, powrót poziomy do ściany, kapinos (szkic produkcji)
+    const uF = uWall + m(PHYS.system1.flashingOffsetSquares)
+    crown = [...cap, [uF, 0.003], [uF, -face], [uWall + 0.006, -face], [uWall + 0.012, -face - 0.02]]
+    label = 'Obróbka „na kwadraty” 25 mm'
+    conf = 'HIGH'
+  } else {
+    crown = [...cap, [o, 0.003], [o, -(f.a + 0.10)]]
+    label = 'Obróbka płaska techniczna (pod kaseton)'
+    conf = 'LOW'
+  }
+  const base: Array<[number, number]> = finish === 'cassette'
+    ? [[o, 0], [o, baseFace], [-f.t - 0.002, baseFace + 0.004]]
+    : [[o + 0.01, -0.012], [o, 0], [o, baseFace], [-f.t - 0.002, baseFace + 0.004]]
   const crownSec = thicken(crown, FLASH_T)
   const baseSec = thicken(base, FLASH_T)
-  const conf: Confidence = finish === 'bare' ? 'MEDIUM' : 'LOW'
-  const label = finish === 'bare' ? 'Obróbka A (wykończeniowa)' : 'Obróbka B (techniczna pod kaseton)'
   const runs: Array<[string, Vec3, Vec3, Vec3, number, Vec3, number]> = [
     // tag, start (na krawędzi zewn., poziom odniesienia), oś biegu, kierunek „na zewnątrz”, długość, w górę, y odniesienia
     ['front', [-f.L / 2, 0, f.W / 2], [1, 0, 0], [0, 0, 1], f.L, [0, 1, 0], f.yTopF],
@@ -518,5 +536,49 @@ function addCassettes(ctx: Ctx, k: CassCtx) {
         })
       })
     })
+  }
+}
+
+/**
+ * Deska elewacyjna pozioma (wariant pod obróbkę „na kwadraty”): lico deski w płaszczyźnie lica obróbki (25 mm od ściany).
+ * Grubość deski i sposób mocowania — niepotwierdzone (LOW).
+ */
+function addBoards(ctx: Ctx, k: CassCtx) {
+  const h = m(PHYS.board.height)
+  const gap = m(PHYS.board.gap)
+  const off = m(PHYS.system1.flashingOffsetSquares)
+  const th = 0.024
+  const face = m(PHYS.system1.crownFlashingFace)
+  for (const side of ['front', 'back'] as const) {
+    const out: Vec3 = side === 'front' ? [0, 0, 1] : [0, 0, -1]
+    const zFace = side === 'front' ? k.W / 2 - k.t + off : -k.W / 2 + k.t - off
+    const yTop = (side === 'front' ? k.yTopF : k.yTopB) + m(PHYS.system1.angleLeg) - face
+    const wall = k.walls.find((w) => w.side === side)!
+    const ops = k.openings.filter((o) => o.wall === side).map((o) => toWallOpening(o, wall))
+    const x0 = -k.L / 2 + k.t
+    const len = k.L - 2 * k.t
+    let r = 0
+    for (let ya = k.y0 + m(PHYS.system1.baseFlashingFace); ya + h <= yTop + 1e-6; ya += h + gap, r++) {
+      const yb = ya + h
+      const cuts = ops
+        .filter((o) => Math.min(yb, k.yFloorTop + o.y1) - Math.max(ya, k.yFloorTop + o.y0) > 0.001)
+        .map((o) => (side === 'front' ? [o.a, o.b] : [len - o.b, len - o.a]) as [number, number])
+        .sort((p, q) => p[0] - q[0])
+      let cursor = 0
+      const segs: Array<[number, number]> = []
+      for (const [ca, cb] of cuts) {
+        if (ca > cursor) segs.push([cursor, ca])
+        cursor = Math.max(cursor, cb)
+      }
+      if (cursor < len) segs.push([cursor, len])
+      segs.forEach(([sa, sb], s) => {
+        if (sb - sa < 0.03) return
+        push(ctx, {
+          id: `board-${side}-${r}-${s}`, name: 'Deska elewacyjna', layer: 'decor', stage: 10, material: 'cassette', color: '#8a6446',
+          explode: mul(out, 2.2), confidence: 'LOW',
+          geometry: { start: [x0, 0, zFace], axis: mul(out, -1) as Vec3, u: [1, 0, 0], v: [0, 1, 0], length: th, section: rect(sa, ya, sb, yb) },
+        })
+      })
+    }
   }
 }

@@ -266,8 +266,8 @@ export const DEFAULT_CONFIG: PavilionConfig = {
 
 export const RAL_COLORS = [
   { name: 'RAL 7016 — grafit/antracyt', value: '#383e42' },
-  { name: 'Czarny mat', value: '#121315' },
-  { name: 'RAL 9010 — biały', value: '#f2f0e7' },
+  { name: 'RAL 9005 — czarny mat (płyty gładkie)', value: '#0e0e10' },
+  { name: 'RAL 9010 — biały', value: '#f1ece1' },
   { name: 'RAL 9006 — aluminium', value: '#a5a5a3' },
   { name: 'RAL 9007 — szary aluminium', value: '#7d7d7a' },
 ]

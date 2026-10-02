@@ -29,7 +29,7 @@ Na razie tylko System 1. `ConstructionSystemId` przewiduje `system_2` i `system_
 | 6 | ściana przednia | jak tylna; otwory wycięte w płytach, stolarka w otworach | HIGH |
 | 7 | dach | płyty w poprzek, oparte na ścianach. Długość = W − 2·4 − 2·luz (luz 6 mm wyliczony z danych produkcji 2,94 m), trapez wg katalogu | MEDIUM |
 | 8 | górna rama | kątownik na płycie dachowej (ramię pionowe na obrysie, poziome do środka), zespawany ze słupami | LOW |
-| 9 | obróbki | A (goły PIR): korona z kapinosem 215 mm, cokół 140 mm, narożniki L. B (pod kaseton): płaskie techniczne. „Na kwadraty”: typ zarejestrowany, geometria UNKNOWN | MEDIUM / B LOW |
+| 9 | obróbki | półtorówka 15 mm (goły PIR), na kwadraty 25 mm (deska/dekor), płaska techniczna (pod kaseton); cokół 140 mm, narożniki L 124 mm | HIGH / płaska LOW |
 | 10 | elewacja | kasetony na odsunięciu 75 mm (UNKNOWN). Konstrukcja jest identyczna dla każdej elewacji | MEDIUM |
 
 ## Wymiary wyliczone (rama 6030 × 2960 mm, PIR 100, preset 722/08/26)
@@ -56,7 +56,15 @@ Na razie tylko System 1. `ConstructionSystemId` przewiduje `system_2` i `system_
 - Ostatnia płyta ściany jest docinana, gdy się nie mieści; zależy to od złożenia zamków.
 - Ściana boczna: 3 płyty (2 × 1000 + 752).
 - Górna rama leży na dachu. W narożnikach jest wyżej, bo pod nią jest silikon i wasserstop (wartość UNKNOWN).
-- Rysunek gięcia obróbek: zapowiedziany.
+- Obróbki (szkice: `szkic-obrobka-poltorowka-15mm.jpg`, `szkic-obrobka-na-kwadraty-25mm.jpg`):
+  - **„półtorówka”**: lico 15 mm od ściany, na dole załamanie pod kątem do ściany i przykręcony kołnierz; wykończenie gołego PIR (przekrój E).
+  - **„na kwadraty”**: lico 25 mm od ściany, przechodzi przez ostatnie żebro dachu, na dole powrót poziomy do ściany i kapinos; pod deskę, lamele i dekor wymagające większego odsunięcia (przekrój G).
+  - Jednostki „1,5 / 2,5” to **cm**.
+- Materiały:
+  - obróbki: RAL 7016M (faktura, mat);
+  - płyty zewnątrz: RAL 7016, półmat, poliester 25 µm;
+  - wewnątrz zawsze RAL 9010 gładka (styropian: linia);
+  - płyty czarne: RAL 9005 mat, gładkie.
 
 ## Niewiadome
 

@@ -5,7 +5,7 @@
 Hierarchia źródeł: 1 zdjęcie gotowego pawilonu · 2 film · 3 pomiar zdjęcia ze skalą · 4 katalog · 5 produkcja · 6 rysunek · 7 szkic · 8 założenie.
 Przy sprzeczności wygrywa źródło wyżej; sprzeczność opisana w kolumnie „problem”.
 
-Pewność: VERIFIED 9 · HIGH 10 · MEDIUM 14 · LOW 5 · UNKNOWN 9
+Pewność: VERIFIED 15 · HIGH 11 · MEDIUM 14 · LOW 6 · UNKNOWN 7
 
 ## Wartości fizyczne
 
@@ -51,12 +51,18 @@ Pewność: VERIFIED 9 · HIGH 10 · MEDIUM 14 · LOW 5 · UNKNOWN 9
 | `system1.topFrameCornerRaise` Górna rama: podniesienie w narożnikach (silikon + wasserstop pod kątownikiem) | 0 mm | produkcja: Produkcja Dampol (2026-10-02): rama leży na dachu, w rogach „troszkę wyżej” — narożnik wcześniej uszczelniany. Wartość nieznana — w modelu 0 | **UNKNOWN** | Grubość warstwy uszczelnienia w narożniku (mm). | zmierzyć | OPEN |
 | `system1.cornerContact` Narożnik: blacha płyty skrajnej oparta o jedno ramię słupa, czoło (rdzeń/zamek) dotyka drugiego ramienia | 1 | produkcja: Produkcja Dampol (2026-10-02) | **VERIFIED** | — | — | OK |
 | `system1.crownFlashingFace` Obróbka korony A (goły PIR) — wysokość lica | 215 mm | film: Film WA0017 (gotowy): pas 200–220 mm; WA0019 (w produkcji): obróbka 180 mm + kątownik 55 mm | **MEDIUM** | — | — | OK |
-| `system1.flashingDrip` Obróbka A — wysunięcie zagięcia (kapinos) | 15 mm | założenie: Przekaz ustny „1,5” / „2,5” bez jednostki. Zdjęcie 11: daszek korony ≈ 15–20 mm → przyjęto cm-owy odczyt 15 mm (wariant mały) | **UNKNOWN** | flashingOffset — potwierdzić jednostkę i wartości 1,5 / 2,5 na rysunku gięcia. | zmierzyć | OPEN |
+| `system1.flashingOffsetPoltorowka` Obróbka korony „półtorówka” (goły PIR) — odsunięcie lica od ściany | 15 mm | produkcja: Produkcja Dampol (2026-10-02): szkic z wymiarem „1,5 cm” (reference/construction/szkic-obrobka-poltorowka-15mm.jpg); zdjęcie 11: daszek ≈ 15–20 mm | **VERIFIED** | Wcześniej jednostka nieznana — rozstrzygnięte: cm. | — | CHANGED |
+| `system1.poltorowkaStep` Półtorówka — załamanie do ściany na dole lica (kąt) i kołnierz przykręcany do ściany | 45 deg | szkic: Szkic produkcji (rysunek poglądowy, oznaczony jako generowany przez AI — kształt, nie wymiar) | **LOW** | Kąt załamania i długość kołnierza na ścianie. | zmierzyć | OPEN |
+| `system1.flashingOffsetSquares` Obróbka korony „na kwadraty” — odsunięcie lica od ściany | 25 mm | produkcja: Produkcja Dampol (2026-10-02): szkic „2,5” + opis „kwadrat ma 2,5 cm” (reference/construction/szkic-obrobka-na-kwadraty-25mm.jpg) | **VERIFIED** | — | — | CHANGED |
 | `system1.cornerFlashingSide` Obróbka narożna — ramię od strony ściany bocznej | 124 mm | film: Wyliczone: musi zakryć czoło ściany przedniej/tylnej (t + grubość ściany = 104 mm) + zakład 20 mm; film WA0017: ciemna listwa narożna | **MEDIUM** | Zmierzyć listwę narożną na gotowym pawilonie. | — | OK |
 | `system1.cornerFlashingFront` Obróbka narożna — ramię od strony ściany przedniej/tylnej | 60 mm | film: Wyliczone: zakrywa ramię słupa 50 mm + zakład 10 mm | **LOW** | — | zmierzyć | OPEN |
 | `system1.baseFlashingFace` Obróbka cokołowa — wysokość lica | 140 mm | film: Film WA0017: 135–140 mm (kątownik 50 + krawędź podłogi + zakład) | **MEDIUM** | — | — | OK |
 | `system1.intermediateFloorSupports` Podpory pośrednie podłogi (poprzeczki) | 0 | założenie: Opis produkcji wymienia tylko obwód; brak danych o poprzeczkach | **UNKNOWN** | — | zmierzyć | OPEN |
-| `system1.squareFlashing` Obróbka „na kwadraty” — geometria | 0 | założenie: Brak przykładu na zdjęciach/filmach — typ zarejestrowany, geometria nieznana | **UNKNOWN** | — | zmierzyć | OPEN |
+| `system1.squareFlashing` Obróbka „na kwadraty” — geometria: przez ostatnie żebro dachu, lico pionowe, powrót poziomy do ściany, kapinos | 1 | produkcja: Szkic produkcji (2026-10-02). Stosowana, gdy deska/lamele/dekor wymagają większego odsunięcia | **HIGH** | Długość powrotu i kapinosu (mm). | — | CHANGED |
+| `coating.panelOuter` Płyta warstwowa — okładzina zewn.: RAL 7016 półmat (lekki połysk), poliester 25 µm | 25 | produkcja: Produkcja Dampol (2026-10-02): „zwykła 25 mikronów”, półmat | **VERIFIED** | — | — | OK |
+| `coating.flashings` Obróbki blacharskie — RAL 7016M (faktura, mat) | 7016 | produkcja: Produkcja Dampol (2026-10-02): „wszystkie obróbki w fakturze 7016M” | **VERIFIED** | Faktura (struktura powłoki) — w renderze tylko wyższa chropowatość, bez mapy struktury. | — | OK |
+| `coating.panelInner` Okładzina wewnętrzna ścian i dachu — zawsze RAL 9010, gładka (PIR); w płycie styropianowej — linia | 9010 | produkcja: Produkcja Dampol (2026-10-02) | **VERIFIED** | — | — | OK |
+| `coating.black` Płyty czarne — RAL 9005 mat, zawsze gładkie (mikrofala możliwa jako opcja) | 9005 | produkcja: Produkcja Dampol (2026-10-02) | **VERIFIED** | — | — | OK |
 | `color.ral7016` RAL 7016 (sRGB #383E42) | 7016 | katalog: Wzornik RAL (sRGB 56,62,66) | **VERIFIED** | — | — | OK |
 
 ## System 1 (kątownik 50×50×4) — wymiary wyliczone z konstrukcji (preset 722/08/26, rama 6030 × 2960 mm)
@@ -103,6 +109,11 @@ Pewność: VERIFIED 9 · HIGH 10 · MEDIUM 14 · LOW 5 · UNKNOWN 9
 | `metalMetalness` | 0.38 | Powłoka organiczna na stali — strojenie wizualne |
 | `glassMetalness` | 0.82 | Przybliżenie szkła niskoemisyjnego (odbicie) zgodne w rasteryzacji i path tracerze |
 | `cassetteBevelMm` | 3 | Zaokrąglenie krawędzi kasetonu w renderze |
+| `panelSemiMattRoughness` | 0.4 | Płyta 7016 półmat (lekki połysk) — strojenie wizualne powłoki 25 µm |
+| `flashingMattRoughness` | 0.72 | Obróbki 7016M faktura mat — wyższa chropowatość |
+| `flashingMattMetalness` | 0.22 | Obróbki 7016M — mniej metaliczny połysk niż płyta |
+| `blackMattRoughness` | 0.7 | Płyta RAL 9005 mat |
+| `flashingSheetRenderMm` | 1.2 | Grubość blachy obróbki w widoku technicznym (realnie 0,5–0,7 mm — pogrubione dla czytelności) |
 
 ## Pomiary zdjęć i filmów
 

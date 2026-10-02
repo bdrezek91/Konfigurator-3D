@@ -238,10 +238,21 @@ export const PHYS = {
       source: 'Film WA0017 (gotowy): pas 200–220 mm; WA0019 (w produkcji): obróbka 180 mm + kątownik 55 mm',
       confidence: 'MEDIUM', status: 'OK',
     }),
-    flashingDrip: P({
-      element: 'Obróbka A — wysunięcie zagięcia (kapinos)', value: 15, rank: 8,
-      source: 'Przekaz ustny „1,5” / „2,5” bez jednostki. Zdjęcie 11: daszek korony ≈ 15–20 mm → przyjęto cm-owy odczyt 15 mm (wariant mały)',
-      confidence: 'UNKNOWN', status: 'OPEN', todo: 'flashingOffset — potwierdzić jednostkę i wartości 1,5 / 2,5 na rysunku gięcia.',
+    flashingOffsetPoltorowka: P({
+      element: 'Obróbka korony „półtorówka” (goły PIR) — odsunięcie lica od ściany', value: 15, rank: 5,
+      source: 'Produkcja Dampol (2026-10-02): szkic z wymiarem „1,5 cm” (reference/construction/szkic-obrobka-poltorowka-15mm.jpg); zdjęcie 11: daszek ≈ 15–20 mm',
+      confidence: 'VERIFIED', status: 'CHANGED',
+      conflict: 'Wcześniej jednostka nieznana — rozstrzygnięte: cm.',
+    }),
+    poltorowkaStep: P({
+      element: 'Półtorówka — załamanie do ściany na dole lica (kąt) i kołnierz przykręcany do ściany', value: 45, unit: 'deg', rank: 7,
+      source: 'Szkic produkcji (rysunek poglądowy, oznaczony jako generowany przez AI — kształt, nie wymiar)', confidence: 'LOW', status: 'OPEN',
+      todo: 'Kąt załamania i długość kołnierza na ścianie.',
+    }),
+    flashingOffsetSquares: P({
+      element: 'Obróbka korony „na kwadraty” — odsunięcie lica od ściany', value: 25, rank: 5,
+      source: 'Produkcja Dampol (2026-10-02): szkic „2,5” + opis „kwadrat ma 2,5 cm” (reference/construction/szkic-obrobka-na-kwadraty-25mm.jpg)',
+      confidence: 'VERIFIED', status: 'CHANGED',
     }),
     cornerFlashingSide: P({
       element: 'Obróbka narożna — ramię od strony ściany bocznej', value: 124, rank: 2,
@@ -261,8 +272,29 @@ export const PHYS = {
       source: 'Opis produkcji wymienia tylko obwód; brak danych o poprzeczkach', confidence: 'UNKNOWN', status: 'OPEN',
     }),
     squareFlashing: P({
-      element: 'Obróbka „na kwadraty” — geometria', value: 0, unit: '-', rank: 8,
-      source: 'Brak przykładu na zdjęciach/filmach — typ zarejestrowany, geometria nieznana', confidence: 'UNKNOWN', status: 'OPEN',
+      element: 'Obróbka „na kwadraty” — geometria: przez ostatnie żebro dachu, lico pionowe, powrót poziomy do ściany, kapinos', value: 1, unit: '-', rank: 5,
+      source: 'Szkic produkcji (2026-10-02). Stosowana, gdy deska/lamele/dekor wymagają większego odsunięcia',
+      confidence: 'HIGH', status: 'CHANGED', todo: 'Długość powrotu i kapinosu (mm).',
+    }),
+  },
+  /** Powłoki i kolory wg produkcji Dampol (2026-10-02). */
+  coating: {
+    panelOuter: P({
+      element: 'Płyta warstwowa — okładzina zewn.: RAL 7016 półmat (lekki połysk), poliester 25 µm', value: 25, unit: '-', rank: 5,
+      source: 'Produkcja Dampol (2026-10-02): „zwykła 25 mikronów”, półmat', confidence: 'VERIFIED', status: 'OK',
+    }),
+    flashings: P({
+      element: 'Obróbki blacharskie — RAL 7016M (faktura, mat)', value: 7016, unit: '-', rank: 5,
+      source: 'Produkcja Dampol (2026-10-02): „wszystkie obróbki w fakturze 7016M”', confidence: 'VERIFIED', status: 'OK',
+      todo: 'Faktura (struktura powłoki) — w renderze tylko wyższa chropowatość, bez mapy struktury.',
+    }),
+    panelInner: P({
+      element: 'Okładzina wewnętrzna ścian i dachu — zawsze RAL 9010, gładka (PIR); w płycie styropianowej — linia', value: 9010, unit: '-', rank: 5,
+      source: 'Produkcja Dampol (2026-10-02)', confidence: 'VERIFIED', status: 'OK',
+    }),
+    black: P({
+      element: 'Płyty czarne — RAL 9005 mat, zawsze gładkie (mikrofala możliwa jako opcja)', value: 9005, unit: '-', rank: 5,
+      source: 'Produkcja Dampol (2026-10-02)', confidence: 'VERIFIED', status: 'OK',
     }),
   },
   color: {
@@ -279,10 +311,20 @@ export const RENDER = {
   metalMetalness: { value: 0.38, note: 'Powłoka organiczna na stali — strojenie wizualne' },
   glassMetalness: { value: 0.82, note: 'Przybliżenie szkła niskoemisyjnego (odbicie) zgodne w rasteryzacji i path tracerze' },
   cassetteBevelMm: { value: 3, note: 'Zaokrąglenie krawędzi kasetonu w renderze' },
+  panelSemiMattRoughness: { value: 0.4, note: 'Płyta 7016 półmat (lekki połysk) — strojenie wizualne powłoki 25 µm' },
+  flashingMattRoughness: { value: 0.72, note: 'Obróbki 7016M faktura mat — wyższa chropowatość' },
+  flashingMattMetalness: { value: 0.22, note: 'Obróbki 7016M — mniej metaliczny połysk niż płyta' },
+  blackMattRoughness: { value: 0.7, note: 'Płyta RAL 9005 mat' },
+  flashingSheetRenderMm: { value: 1.2, note: 'Grubość blachy obróbki w widoku technicznym (realnie 0,5–0,7 mm — pogrubione dla czytelności)' },
 } as const
 
 /** RAL 7016 w sRGB — kolor elewacji i ram stolarki na zdjęciach realizacji (03, 09, 11). */
 export const RAL_7016_HEX = '#383e42'
+/** RAL 9010 (biały) — okładzina wewnętrzna. */
+export const RAL_9010_HEX = '#f1ece1'
+/** RAL 9005 (czarny) — płyty czarne mat. */
+export const RAL_9005_HEX = '#0e0e10'
+export const isRal9005 = (hex: string) => ['#0e0e10', '#121315'].includes(hex.toLowerCase())
 
 /** mm → m */
 export const m = (p: { value: number }) => p.value / 1000

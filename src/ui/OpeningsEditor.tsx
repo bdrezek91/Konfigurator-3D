@@ -17,7 +17,7 @@ import { Icon } from './icons'
 const FRAME_COLORS = [
   { value: DEFAULT_FRAME_COLOR, name: 'RAL 7016 — jak elewacja (zdjęcia realizacji)' },
   { value: '#17191b', name: 'Czarny mat' },
-  { value: '#f2f0e7', name: 'Biały RAL 9010' },
+  { value: '#f1ece1', name: 'Biały RAL 9010' },
   { value: '#a5a5a3', name: 'Srebrny RAL 9006' },
 ]
 

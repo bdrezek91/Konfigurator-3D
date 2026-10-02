@@ -72,4 +72,5 @@ export type ConstructionModel = {
   levels: Record<string, number>
 }
 
-export type FinishVariant = 'bare' | 'cassette'
+/** Wykończenie: goły PIR (obróbka „półtorówka” 15 mm), deska/dekor (obróbka „na kwadraty” 25 mm), kasetony (obróbka płaska techniczna). */
+export type FinishVariant = 'bare' | 'squares' | 'cassette'

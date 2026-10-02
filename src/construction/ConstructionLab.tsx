@@ -6,6 +6,7 @@ import {
   SRGBColorSpace, Vector3,
 } from 'three'
 import { geometryOf } from '../components'
+import { RENDER } from '../physical/spec'
 import { PRESETS } from '../presets'
 import { DEFAULT_CONFIG, type PavilionConfig } from '../types'
 import { buildSystem1 } from './system1/build'
@@ -16,7 +17,7 @@ import { STAGES, type FinishVariant, type Layer, type Part, type RunGeometry, ty
  * ?lab=construction&preset=722-08-26&view=assembled|exploded|A|B|C|D|E|F&finish=bare|cassette&step=1..10
  */
 
-type ViewId = 'assembled' | 'exploded' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+type ViewId = 'assembled' | 'exploded' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G'
 
 const LAYER_LABELS: Record<Layer, string> = {
   steel: 'Konstrukcja stalowa', floor: 'Podłoga', walls: 'Ściany + stolarka', roof: 'Dach', topFrame: 'Górna rama',
@@ -50,8 +51,8 @@ function materialFor(p: Part) {
     case 'pirCore': mat = new MeshStandardMaterial({ color: p.color, roughness: 0.92, side: DoubleSide }); break
     case 'glass': mat = new MeshPhysicalMaterial({ color: p.color, metalness: 0.4, roughness: 0.05, transparent: true, opacity: 0.45, side: DoubleSide }); break
     case 'screw': mat = new MeshStandardMaterial({ color: p.color, metalness: 0.8, roughness: 0.3, side: DoubleSide }); break
-    case 'flashing': mat = new MeshStandardMaterial({ color: p.color, metalness: 0.35, roughness: 0.45, side: DoubleSide }); break
-    default: mat = new MeshStandardMaterial({ color: p.color, metalness: p.material === 'sheetInner' ? 0.1 : 0.35, roughness: 0.5, side: DoubleSide })
+    case 'flashing': mat = new MeshStandardMaterial({ color: p.color, metalness: RENDER.flashingMattMetalness.value, roughness: RENDER.flashingMattRoughness.value, side: DoubleSide }); break
+    default: mat = new MeshStandardMaterial({ color: p.color, metalness: p.material === 'sheetInner' ? 0.1 : 0.35, roughness: p.material === 'sheetInner' ? 0.35 : RENDER.panelSemiMattRoughness.value, side: DoubleSide })
   }
   materialCache.set(key, mat)
   return mat
@@ -85,7 +86,7 @@ type SectionDef = {
   labels: Array<{ at: Vec3; text: string }>
 }
 
-function sections(config: PavilionConfig, lv: Record<string, number>): Record<'A' | 'B' | 'C' | 'D' | 'E' | 'F', SectionDef> {
+function sections(config: PavilionConfig, lv: Record<string, number>): Record<'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G', SectionDef> {
   const L = config.length
   const W = config.width
   const zf = W / 2
@@ -136,10 +137,20 @@ function sections(config: PavilionConfig, lv: Record<string, number>): Record<'A
       ],
     },
     E: {
-      title: 'E — obróbka korony A (goły PIR)', finish: 'bare', plane: cutX,
+      title: 'E — obróbka „półtorówka” 15 mm (goły PIR)', finish: 'bare', plane: cutX,
       camera: { position: [xs - 1.4, lv.yTopF - 0.08, zf - 0.08], target: [xs, lv.yTopF - 0.08, zf - 0.08], fov: 18, viewHeight: 0.45 },
       labels: [
-        { at: [xs, lv.yTopF + 0.055, zf + 0.002], text: 'Obróbka A: kapa na górnej ramie, lico ≈ 215 mm, kapinos (wysunięcie UNKNOWN)' },
+        { at: [xs, lv.yTopF + 0.055, zf + 0.012], text: 'Półtorówka: kapa na górnej ramie i dachu, lico 15 mm od ściany' },
+        { at: [xs, lv.yTopF + 0.05 - 0.215, zf - 0.002], text: 'Załamanie do ściany + kołnierz przykręcany' },
+      ],
+    },
+    G: {
+      title: 'G — obróbka „na kwadraty” 25 mm + deska', finish: 'squares', plane: cutX,
+      camera: { position: [xs - 1.4, lv.yTopF - 0.08, zf - 0.06], target: [xs, lv.yTopF - 0.08, zf - 0.06], fov: 18, viewHeight: 0.45 },
+      labels: [
+        { at: [xs, lv.yTopF + 0.055, zf + 0.022], text: 'Na kwadraty: lico 25 mm od ściany' },
+        { at: [xs, lv.yTopF + 0.05 - 0.215, zf + 0.006], text: 'Powrót poziomy do ściany + kapinos' },
+        { at: [xs, lv.yTopF - 0.25, zf + 0.012], text: 'Deska — lico w płaszczyźnie obróbki (grubość LOW)' },
       ],
     },
     F: {
@@ -183,14 +194,14 @@ export default function ConstructionLab() {
     return preset ? { ...preset.config } : { ...DEFAULT_CONFIG }
   })
   const [view, setView] = useState<ViewId>((q.get('view') as ViewId) ?? 'assembled')
-  const [finish, setFinish] = useState<FinishVariant>(q.get('finish') === 'cassette' ? 'cassette' : 'bare')
+  const [finish, setFinish] = useState<FinishVariant>((['bare', 'squares', 'cassette'] as const).find((f) => f === q.get('finish')) ?? 'bare')
   const [step, setStep] = useState(Number(q.get('step') ?? 10))
   const [hidden, setHidden] = useState<Set<Layer>>(new Set(q.get('hide')?.split(',') as Layer[] | undefined))
 
   const isSection = view.length === 1
   const base = useMemo(() => buildSystem1(config, 'bare'), [config])
   const sec = isSection ? sections(config, base.levels)[view as 'A'] : null
-  const effFinish: FinishVariant = view === 'E' ? 'bare' : view === 'F' ? 'cassette' : finish
+  const effFinish: FinishVariant = view === 'E' ? 'bare' : view === 'F' ? 'cassette' : view === 'G' ? 'squares' : finish
   const model = useMemo(() => buildSystem1(config, effFinish), [config, effFinish])
   const explode = view === 'exploded' ? 1 : 0
   const showFasteners = view === 'A' || view === 'B' || q.get('fasteners') === '1'
@@ -261,13 +272,14 @@ export default function ConstructionLab() {
         <div style={{ color: '#5d6468', marginBottom: 8 }}>{config.project} · rama {Math.round(config.length * 1000)} × {Math.round(config.width * 1000)} mm</div>
         {sec && <div style={{ font: '700 12px Inter', marginBottom: 6 }}>{sec.title}</div>}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
-          {(['assembled', 'exploded', 'A', 'B', 'C', 'D', 'E', 'F'] as ViewId[]).map((v) => (
+          {(['assembled', 'exploded', 'A', 'B', 'C', 'D', 'E', 'F', 'G'] as ViewId[]).map((v) => (
             <button key={v} style={btn(view === v)} onClick={() => setView(v)}>{v === 'assembled' ? 'Złożony' : v === 'exploded' ? 'Exploded' : 'Przekrój ' + v}</button>
           ))}
         </div>
         <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-          <button style={btn(effFinish === 'bare')} onClick={() => setFinish('bare')}>Goły PIR (obróbka A)</button>
-          <button style={btn(effFinish === 'cassette')} onClick={() => setFinish('cassette')}>Kasetony (obróbka B)</button>
+          <button style={btn(effFinish === 'bare')} onClick={() => setFinish('bare')}>Goły PIR · półtorówka</button>
+          <button style={btn(effFinish === 'squares')} onClick={() => setFinish('squares')}>Deska · na kwadraty</button>
+          <button style={btn(effFinish === 'cassette')} onClick={() => setFinish('cassette')}>Kasetony · płaska</button>
         </div>
         <label style={{ display: 'block', marginBottom: 8 }}>
           Krok montażu: <b>{step}. {STAGES[step - 1].label}</b>

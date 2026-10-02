@@ -5,7 +5,7 @@ import { Path, Shape } from 'three'
 import { Box, RoundedPiece } from '../materials/primitives'
 import { renderMetalColor, woodTexture } from '../materials/textures'
 import { type ReactNode, useMemo } from 'react'
-import { m, PHYS } from '../../physical/spec'
+import { m, PHYS, RENDER } from '../../physical/spec'
 
 export function PanelProfileLocal({
   side,
@@ -23,7 +23,7 @@ export function PanelProfileLocal({
   const out: ReactNode[] = []
   const { floorT } = envelope(config)
   const z = wallDepth / 2 + 0.008
-  const isLight = config.exteriorColor === '#f2f0e7' || config.exteriorColor === '#a5a5a3'
+  const isLight = config.exteriorColor === '#f1ece1' || config.exteriorColor === '#a5a5a3'
   const jointColor = isLight ? '#d7d5ce' : '#202427'
 
   // Widoczne zamki/podziały płyt ~1 m.
@@ -494,8 +494,9 @@ export function DampolFrameLocal({
   const angle = Math.atan2(delta, span)
   const railLength = Math.hypot(span, delta)
   const railY = (topLeft + topRight) / 2 - topBand / 2
-  const metalness = 0.42
-  const roughness = 0.46
+  // obróbki 7016M — faktura mat (produkcja Dampol)
+  const metalness = RENDER.flashingMattMetalness.value
+  const roughness = RENDER.flashingMattRoughness.value
 
   return (
     <group>

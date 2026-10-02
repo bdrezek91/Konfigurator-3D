@@ -5,6 +5,7 @@ import { facadeKindForWall } from '../facade/facadeKind'
 import { envelope, fallbackGeometry, makeWallShape, wallTransform } from '../geometry'
 import { Box, RoundedPiece } from '../materials/primitives'
 import { renderMetalColor } from '../materials/textures'
+import { isRal9005, RAL_9010_HEX, RENDER } from '../../physical/spec'
 import { flatNormalMap, profileNormalMap, ROOF_TRAPEZOIDS, surfaceProfileDef, type RoofTrapezoidDef } from '../materials/profiles'
 import { OpeningFrame } from '../openings/OpeningFrame'
 import { useLighting } from '../environment/lighting'
@@ -45,7 +46,7 @@ export function Wall({
         <meshStandardMaterial
           color={hasCladding ? (config.project === 'GALERIA/03' ? '#070a0d' : '#202528') : renderMetalColor(config.exteriorColor)}
           metalness={hasCladding ? 0.20 : 0.38}
-          roughness={hasCladding ? 0.68 : 0.50}
+          roughness={hasCladding ? 0.68 : isRal9005(config.exteriorColor) ? RENDER.blackMattRoughness.value : RENDER.panelSemiMattRoughness.value}
           normalMap={profileDef ? profileNormalMap(profileDef) : flatNormalMap()}
           envMapIntensity={hasCladding ? 0.55 : 1.05}
           transparent={opacity < 1}
@@ -277,7 +278,7 @@ export function SlopedCeiling({ config }: Props) {
     config.interiorFinish === 'black' ? '#292c2e' :
     config.interiorFinish === 'concrete' ? '#b7b4ad' :
     config.interiorFinish === 'oak' ? '#9b7651' :
-    config.interiorFinish === 'walnut' ? '#654936' : '#ecebe5'
+    config.interiorFinish === 'walnut' ? '#654936' : RAL_9010_HEX
 
   return (
     <Box
@@ -336,7 +337,7 @@ export function Interior({ config }: Props) {
   const yBack = floorT + config.backHeight
   const slope = Math.atan2(yFront - yBack, iz * 2)
   const trim = 0.055
-  const trimColor = '#f1f0eb'
+  const trimColor = RAL_9010_HEX
 
   return (
     <group>
