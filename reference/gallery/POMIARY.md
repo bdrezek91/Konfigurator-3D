@@ -44,3 +44,41 @@ Ogniskowa ≈ 1221 px → pionowe FOV ≈ 52,3°.
 Weryfikacja: nakładka zdjęcia i renderu (`reference/comparisons/galeria-03-nakladka-zdjecie-render.png`)
 pokrywa krawędzie przeszklenia, lameli, rzędów kasetonów i attyki. Dokładność wymiarów ±3%
 (zależy od założonej wysokości okładziny).
+
+## Walidacja 2026-10-02 — rektyfikacja zdjęć 03, 09, 11 i klatek filmów
+
+Metoda: 4 narożniki fasady → homografia; ogniskowa z warunku prostopadłości krawędzi, gdy zdjęcie nie jest frontalne.
+Skrypt odtwarza wcześniejszy wynik zdjęcia 03 (f = 1221 px, L = 6,675 m, kamera 0,68 m nad gruntem, 3,6 m od lica).
+Skala: wysokość okładziny 2,82 m (2,79 m dla 03). Wymiary poziome rozdzielczość 5 mm/px.
+
+### Zdjęcie 11 (frontalne, szare kasetony, lamele aluminiowe)
+Narożniki: TL (44,265), TR (1540,259), BR (1541,866), BL (45,875); L/H = 2,45 → L ≈ 6,92 m (pawilon ~7 × 3).
+
+| Element | Pomiar |
+|---|---|
+| Fugi poziome korpusu (od dołu) | 225, 460, 695, 925, 1160, 1415, 1670, 1925, 2175 mm → 9 pasów, średnio **242 mm** (234–254, dystorsja) |
+| Attyka | 2 rzędy ≈ **320 mm**; moduł **760–795 mm**; łączenia obu rzędów w jednej linii; panel z logo 2,29 m |
+| Fuga | **15 mm** |
+| Lamele aluminiowe | rozstaw **80,6 mm** (10 żeber w polu ≈ 0,82 m), czoło ≈ 40 mm, szczelina ≈ 40 mm |
+| Wąski kaseton przy ramie | ≈ 150 mm |
+| Rama FIX (widoczna) | 55–75 mm (bok 70, góra 70; prawa 50 + cień ościeża ≈ 50 mm) |
+| Drzwi: ościeżnica + skrzydło | bok ≈ 95 mm, góra ≈ 125 mm; słupek szkło–szkło FIX/drzwi ≈ 135 mm |
+| Góra ramy przeszklenia | 2,17 m nad dołem okładziny |
+| Prześwit pod ramą | ≈ 30 mm |
+
+### Zdjęcie 03 (wzorzec galerii-03), rektyfikacja powtórzona
+| Element | Pomiar |
+|---|---|
+| Lamele drewnopodobne | **28 lameli, rozstaw 82 ± 2 mm** (trzy wysokości: 82,8 / 81,9 / 81,7) — model miał 58 mm |
+| Attyka | łączenia w jednej linii w obu rzędach co ≈ **1,10 m** (6 równych modułów) — model miał mijankę co 0,6 m |
+| Pasy korpusu | 232 mm |
+
+### Zdjęcie 09 (inna realizacja: duże kasetony, lamele szerokie)
+f ≈ 2058 px, L/H = 2,87. Attyka 1 rząd ≈ 0,22 H (≈ 0,65 m); kasetony korpusu ≈ 0,18 H (≈ 0,55 m);
+widoczny cokół (rama pod kasetonami) ≈ 0,054 H (≈ 0,15 m); lamele **≈ 150 mm** (0,053 H, 19 szczelin).
+Wniosek: wysokość pasa, attyka i rozstaw lameli to **parametry wariantu**, nie stałe.
+
+### Filmy
+- **WA0017** (gotowy, goły PIR): korona 7,2–7,7% H ≈ **200–220 mm**, dolny pas 4,8% H ≈ **135 mm**. Moduł płyty z rozstawu styków nie jest jednoznaczny (ogniskowa nieoznaczona przy poziomej kamerze); przy typowym FOV telefonu ≈ 0,97–1,0 m.
+- **WA0019** (w produkcji): nad jasną obróbką korony (≈ 180 mm) ciemny pas ≈ **55 mm** = górny kątownik; słupy narożne sięgają jego góry.
+- **WA0018** (wnętrze): w narożnikach pionowych i na styku ściana–sufit białe L ≈ 50–60 mm.

@@ -167,6 +167,88 @@ export const PHYS = {
       source: 'Film WA0017: 7,2–7,7% H ≈ 200–220 mm; WA0019: 200–250 mm', confidence: 'MEDIUM', status: 'CHANGED', previous: 230,
     }),
   },
+  /** SYSTEM 1 — konstrukcja z kątownika równoramiennego 50×50×4 (opis produkcji Dampol + filmy WA0017/18/19). */
+  system1: {
+    angleLeg: P({
+      element: 'Kątownik — długość ramienia', value: 50, rank: 5, source: 'Opis produkcji: kątownik równoramienny 50×50×4',
+      confidence: 'VERIFIED', status: 'OK',
+    }),
+    angleThickness: P({
+      element: 'Kątownik — grubość', value: 4, rank: 5, source: 'Opis produkcji: 50×50×4',
+      confidence: 'VERIFIED', status: 'OK',
+    }),
+    angleOrientation: P({
+      element: 'Orientacja kątowników (ramiona do środka, piętka na zewnętrznym obrysie)', value: 1, unit: '-', rank: 5,
+      source: 'Opis produkcji; film WA0018 (L widoczne od wewnątrz w narożach), WA0017 (słup widoczny z zewnątrz w narożu)',
+      confidence: 'HIGH', status: 'OK',
+    }),
+    outerFrameWidth: P({
+      element: 'Zewnętrzny wymiar ramy (pawilon „3 m”)', value: 2960, rank: 6,
+      source: 'Presety/projekty: 2,96 m. Potwierdzone pośrednio: ściana boczna wyliczona 2,752 m mieści się w danych produkcji 2,74–2,76 m',
+      confidence: 'HIGH', status: 'OK',
+      conflict: 'Nominał handlowy 3,00 m dałby ścianę boczną 2,792 m — poza zakresem produkcji.',
+    }),
+    floorModule: P({
+      element: 'Szerokość modułowa płyty podłogowej', value: 1000, rank: 5, source: 'Opis produkcji: kilka (np. 3) długich elementów na szerokości ~3 m',
+      confidence: 'MEDIUM', status: 'OK', todo: 'Potwierdzić szerokość krycia płyt podłogowych (1000 / 1050 / 1130).',
+    }),
+    floorScrewLength: P({
+      element: 'Mocowanie podłogi do kątownika — długość wkrętu/szpilki', value: 125, rank: 5, source: 'Opis produkcji: 120–125 mm',
+      confidence: 'HIGH', status: 'OK', todo: 'Rozstaw mocowań (UNKNOWN).',
+    }),
+    floorScrewSpacing: P({
+      element: 'Mocowanie podłogi — rozstaw', value: 600, rank: 8, source: 'Założenie wizualizacyjne', confidence: 'UNKNOWN', status: 'OPEN',
+    }),
+    wallScrewSpacing: P({
+      element: 'Mocowanie ściany skrajnej do słupa — rozstaw', value: 500, rank: 8, source: 'Założenie wizualizacyjne', confidence: 'UNKNOWN', status: 'OPEN',
+    }),
+    roofClearance: P({
+      element: 'Luz płyty dachowej przy kątowniku (na stronę)', value: 6, rank: 5,
+      source: 'Wyliczony z danych produkcji: element dachowy 2,94 m przy ramie 2,96 m → (2,96 − 2·0,004 − 2,94) / 2',
+      confidence: 'MEDIUM', status: 'OK', todo: 'Potwierdzić sposób oparcia dachu i kierunek ułożenia.',
+    }),
+    topFrameOnRoof: P({
+      element: 'Górna rama: kątownik leżący na płycie dachowej (ramię poziome do środka)', value: 1, unit: '-', rank: 2,
+      source: 'Film WA0019: ciemny pas ≈ 55 mm nad obróbką korony, słupy kończą się na jego górze',
+      confidence: 'LOW', status: 'OPEN', todo: 'topFramePosition — zdjęcie z bliska górnego narożnika przed obróbką.',
+    }),
+    postAboveRoof: P({
+      element: 'Wysunięcie słupa ponad płytę dachową (= wysokość górnego kątownika)', value: 50, rank: 2,
+      source: 'Film WA0019: słup sięga góry ciemnego pasa ≈ 55 mm nad koroną', confidence: 'LOW', status: 'OPEN',
+      todo: 'cornerAngleHeight — pomiar na produkcji.',
+    }),
+    crownFlashingFace: P({
+      element: 'Obróbka korony A (goły PIR) — wysokość lica', value: 215, rank: 2,
+      source: 'Film WA0017 (gotowy): pas 200–220 mm; WA0019 (w produkcji): obróbka 180 mm + kątownik 55 mm',
+      confidence: 'MEDIUM', status: 'OK',
+    }),
+    flashingDrip: P({
+      element: 'Obróbka A — wysunięcie zagięcia (kapinos)', value: 15, rank: 8,
+      source: 'Przekaz ustny „1,5” / „2,5” bez jednostki. Zdjęcie 11: daszek korony ≈ 15–20 mm → przyjęto cm-owy odczyt 15 mm (wariant mały)',
+      confidence: 'UNKNOWN', status: 'OPEN', todo: 'flashingOffset — potwierdzić jednostkę i wartości 1,5 / 2,5 na rysunku gięcia.',
+    }),
+    cornerFlashingSide: P({
+      element: 'Obróbka narożna — ramię od strony ściany bocznej', value: 124, rank: 2,
+      source: 'Wyliczone: musi zakryć czoło ściany przedniej/tylnej (t + grubość ściany = 104 mm) + zakład 20 mm; film WA0017: ciemna listwa narożna',
+      confidence: 'MEDIUM', status: 'OK', todo: 'Zmierzyć listwę narożną na gotowym pawilonie.',
+    }),
+    cornerFlashingFront: P({
+      element: 'Obróbka narożna — ramię od strony ściany przedniej/tylnej', value: 60, rank: 2,
+      source: 'Wyliczone: zakrywa ramię słupa 50 mm + zakład 10 mm', confidence: 'LOW', status: 'OPEN',
+    }),
+    baseFlashingFace: P({
+      element: 'Obróbka cokołowa — wysokość lica', value: 140, rank: 2, source: 'Film WA0017: 135–140 mm (kątownik 50 + krawędź podłogi + zakład)',
+      confidence: 'MEDIUM', status: 'OK',
+    }),
+    intermediateFloorSupports: P({
+      element: 'Podpory pośrednie podłogi (poprzeczki)', value: 0, unit: '-', rank: 8,
+      source: 'Opis produkcji wymienia tylko obwód; brak danych o poprzeczkach', confidence: 'UNKNOWN', status: 'OPEN',
+    }),
+    squareFlashing: P({
+      element: 'Obróbka „na kwadraty” — geometria', value: 0, unit: '-', rank: 8,
+      source: 'Brak przykładu na zdjęciach/filmach — typ zarejestrowany, geometria nieznana', confidence: 'UNKNOWN', status: 'OPEN',
+    }),
+  },
   color: {
     ral7016: P({
       element: 'RAL 7016 (sRGB #383E42)', value: 7016, unit: '-', rank: 4, source: 'Wzornik RAL (sRGB 56,62,66)',

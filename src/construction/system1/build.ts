@@ -1,0 +1,498 @@
+import { geometryOf } from '../../components'
+import { m, PHYS, RAL_7016_HEX, type Confidence } from '../../physical/spec'
+import { ROOF_TRAPEZOIDS } from '../../scene/materials/profiles'
+import { PANEL_THICKNESS_M, type OpeningPlacement, type PavilionConfig, type WallSide } from '../../types'
+import type { ConstructionModel, DerivedDimension, FinishVariant, Layer, MaterialKind, Part, Stage, Vec3 } from '../types'
+
+/**
+ * SYSTEM 1 — konstrukcja z kątownika równoramiennego 50×50×4 mm.
+ *
+ * Kolejność budowy = kolejność produkcji (PRODUKCJA → GEOMETRIA → WYMIAR ZEWNĘTRZNY):
+ *  1. dolna rama z kątownika po obrysie, piętka na zewnętrznym obrysie, ramiona do środka
+ *     (ramię poziome = podparcie podłogi, ramię pionowe = krawędź ramy),
+ *  2. pionowe kątowniki w narożach (piętka w narożu, ramiona w płaszczyznach ścian),
+ *  3. płyty podłogowe PIR wewnątrz ramy, oparte na ramieniu poziomym, mocowane od góry wkrętem 120–125 mm,
+ *  4–6. ściany na podłodze: tylna i przednia między słupami (przykręcone do słupów), boczne pomiędzy nimi,
+ *  7. dach na ścianach, 8. górna rama (kątownik na płycie dachowej, zespawany ze słupami), 9. obróbki, 10. elewacja.
+ *
+ * Układ: x — długość (+ w prawo), y — w górę od gruntu, z — szerokość (+ front).
+ * Zewnętrzny obrys ramy = config.length × config.width (np. 6,03 × 2,96 dla pawilonu „6 × 3”).
+ */
+
+const SHEET = 0.0006
+const FLASH_T = 0.0007
+
+type Ctx = { parts: Part[] }
+
+const add = (v: Vec3, w: Vec3): Vec3 => [v[0] + w[0], v[1] + w[1], v[2] + w[2]]
+const mul = (v: Vec3, k: number): Vec3 => [v[0] * k, v[1] * k, v[2] * k]
+const norm = (v: Vec3): Vec3 => {
+  const l = Math.hypot(...v) || 1
+  return [v[0] / l, v[1] / l, v[2] / l]
+}
+
+function push(ctx: Ctx, p: Omit<Part, 'confidence'> & { confidence?: Confidence }) {
+  ctx.parts.push({ confidence: 'HIGH', ...p })
+}
+
+const rect = (u0: number, v0: number, u1: number, v1: number): Array<[number, number]> => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]]
+
+/** Przekrój L kątownika: piętka w (0,0), ramię A wzdłuż u, ramię B wzdłuż v. */
+function angleSection(a: number, t: number): Array<[number, number]> {
+  return [[0, 0], [a, 0], [a, t], [t, t], [t, a], [0, a]]
+}
+
+function angle(ctx: Ctx, id: string, name: string, stage: Stage, layer: Layer, heel: Vec3, axis: Vec3, legA: Vec3, legB: Vec3, length: number, explode: Vec3) {
+  const a = m(PHYS.system1.angleLeg)
+  const t = m(PHYS.system1.angleThickness)
+  push(ctx, {
+    id, name, layer, stage, material: 'steel', color: '#6f767c', explode,
+    geometry: { start: heel, axis, u: legA, v: legB, length, section: angleSection(a, t) },
+  })
+}
+
+/**
+ * Płyta warstwowa jako 3 warstwy (blacha zewn. / rdzeń PIR / blacha wewn.) wyciągnięte wzdłuż grubości.
+ * Kontur płyty (z otworami) leży w płaszczyźnie (u, v); `axis` = kierunek od lica zewnętrznego do wewnętrznego.
+ */
+function sandwich(
+  ctx: Ctx, id: string, name: string, stage: Stage, layer: Layer, origin: Vec3, axis: Vec3, u: Vec3, v: Vec3,
+  thickness: number, outline: Array<[number, number]>, outerColor: string, innerColor: string, explode: Vec3,
+  holes?: Array<Array<[number, number]>>, confidence: Confidence = 'HIGH',
+) {
+  const layers: Array<[string, number, number, MaterialKind, string]> = [
+    ['outer', 0, SHEET, 'sheetOuter', outerColor],
+    ['core', SHEET, thickness - 2 * SHEET, 'pirCore', '#e3cf8f'],
+    ['inner', thickness - SHEET, SHEET, 'sheetInner', innerColor],
+  ]
+  for (const [tag, off, len, material, color] of layers) {
+    push(ctx, {
+      id: id + '-' + tag, name: name + (tag === 'core' ? ' — rdzeń PIR' : tag === 'outer' ? ' — blacha zewn.' : ' — blacha wewn.'),
+      layer, stage, material, color, explode, confidence,
+      geometry: { start: add(origin, mul(axis, off)), axis, u, v, length: len, section: outline, holes },
+    })
+  }
+}
+
+/** Prostokąty pola [u0,u1]×[0,h(u)] pozostałe po odjęciu otworów (pasy pionowe — stabilna triangulacja). */
+function cutRects(u0: number, u1: number, top: (u: number) => number, openings: Array<{ a: number; b: number; y0: number; y1: number }>) {
+  const xs = new Set<number>([u0, u1])
+  for (const o of openings) {
+    if (o.b <= u0 || o.a >= u1) continue
+    xs.add(Math.max(u0, o.a))
+    xs.add(Math.min(u1, o.b))
+  }
+  const cuts = [...xs].sort((p, q) => p - q)
+  const out: Array<Array<[number, number]>> = []
+  for (let i = 0; i < cuts.length - 1; i++) {
+    const a = cuts[i]
+    const b = cuts[i + 1]
+    if (b - a < 0.002) continue
+    const mid = (a + b) / 2
+    const blocked = openings.filter((o) => o.a < mid && o.b > mid).sort((p, q) => p.y0 - q.y0)
+    let y = 0
+    const ta = top(a)
+    const tb = top(b)
+    for (const o of blocked) {
+      if (o.y0 - y > 0.002) out.push([[a, y], [b, y], [b, o.y0], [a, o.y0]])
+      y = Math.max(y, o.y1)
+    }
+    if (Math.min(ta, tb) - y > 0.002) out.push([[a, y], [b, y], [b, tb], [a, ta]])
+  }
+  return out
+}
+
+type WallDef = {
+  side: WallSide
+  stage: Stage
+  origin: Vec3 // lewy-dolny punkt lica zewnętrznego (patrząc z zewnątrz)
+  u: Vec3 // wzdłuż ściany
+  inward: Vec3
+  length: number
+  top: (u: number) => number // wysokość panelu nad podłogą
+  /** przesunięcie: współrzędna lokalna otworu (od środka rozpiętości starego modelu) → u */
+  toU: (center: number) => number
+}
+
+export function buildSystem1(config: PavilionConfig, finish: FinishVariant): ConstructionModel {
+  const ctx: Ctx = { parts: [] }
+  const L = config.length
+  const W = config.width
+  const a = m(PHYS.system1.angleLeg)
+  const t = m(PHYS.system1.angleThickness)
+  const tf = PANEL_THICKNESS_M[config.floorPanel]
+  const tw = PANEL_THICKNESS_M[config.wallPanel]
+  const tr = PANEL_THICKNESS_M[config.roofPanel]
+  const geo = geometryOf(config)
+  const y0 = geo.foundationGap ?? m(PHYS.base.groundGap)
+  const outer = config.exteriorColor || RAL_7016_HEX
+  const inner = '#f1f0eb'
+  const steelUp: Vec3 = [0, 1, 0]
+
+  // ---- poziomy wynikające z montażu
+  const yFrame = y0 // spód dolnej ramy
+  const yFloorBottom = yFrame + t // płyta leży na ramieniu poziomym
+  const yFloorTop = yFloorBottom + tf
+  const hF = config.frontHeight
+  const hB = config.backHeight
+  // spód dachu przechodzi przez górne krawędzie ściany przedniej i tylnej (lica zewnętrzne)
+  const zFrontFace = W / 2 - t
+  const zBackFace = -W / 2 + t
+  const roofUnder = (z: number) => yFloorTop + hB + (hF - hB) * (z - zBackFace) / (zFrontFace - zBackFace)
+  const roofTopAtOuter = (z: number) => roofUnder(z) + tr
+  const yTopF = roofTopAtOuter(W / 2)
+  const yTopB = roofTopAtOuter(-W / 2)
+  const postTopF = yTopF + a // słup kończy się na górze górnej ramy (WA0019)
+  const postTopB = yTopB + a
+
+  // ---- 1. dolna rama
+  angle(ctx, 'frame-bottom-front', 'Dolna rama — kątownik front', 1, 'steel', [-L / 2, yFrame, W / 2], [1, 0, 0], steelUp, [0, 0, -1], L, [0, -0.6, 0.3])
+  angle(ctx, 'frame-bottom-back', 'Dolna rama — kątownik tył', 1, 'steel', [-L / 2, yFrame, -W / 2], [1, 0, 0], steelUp, [0, 0, 1], L, [0, -0.6, -0.3])
+  angle(ctx, 'frame-bottom-left', 'Dolna rama — kątownik lewy', 1, 'steel', [-L / 2, yFrame, -W / 2], [0, 0, 1], steelUp, [1, 0, 0], W, [-0.3, -0.6, 0])
+  angle(ctx, 'frame-bottom-right', 'Dolna rama — kątownik prawy', 1, 'steel', [L / 2, yFrame, -W / 2], [0, 0, 1], steelUp, [-1, 0, 0], W, [0.3, -0.6, 0])
+
+  // ---- 2. słupy narożne (ramiona w płaszczyznach ścian, do środka)
+  const corners: Array<[string, number, number, Vec3, Vec3, number]> = [
+    ['FL', -L / 2, W / 2, [1, 0, 0], [0, 0, -1], postTopF],
+    ['FR', L / 2, W / 2, [-1, 0, 0], [0, 0, -1], postTopF],
+    ['BL', -L / 2, -W / 2, [1, 0, 0], [0, 0, 1], postTopB],
+    ['BR', L / 2, -W / 2, [-1, 0, 0], [0, 0, 1], postTopB],
+  ]
+  for (const [tag, x, z, lA, lB, top] of corners) {
+    angle(ctx, 'post-' + tag, 'Słup narożny ' + tag + ' — kątownik 50×50×4', 2, 'steel', [x, yFrame, z], steelUp, lA, lB, top - yFrame,
+      [Math.sign(x) * 0.5, 0.2, Math.sign(z) * 0.5])
+  }
+
+  // ---- 3. podłoga: wewnątrz ramy, na ramieniu poziomym; długie elementy wzdłuż długości pawilonu
+  const floorL = L - 2 * t
+  const floorW = W - 2 * t
+  const floorModule = m(PHYS.system1.floorModule)
+  const floorCount = Math.ceil(floorW / floorModule - 1e-6)
+  for (let i = 0; i < floorCount; i++) {
+    const z0 = -W / 2 + t + i * floorModule
+    const z1 = Math.min(W / 2 - t, z0 + floorModule)
+    // kontur w płaszczyźnie (x, z), wyciągnięty w górę; blacha „zewn.” = spód, „wewn.” = wierzch podłogi
+    sandwich(ctx, 'floor-' + i, 'Płyta podłogowa ' + (i + 1), 3, 'floor', [-L / 2 + t, yFloorBottom, 0], steelUp, [1, 0, 0], [0, 0, 1],
+      tf, rect(0, z0, floorL, z1), '#9aa0a3', '#d8d4cc', [0, 0.9, 0])
+  }
+  // mocowanie podłogi: wkręt z góry przez PIR → blachę → ramię poziome kątownika (w osi ramienia)
+  const screwL = m(PHYS.system1.floorScrewLength)
+  const fs = m(PHYS.system1.floorScrewSpacing)
+  const legMid = t + (a - t) / 2
+  const floorScrews: Array<[number, number]> = []
+  for (let x = -L / 2 + 0.15; x <= L / 2 - 0.15 + 1e-6; x += (L - 0.3) / Math.max(1, Math.round((L - 0.3) / fs))) {
+    floorScrews.push([x, W / 2 - legMid], [x, -W / 2 + legMid])
+  }
+  for (let z = -W / 2 + 0.15; z <= W / 2 - 0.15 + 1e-6; z += (W - 0.3) / Math.max(1, Math.round((W - 0.3) / fs))) {
+    floorScrews.push([-L / 2 + legMid, z], [L / 2 - legMid, z])
+  }
+  floorScrews.forEach(([x, z], i) => {
+    push(ctx, {
+      id: 'screw-floor-' + i, name: 'Wkręt podłoga → kątownik (' + Math.round(screwL * 1000) + ' mm)', layer: 'fasteners', stage: 3,
+      material: 'screw', color: '#c9a227', explode: [0, 0.9, 0], confidence: 'MEDIUM',
+      geometry: { start: [x - 0.003, yFloorTop + 0.004, z - 0.003], axis: [0, -1, 0], u: [1, 0, 0], v: [0, 0, 1], length: screwL, section: rect(0, 0, 0.006, 0.006) },
+    })
+  })
+
+  // ---- 4–6. ściany na podłodze (na taśmie uszczelniającej — 2 mm, założenie; rozdziela też płaszczyzny w przekroju)
+  const seal = 0.002
+  const yWallBase = yFloorTop + seal
+  const openings = geo.openings
+  const wallModule = m(PHYS.panel.wallModule)
+  const walls: WallDef[] = [
+    {
+      side: 'back', stage: 4, origin: [L / 2 - t, yWallBase, -W / 2 + t], u: [-1, 0, 0], inward: [0, 0, 1], length: L - 2 * t,
+      top: () => hB - seal, toU: (c) => c + L / 2 - t,
+    },
+    {
+      side: 'left', stage: 5, origin: [-L / 2 + t, yWallBase, -W / 2 + t + tw], u: [0, 0, 1], inward: [1, 0, 0], length: W - 2 * t - 2 * tw,
+      top: (u) => roofUnder(-W / 2 + t + tw + u) - yWallBase, toU: (c) => c + W / 2 - t - tw,
+    },
+    {
+      side: 'right', stage: 5, origin: [L / 2 - t, yWallBase, W / 2 - t - tw], u: [0, 0, -1], inward: [-1, 0, 0], length: W - 2 * t - 2 * tw,
+      top: (u) => roofUnder(W / 2 - t - tw - u) - yWallBase, toU: (c) => c + W / 2 - t - tw,
+    },
+    {
+      side: 'front', stage: 6, origin: [-L / 2 + t, yWallBase, W / 2 - t], u: [1, 0, 0], inward: [0, 0, -1], length: L - 2 * t,
+      top: () => hF - seal, toU: (c) => c + L / 2 - t,
+    },
+  ]
+  for (const wdef of walls) {
+    const ops = openings.filter((o) => o.wall === wdef.side).map((o) => toWallOpening(o, wdef))
+    const count = Math.ceil(wdef.length / wallModule - 1e-6)
+    const explode = mul(wdef.inward, -1.4)
+    for (let i = 0; i < count; i++) {
+      const u0 = i * wallModule
+      const u1 = Math.min(wdef.length, u0 + wallModule)
+      const rects = cutRects(u0, u1, wdef.top, ops)
+      rects.forEach((poly, k) => {
+        sandwich(ctx, 'wall-' + wdef.side + '-' + i + '-' + k, 'Płyta ścienna ' + wdef.side + ' ' + (i + 1), wdef.stage, 'walls',
+          wdef.origin, wdef.inward, wdef.u, steelUp, tw, poly, outer, inner, explode)
+      })
+    }
+    // stolarka w otworach (uproszczona: rama + szyba) — warstwa ścian, bez zmian konstrukcji
+    for (const o of ops) addJoinery(ctx, wdef, o, tw, explode)
+  }
+
+  // mocowanie ścian skrajnych (przód/tył) do słupów: wkręt przez ramię słupa w krawędź płyty
+  const ws = m(PHYS.system1.wallScrewSpacing)
+  for (const [tag, x, z] of [['FL', -L / 2, W / 2], ['FR', L / 2, W / 2], ['BL', -L / 2, -W / 2], ['BR', L / 2, -W / 2]] as const) {
+    const h = z > 0 ? hF : hB
+    const n = Math.max(2, Math.round(h / ws))
+    for (let k = 0; k < n; k++) {
+      const y = yWallBase + (k + 0.5) * (h / n)
+      // przez ramię leżące w płaszczyźnie ściany przedniej/tylnej (normalna ±z)
+      push(ctx, {
+        id: 'screw-post-' + tag + '-' + k, name: 'Wkręt słup → płyta ściany skrajnej', layer: 'fasteners', stage: z > 0 ? 6 : 4,
+        material: 'screw', color: '#c9a227', explode: [0, 0, Math.sign(z) * 1.4], confidence: 'UNKNOWN',
+        geometry: { start: [x - Math.sign(x) * legMid - 0.003, y - 0.003, z + Math.sign(z) * 0.004], axis: [0, 0, -Math.sign(z)], u: [1, 0, 0], v: [0, 1, 0], length: 0.06, section: rect(0, 0, 0.006, 0.006) },
+      })
+    }
+  }
+
+  // ---- 7. dach: płyty w poprzek (kierunek z), luz przy kątownikach wyliczony z danych produkcji
+  const c = m(PHYS.system1.roofClearance)
+  const zR0 = -W / 2 + t + c
+  const zR1 = W / 2 - t - c
+  const dy = roofUnder(zR1) - roofUnder(zR0)
+  const dz = zR1 - zR0
+  const roofLen = Math.hypot(dz, dy)
+  const slopeDir = norm([0, dy, dz])
+  const roofNormal = norm([0, dz, -dy])
+  const roofModule = m(PHYS.panel.roofModule)
+  const roofSpanX = L - 2 * t - 2 * c
+  const roofCount = Math.ceil(roofSpanX / roofModule - 1e-6)
+  const roofOrigin: Vec3 = [-L / 2 + t + c, roofUnder(zR0), zR0]
+  for (let i = 0; i < roofCount; i++) {
+    const x0 = i * roofModule
+    const x1 = Math.min(roofSpanX, x0 + roofModule)
+    // „zewn.” = sufit (biały, od dołu), „wewn.” = wierzch dachu — kolejność warstw wzdłuż normalnej do góry
+    sandwich(ctx, 'roof-' + i, 'Płyta dachowa ' + (i + 1), 7, 'roof', roofOrigin, roofNormal, [1, 0, 0], slopeDir, tr,
+      rect(x0, 0, x1, roofLen), inner, outer, [0, 1.6, 0])
+  }
+  if (config.roofProfile === 'trapezoid') {
+    const tz = ROOF_TRAPEZOIDS[config.panelManufacturer]
+    const b = tz.baseMm / 2000
+    const top = tz.topMm / 2000
+    const h = tz.heightMm / 1000
+    const topOrigin = add(roofOrigin, mul(roofNormal, tr))
+    for (let x = tz.pitchMm / 2000; x < roofSpanX - b; x += tz.pitchMm / 1000) {
+      push(ctx, {
+        id: 'roof-rib-' + x.toFixed(3), name: 'Żebro trapezu dachu', layer: 'roof', stage: 7, material: 'sheetOuter', color: outer,
+        explode: [0, 1.6, 0], confidence: 'MEDIUM',
+        geometry: { start: topOrigin, axis: slopeDir, u: [1, 0, 0], v: roofNormal, length: roofLen, section: [[x - b, 0], [x + b, 0], [x + top, h], [x - top, h]] },
+      })
+    }
+  }
+
+  // ---- 8. górna rama: kątownik na płycie dachowej, ramię pionowe w płaszczyźnie zewnętrznej, poziome do środka
+  angle(ctx, 'frame-top-front', 'Górna rama — kątownik front', 8, 'topFrame', [-L / 2, yTopF, W / 2], [1, 0, 0], steelUp, [0, 0, -1], L, [0, 2.2, 0.3])
+  angle(ctx, 'frame-top-back', 'Górna rama — kątownik tył', 8, 'topFrame', [-L / 2, yTopB, -W / 2], [1, 0, 0], steelUp, [0, 0, 1], L, [0, 2.2, -0.3])
+  const sideAxis = norm([0, yTopF - yTopB, W])
+  const sideLen = Math.hypot(W, yTopF - yTopB)
+  const sideUp = norm([0, W, -(yTopF - yTopB)])
+  angle(ctx, 'frame-top-left', 'Górna rama — kątownik lewy', 8, 'topFrame', [-L / 2, yTopB, -W / 2], sideAxis, sideUp, [1, 0, 0], sideLen, [-0.3, 2.2, 0])
+  angle(ctx, 'frame-top-right', 'Górna rama — kątownik prawy', 8, 'topFrame', [L / 2, yTopB, -W / 2], sideAxis, sideUp, [-1, 0, 0], sideLen, [0.3, 2.2, 0])
+
+  // ---- 9. obróbki
+  addFlashings(ctx, { L, W, y0, yTopF, yTopB, a, t, tw, sideAxis, sideLen, sideUp, color: config.flashingColor || outer }, finish)
+
+  // ---- 10. elewacja (tylko wariant pod kasetony) — osobna warstwa, nie zmienia konstrukcji
+  if (finish === 'cassette') addCassettes(ctx, { L, W, y0, yFloorTop, yTopF, yTopB, t, walls, openings: geo.openings, color: outer })
+
+  // ---- wymiary wyliczone
+  const derived: DerivedDimension[] = [
+    { key: 'floorInner', label: 'Płyta podłogowa — pole wewnątrz ramy', valueMm: Math.round(floorL * 1000), formula: 'L − 2·t (dł.) × W − 2·t = ' + Math.round(floorL * 1000) + ' × ' + Math.round(floorW * 1000), confidence: 'HIGH' },
+    { key: 'floorCount', label: 'Liczba płyt podłogowych (wzdłuż długości)', valueMm: floorCount, formula: `⌈(W − 2·t) / moduł⌉ = ⌈${Math.round(floorW * 1000)} / ${Math.round(floorModule * 1000)}⌉, ostatnia ${Math.round((floorW - (floorCount - 1) * floorModule) * 1000)} mm`, confidence: 'MEDIUM' },
+    { key: 'floorTop', label: 'Poziom podłogi (wierzch PIR) nad spodem ramy', valueMm: Math.round((yFloorTop - yFrame) * 1000), formula: 't + grubość podłogi = 4 + ' + Math.round(tf * 1000), confidence: 'HIGH' },
+    { key: 'frontBackWallLength', label: 'Ściana przednia/tylna — długość', valueMm: Math.round((L - 2 * t) * 1000), formula: 'L − 2·t (między ramionami słupów)', confidence: 'HIGH' },
+    {
+      key: 'sideWallLength', label: 'Ściana boczna — długość', valueMm: Math.round((W - 2 * t - 2 * tw) * 1000),
+      formula: `W − 2·t − 2·grubość ściany przód/tył = ${Math.round(W * 1000)} − 8 − ${Math.round(2 * tw * 1000)}`, confidence: 'HIGH',
+      check: { expected: 'produkcja: 2740–2760 mm', ok: Math.abs(W - 2 * t - 2 * tw - 2.75) <= 0.011 },
+    },
+    (() => {
+      const len = L - 2 * t
+      const n = Math.ceil(len / wallModule - 1e-6)
+      const last = Math.round((len - (n - 1) * wallModule) * 1000)
+      return {
+        key: 'wallModules', label: 'Płyty ściany przedniej', valueMm: n, formula: `⌈${Math.round(len * 1000)} / ${Math.round(wallModule * 1000)}⌉, ostatnia ${last} mm`,
+        confidence: 'MEDIUM' as Confidence,
+        check: { expected: 'ostatnia płyta ≥ 100 mm (inaczej moduł lub długość ramy są inne)', ok: last >= 100 },
+      }
+    })(),
+    {
+      key: 'roofLength', label: 'Element dachowy — długość (w poprzek)', valueMm: Math.round(roofLen * 1000),
+      formula: 'W − 2·t − 2·luz (luz z danych produkcji) — po skosie', confidence: 'MEDIUM',
+      check: { expected: 'produkcja: ≈ 2940 mm', ok: Math.abs(roofLen - 2.94) <= 0.012 },
+    },
+    { key: 'roofCount', label: 'Liczba płyt dachowych', valueMm: roofCount, formula: `⌈${Math.round(roofSpanX * 1000)} / ${Math.round(roofModule * 1000)}⌉`, confidence: 'MEDIUM' },
+    { key: 'postFront', label: 'Słup narożny przedni — długość', valueMm: Math.round((postTopF - yFrame) * 1000), formula: 't + podłoga + ściana przednia + dach + 50 (ponad dach)', confidence: 'LOW' },
+    { key: 'postBack', label: 'Słup narożny tylny — długość', valueMm: Math.round((postTopB - yFrame) * 1000), formula: 't + podłoga + ściana tylna + dach + 50', confidence: 'LOW' },
+    { key: 'postAboveRoof', label: 'Wysunięcie słupa ponad dach', valueMm: Math.round(a * 1000), formula: '= wysokość górnego kątownika (WA0019)', confidence: 'LOW' },
+    { key: 'outerHeightFront', label: 'Wysokość zewn. front (spód ramy → góra górnej ramy)', valueMm: Math.round((postTopF - yFrame) * 1000), formula: 'konstrukcja; + prześwit ' + Math.round(y0 * 1000) + ' mm do gruntu', confidence: 'MEDIUM' },
+  ]
+
+  return {
+    system: 'angle_50x50x4',
+    parts: ctx.parts,
+    derived,
+    levels: { yFrame, yFloorTop, wallTopFront: yFloorTop + hF, wallTopBack: yFloorTop + hB, yTopF, yTopB, postTopF, postTopB },
+  }
+}
+
+function toWallOpening(o: OpeningPlacement, w: WallDef) {
+  const c = w.toU(o.center)
+  const sill = o.sill ?? (o.kind.startsWith('door-') ? 0 : 0.08)
+  return { a: c - o.width / 2, b: c + o.width / 2, y0: sill, y1: sill + o.height, kind: o.kind, id: o.id }
+}
+
+function addJoinery(ctx: Ctx, w: WallDef, o: ReturnType<typeof toWallOpening>, tw: number, explode: Vec3) {
+  const face = m(PHYS.joinery.fixFrameFace)
+  const depth = m(PHYS.joinery.frameDepth)
+  const origin = add(w.origin, mul(w.inward, (tw - depth) / 2))
+  const pieces: Array<[string, Array<[number, number]>]> = [
+    ['l', rect(o.a, o.y0, o.a + face, o.y1)],
+    ['r', rect(o.b - face, o.y0, o.b, o.y1)],
+    ['t', rect(o.a + face, o.y1 - face, o.b - face, o.y1)],
+    ['b', rect(o.a + face, o.y0, o.b - face, o.y0 + face)],
+  ]
+  for (const [tag, poly] of pieces) {
+    push(ctx, {
+      id: 'joinery-' + o.id + '-' + tag, name: 'Rama stolarki ' + o.id, layer: 'walls', stage: w.stage, material: 'frame', color: RAL_7016_HEX,
+      explode, confidence: 'MEDIUM', geometry: { start: origin, axis: w.inward, u: w.u, v: [0, 1, 0], length: depth, section: poly },
+    })
+  }
+  push(ctx, {
+    id: 'glass-' + o.id, name: 'Szyba ' + o.id, layer: 'walls', stage: w.stage, material: 'glass', color: '#5d6b74', explode, confidence: 'MEDIUM',
+    geometry: { start: add(origin, mul(w.inward, depth / 2)), axis: w.inward, u: w.u, v: [0, 1, 0], length: 0.024, section: rect(o.a + face, o.y0 + face, o.b - face, o.y1 - face) },
+  })
+}
+
+type FlashCtx = { L: number; W: number; y0: number; yTopF: number; yTopB: number; a: number; t: number; tw: number; sideAxis: Vec3; sideLen: number; sideUp: Vec3; color: string }
+
+/** Linia środkowa obróbki → wielokąt o grubości blachy. Punkty w układzie (na zewnątrz, w górę). */
+function thicken(path: Array<[number, number]>, th: number): Array<[number, number]> {
+  const left: Array<[number, number]> = []
+  const right: Array<[number, number]> = []
+  for (let i = 0; i < path.length; i++) {
+    const p = path[Math.max(0, i - 1)]
+    const n = path[Math.min(path.length - 1, i + 1)]
+    const dx = n[0] - p[0]
+    const dy = n[1] - p[1]
+    const l = Math.hypot(dx, dy) || 1
+    const nx = -dy / l
+    const ny = dx / l
+    left.push([path[i][0] + nx * th / 2, path[i][1] + ny * th / 2])
+    right.push([path[i][0] - nx * th / 2, path[i][1] - ny * th / 2])
+  }
+  return [...left, ...right.reverse()]
+}
+
+function addFlashings(ctx: Ctx, f: FlashCtx, finish: FinishVariant) {
+  const face = m(PHYS.system1.crownFlashingFace)
+  const drip = m(PHYS.system1.flashingDrip)
+  const baseFace = m(PHYS.system1.baseFlashingFace)
+  const o = 0.0012 // odsunięcie blachy od lica kątownika
+  // korona: od wnętrza nad górną ramą, przez górę, w dół po licu; A — z kapinosem, B — płaska techniczna (pod kaseton)
+  const crown: Array<[number, number]> = finish === 'bare'
+    ? [[-0.02, -0.03], [-0.02, 0.002], [o, 0.002], [o, -face + drip], [o + drip, -face]]
+    : [[-0.02, -0.03], [-0.02, 0.002], [o, 0.002], [o, -(f.a + 0.10)]]
+  const base: Array<[number, number]> = finish === 'bare'
+    ? [[o + drip * 0.7, -0.012], [o, 0], [o, baseFace], [-f.t - 0.002, baseFace + 0.004]]
+    : [[o, 0], [o, baseFace], [-f.t - 0.002, baseFace + 0.004]]
+  const crownSec = thicken(crown, FLASH_T)
+  const baseSec = thicken(base, FLASH_T)
+  const conf: Confidence = finish === 'bare' ? 'MEDIUM' : 'LOW'
+  const label = finish === 'bare' ? 'Obróbka A (wykończeniowa)' : 'Obróbka B (techniczna pod kaseton)'
+  const runs: Array<[string, Vec3, Vec3, Vec3, number, Vec3, number]> = [
+    // tag, start (na krawędzi zewn., poziom odniesienia), oś biegu, kierunek „na zewnątrz”, długość, w górę, y odniesienia
+    ['front', [-f.L / 2, 0, f.W / 2], [1, 0, 0], [0, 0, 1], f.L, [0, 1, 0], f.yTopF],
+    ['back', [f.L / 2, 0, -f.W / 2], [-1, 0, 0], [0, 0, -1], f.L, [0, 1, 0], f.yTopB],
+  ]
+  for (const [tag, st, axis, out, len, up, yTop] of runs) {
+    push(ctx, {
+      id: 'flash-crown-' + tag, name: label + ' — korona ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
+      explode: mul(out, 1.0), confidence: conf, geometry: { start: [st[0], yTop + f.a, st[2]], axis, u: out, v: up, length: len, section: crownSec },
+    })
+    push(ctx, {
+      id: 'flash-base-' + tag, name: label + ' — cokół ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
+      explode: mul(out, 1.0), confidence: conf, geometry: { start: [st[0], f.y0, st[2]], axis, u: out, v: up, length: len, section: baseSec },
+    })
+  }
+  // narożniki: L zakrywające słup i czoło ściany przedniej/tylnej (ramię boczne wyliczone z grubości ściany)
+  const legS = f.t + f.tw + 0.02
+  const legF = m(PHYS.system1.cornerFlashingFront)
+  const cornerSec = thicken([[-legF, o], [o, o], [o, -legS]], FLASH_T)
+  for (const [tag, x, z] of [['FL', -1, 1], ['FR', 1, 1], ['BL', -1, -1], ['BR', 1, -1]] as const) {
+    const top = (z > 0 ? f.yTopF : f.yTopB) + f.a
+    push(ctx, {
+      id: 'flash-corner-' + tag, name: label + ' — narożnik ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
+      explode: [x * 0.8, 0, z * 0.8], confidence: 'MEDIUM',
+      geometry: { start: [x * f.L / 2, f.y0, z * f.W / 2], axis: [0, 1, 0], u: [x, 0, 0], v: [0, 0, z], length: top - f.y0, section: cornerSec },
+    })
+  }
+  // boki: korona po skosie dachu, cokół poziomo
+  for (const [tag, x, out] of [['left', -f.L / 2, [-1, 0, 0]], ['right', f.L / 2, [1, 0, 0]]] as const) {
+    push(ctx, {
+      id: 'flash-crown-' + tag, name: label + ' — korona ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
+      explode: mul(out as Vec3, 1.0), confidence: conf,
+      geometry: { start: [x, f.yTopB + f.a, -f.W / 2], axis: f.sideAxis, u: out as Vec3, v: f.sideUp, length: f.sideLen, section: crownSec },
+    })
+    push(ctx, {
+      id: 'flash-base-' + tag, name: label + ' — cokół ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
+      explode: mul(out as Vec3, 1.0), confidence: conf,
+      geometry: { start: [x, f.y0, -f.W / 2], axis: [0, 0, 1], u: out as Vec3, v: [0, 1, 0], length: f.W, section: baseSec },
+    })
+  }
+}
+
+type CassCtx = { L: number; W: number; y0: number; yFloorTop: number; yTopF: number; yTopB: number; t: number; walls: WallDef[]; openings: OpeningPlacement[]; color: string }
+
+/** Kasetony poziome (pas korpusu 240, attyka 2 × 330, fuga 15) na licu odsuniętym od płyty — wariant B. */
+function addCassettes(ctx: Ctx, k: CassCtx) {
+  const gap = m(PHYS.cassette.gap)
+  const off = m(PHYS.cassette.offsetFromPanel)
+  const th = m(PHYS.cassette.thickness)
+  const band = m(PHYS.cassette.bodyBandHeight)
+  const attic = m(PHYS.cassette.atticRowHeight)
+  for (const side of ['front', 'back'] as const) {
+    const z = side === 'front' ? k.W / 2 - k.t + off : -k.W / 2 + k.t - off
+    const out: Vec3 = side === 'front' ? [0, 0, 1] : [0, 0, -1]
+    const yTop = (side === 'front' ? k.yTopF : k.yTopB) + m(PHYS.system1.angleLeg)
+    const x0 = -k.L / 2 - off + k.t
+    const len = k.L + 2 * off - 2 * k.t
+    const atticStart = yTop - 2 * attic
+    const rows: Array<[number, number]> = []
+    const bodyRows = Math.max(1, Math.round((atticStart - k.y0) / band))
+    const pitch = (atticStart - k.y0) / bodyRows
+    for (let r = 0; r < bodyRows; r++) rows.push([k.y0 + r * pitch, k.y0 + (r + 1) * pitch])
+    rows.push([atticStart, atticStart + attic], [atticStart + attic, yTop])
+    const wall = k.walls.find((w) => w.side === side)!
+    const ops = k.openings.filter((o) => o.wall === side).map((o) => toWallOpening(o, wall))
+    rows.forEach(([ya, yb], r) => {
+      // pas przerywany tylko otworami; s — współrzędna od lewego końca kasetonów (x0), otwory przeliczone z układu ściany
+      const cuts = ops
+        .filter((o) => Math.min(yb, k.yFloorTop + o.y1) - Math.max(ya, k.yFloorTop + o.y0) > 0.001)
+        .map((o) => (side === 'front' ? [o.a + off, o.b + off] : [len - off - o.b, len - off - o.a]) as [number, number])
+      let cursor = 0
+      const segs: Array<[number, number]> = []
+      for (const [ca, cb] of cuts.sort((p, q) => p[0] - q[0])) {
+        if (ca > cursor) segs.push([cursor, ca])
+        cursor = Math.max(cursor, cb)
+      }
+      if (cursor < len) segs.push([cursor, len])
+      segs.forEach(([sa, sb], s) => {
+        if (sb - sa < 0.03) return
+        push(ctx, {
+          id: `cassette-${side}-${r}-${s}`, name: 'Kaseton elewacyjny', layer: 'decor', stage: 10, material: 'cassette', color: k.color,
+          explode: mul(out, 2.2), confidence: 'MEDIUM',
+          geometry: {
+            start: [x0, 0, z], axis: mul(out, -1) as Vec3, u: [1, 0, 0], v: [0, 1, 0], length: th,
+            section: rect(sa + (sa > 0 ? gap / 2 : 0), ya + gap / 2, sb - (sb < len ? gap / 2 : 0), yb - gap / 2),
+          },
+        })
+      })
+    })
+  }
+}

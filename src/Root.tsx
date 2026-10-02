@@ -1,10 +1,13 @@
 import { lazy, Suspense } from 'react'
 import App from './App'
 
-// stanowisko kalibracji profili blach: ?lab=profiles (ładowane tylko na żądanie)
+// stanowiska ładowane tylko na żądanie: ?lab=profiles (kalibracja profili), ?lab=construction (System 1 — kątownik 50×50×4)
 const ProfileLab = lazy(() => import('./lab/ProfileLab'))
+const ConstructionLab = lazy(() => import('./construction/ConstructionLab'))
 
 export default function Root() {
   const lab = new URLSearchParams(window.location.search).get('lab')
-  return lab === 'profiles' ? <Suspense fallback={null}><ProfileLab /></Suspense> : <App />
+  if (lab === 'profiles') return <Suspense fallback={null}><ProfileLab /></Suspense>
+  if (lab === 'construction') return <Suspense fallback={null}><ConstructionLab /></Suspense>
+  return <App />
 }
