@@ -20,14 +20,16 @@ function GlassPane({ width, height }: { width: number; height: number }) {
       <Box size={[width * 0.99, 0.055, 0.26]} position={[0, -height / 2 + 0.03, -0.105]} color="#292a28" metalness={0} roughness={0.9} />
       <mesh position={[0, 0, -0.011]}>
         <boxGeometry args={[width, height, 0.012]} />
+        {/* Szkło zespolone z powłoką niskoemisyjną: na zdjęciach z realizacji działa prawie jak lustro
+            (jasne otoczenie, ciemne wnętrze). Częściowo metaliczna powierzchnia odtwarza ten efekt
+            stabilnie zarówno w rasteryzacji, jak i w path tracerze. */}
         <meshPhysicalMaterial
-          color="#1a2228"
-          roughness={0.02}
-          metalness={0}
-          envMapIntensity={2.7}
-          ior={1.5}
-          clearcoat={0.3}
-          clearcoatRoughness={0.025}
+          color="#5d6b74"
+          roughness={0.015}
+          metalness={0.82}
+          envMapIntensity={1.6}
+          clearcoat={1}
+          clearcoatRoughness={0}
         />
       </mesh>
     </>

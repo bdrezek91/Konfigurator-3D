@@ -33,7 +33,7 @@ export function useMetrics(config: PavilionConfig, model: ComponentModel): Metri
       { label: 'Podłoga', value: m.floorAreaM2.toFixed(1) + ' m²', accuracy: 'exact' },
       { label: 'Ściany netto', value: m.netWallAreaM2.toFixed(1) + ' m²', accuracy: openingsDimensioned ? 'project' : 'exact' },
       { label: 'Dach', value: m.roofAreaM2.toFixed(1) + ' m²', accuracy: 'exact' },
-      { label: 'Elewacja (okładzina)', value: decorArea.toFixed(1) + ' m²', accuracy: config.geometry ? 'project' : 'assumption' },
+      { label: 'Elewacja', value: decorArea.toFixed(1) + ' m²', accuracy: config.geometry ? 'project' : 'assumption' },
       { label: 'Kasetony', value: cassettes.length + ' szt.', accuracy: 'assumption' },
       { label: 'Obróbki', value: m.flashingLengthM.toFixed(1) + ' mb', accuracy: 'assumption' },
       { label: 'Łączniki', value: String(m.fastenerCount), accuracy: 'estimate' },

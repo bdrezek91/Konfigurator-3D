@@ -98,7 +98,7 @@ export function Ground({ config }: { config: PavilionConfig }) {
           map={textures.gravelDiffuse}
           normalMap={textures.gravelNormal}
           roughnessMap={textures.gravelRoughness}
-          color="#898277"
+          color="#6f6a62"
           normalScale={[0.70, 0.70]}
           roughness={0.93}
           metalness={0}

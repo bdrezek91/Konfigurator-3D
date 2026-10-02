@@ -149,6 +149,7 @@ export default function App() {
         </section>
 
         <aside className="panel">
+          <div className="panel-main">
           <nav className="tabs" aria-label="Kategorie konfiguracji">
             {TABS.map((t) => (
               <button key={t.id} type="button" className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)} aria-current={tab === t.id}>
@@ -177,6 +178,7 @@ export default function App() {
                 />
               }
             />
+          </div>
           </div>
 
           <footer className="summary">

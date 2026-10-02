@@ -97,6 +97,19 @@ export function Viewer({
             <HQPanel config={config} pose={GALLERY03_PHOTO_POSE} lighting={lighting} compact />
             <figcaption>Render HQ</figcaption>
           </div>
+          <aside className="compare-notes">
+            <span className="eyebrow">Wzorzec galeria-03</span>
+            <h4>Pomiary referencyjne</h4>
+            <dl>
+              <div><dt>Pas kasetonu</dt><dd>≈ 240 mm · 9 rzędów</dd></div>
+              <div><dt>Fuga</dt><dd>12–18 mm</dd></div>
+              <div><dt>Attyka</dt><dd>2 × 315 mm · moduł 1200</dd></div>
+              <div><dt>Lamele</dt><dd>40 mm · szczelina 18 mm</dd></div>
+              <div><dt>Profil stolarki</dt><dd>50–60 mm · antracyt</dd></div>
+              <div><dt>Kamera</dt><dd>h 0,45 m · FOV 60° · 4:3</dd></div>
+            </dl>
+            <p>Źródło: reference/gallery/POMIARY.md. Kadr renderów wyznaczony z perspektywy zdjęcia.</p>
+          </aside>
         </div>
       ) : (
         <div className="viewer-canvas">

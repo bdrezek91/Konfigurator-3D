@@ -51,8 +51,7 @@ export function CameraRig({
   }, [poseKey])
 
   useEffect(() => {
-    if (!apiRef) return
-    apiRef.current = {
+    const api: CameraApi = {
       goTo,
       current: () => {
         const p = new Vector3()
@@ -62,8 +61,13 @@ export function CameraRig({
         return { position: [p.x, p.y, p.z], target: [t.x, t.y, t.z], fov: camera.fov }
       },
     }
+    if (apiRef) apiRef.current = api
+    // uchwyt diagnostyczny dla testów wizualnych (Playwright)
+    const root = window as typeof window & { __DAMPOL3D_CAMERA__?: CameraApi }
+    root.__DAMPOL3D_CAMERA__ = api
     return () => {
-      apiRef.current = null
+      if (apiRef) apiRef.current = null
+      delete root.__DAMPOL3D_CAMERA__
     }
   })
 
@@ -83,7 +87,8 @@ export function CameraRig({
       minDistance={2}
       maxDistance={40}
       minPolarAngle={Math.PI * 0.12}
-      maxPolarAngle={Math.PI * 0.5}
+      // > 90°: pozwala patrzeć lekko w górę z niskiej kamery (kadr galerii-03 z wysokości 0,45 m)
+      maxPolarAngle={Math.PI * 0.58}
       smoothTime={0.45}
       draggingSmoothTime={0.12}
       dollySpeed={0.6}
