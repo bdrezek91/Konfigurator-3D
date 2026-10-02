@@ -430,7 +430,7 @@ export default function App() {
 
   const exportConfig = () => {
     const payload = JSON.stringify({
-      version: 4,
+      version: 5,
       generatedAt: new Date().toISOString(),
       config,
       validation,
@@ -475,7 +475,7 @@ export default function App() {
           <div className="brand-row"><span className="brand-mark">D</span><strong>DAMPOL 3D</strong></div>
           <p>Konfigurator techniczno-sprzedażowy · 14 projektów referencyjnych</p>
         </div>
-        <span className="status-pill">V4</span>
+        <span className="status-pill">V5</span>
       </header>
 
       <section className="preset-bar">
