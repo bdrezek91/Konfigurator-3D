@@ -5,7 +5,7 @@
 Hierarchia źródeł: 1 zdjęcie gotowego pawilonu · 2 film · 3 pomiar zdjęcia ze skalą · 4 katalog · 5 produkcja · 6 rysunek · 7 szkic · 8 założenie.
 Przy sprzeczności wygrywa źródło wyżej; sprzeczność opisana w kolumnie „problem”.
 
-Pewność: VERIFIED 8 · HIGH 9 · MEDIUM 15 · LOW 5 · UNKNOWN 8
+Pewność: VERIFIED 9 · HIGH 10 · MEDIUM 14 · LOW 5 · UNKNOWN 9
 
 ## Wartości fizyczne
 
@@ -44,9 +44,11 @@ Pewność: VERIFIED 8 · HIGH 9 · MEDIUM 15 · LOW 5 · UNKNOWN 8
 | `system1.floorScrewSpacing` Mocowanie podłogi — rozstaw | 600 mm | założenie: Założenie wizualizacyjne | **UNKNOWN** | — | zmierzyć | OPEN |
 | `system1.wallScrewSpacing` Mocowanie ściany skrajnej do słupa — rozstaw | 500 mm | założenie: Założenie wizualizacyjne | **UNKNOWN** | — | zmierzyć | OPEN |
 | `system1.roofClearance` Luz płyty dachowej przy kątowniku (na stronę) | 6 mm | produkcja: Wyliczony z danych produkcji: element dachowy 2,94 m przy ramie 2,96 m → (2,96 − 2·0,004 − 2,94) / 2 | **MEDIUM** | Potwierdzić sposób oparcia dachu i kierunek ułożenia. | — | OK |
-| `system1.topFrameOnRoof` Górna rama: dospawana do słupów wystających ponad dach (kątownik na dachu, ramię poziome do środka) | 1 | produkcja: Produkcja Dampol (2026-10-02): kątownik wystaje nad dach ~5 cm, „żeby potem dospawać górę”; film WA0019: ciemny pas ≈ 55 mm nad obróbką | **MEDIUM** | Orientacja ramienia poziomego górnej ramy (na dachu / nad dachem) — zdjęcie przed obróbką. | — | OK |
+| `system1.topFrameOnRoof` Górna rama: leży na dachu, dospawana do słupów wystających ponad dach | 1 | produkcja: Produkcja Dampol (2026-10-02): rama leży na dachu (w rogach wyżej — uszczelnienie), słup wystaje ~5 cm pod dospawanie; film WA0019 | **HIGH** | — | — | OK |
 | `system1.postAboveRoof` Wysunięcie słupa ponad płytę dachową | 50 mm | produkcja: Produkcja Dampol (2026-10-02): „jakieś 5 cm”; film WA0019: ≈ 55 mm | **HIGH** | — | — | OK |
-| `system1.wallLockTolerance` Ściana przednia/tylna: nadwyżka ponad 6 × 1000 (zamek + tolerancja płyt skrajnych) | 22 mm | produkcja: Wyliczona: między ramionami słupów 6030 − 2·4 = 6022 mm; produkcja: 6 płyt w module 1000, czoła płyt skrajnych dotykają ramion słupów | **HIGH** | Na której płycie zostaje zamek (pióro), a która jest docinana na czole? | — | OK |
+| `system1.wallLockTolerance` Ściana przednia/tylna: nadwyżka ponad 6 × 1000 (tolerancja, przejmowana przez ostatnią płytę) | 22 mm | produkcja: Wyliczona: między ramionami słupów 6030 − 2·4 = 6022 mm. Produkcja: 6 płyt w module 1000; ostatnia płyta docinana, gdy się nie mieści (zależnie od złożenia zamków) | **HIGH** | — | — | OK |
+| `system1.sideWallPanels` Ściana boczna: 3 płyty = 2 × 1000 + 1 docięta na 752 mm | 3 | produkcja: Produkcja Dampol (2026-10-02); wyliczenie 2752 = 2 × 1000 + 752 | **VERIFIED** | — | — | OK |
+| `system1.topFrameCornerRaise` Górna rama: podniesienie w narożnikach (silikon + wasserstop pod kątownikiem) | 0 mm | produkcja: Produkcja Dampol (2026-10-02): rama leży na dachu, w rogach „troszkę wyżej” — narożnik wcześniej uszczelniany. Wartość nieznana — w modelu 0 | **UNKNOWN** | Grubość warstwy uszczelnienia w narożniku (mm). | zmierzyć | OPEN |
 | `system1.cornerContact` Narożnik: blacha płyty skrajnej oparta o jedno ramię słupa, czoło (rdzeń/zamek) dotyka drugiego ramienia | 1 | produkcja: Produkcja Dampol (2026-10-02) | **VERIFIED** | — | — | OK |
 | `system1.crownFlashingFace` Obróbka korony A (goły PIR) — wysokość lica | 215 mm | film: Film WA0017 (gotowy): pas 200–220 mm; WA0019 (w produkcji): obróbka 180 mm + kątownik 55 mm | **MEDIUM** | — | — | OK |
 | `system1.flashingDrip` Obróbka A — wysunięcie zagięcia (kapinos) | 15 mm | założenie: Przekaz ustny „1,5” / „2,5” bez jednostki. Zdjęcie 11: daszek korony ≈ 15–20 mm → przyjęto cm-owy odczyt 15 mm (wariant mały) | **UNKNOWN** | flashingOffset — potwierdzić jednostkę i wartości 1,5 / 2,5 na rysunku gięcia. | zmierzyć | OPEN |
@@ -66,8 +68,8 @@ Pewność: VERIFIED 8 · HIGH 9 · MEDIUM 15 · LOW 5 · UNKNOWN 8
 | Poziom podłogi (wierzch PIR) nad spodem ramy | 104 | t + grubość podłogi = 4 + 100 | **HIGH** | — |
 | Ściana przednia/tylna — długość | 6022 | L − 2·t (między ramionami słupów) | **HIGH** | — |
 | Ściana boczna — długość | 2752 | W − 2·t − 2·grubość ściany przód/tył = 2960 − 8 − 200 | **HIGH** | ✓ produkcja: 2740–2760 mm |
-| Płyty ściany przedniej | 6 | 6022 mm między słupami = 6 × 1000 + 22 mm (zamek/tolerancja płyty skrajnej) | **VERIFIED** | ✓ produkcja: 6 płyt dla 6 × 3 |
-| Płyty ściany bocznej | 3 | 2 × 1000 + docięta 752 mm | **MEDIUM** | — |
+| Płyty ściany przedniej | 6 | 6022 mm między słupami = 6 × 1000 + 22 mm tolerancji (ostatnia płyta docinana, gdy się nie mieści) | **VERIFIED** | ✓ produkcja: 6 płyt dla 6 × 3 |
+| Płyty ściany bocznej | 3 | 2 × 1000 + docięta 752 mm | **VERIFIED** | ✓ produkcja: 3 płyty, jedna docięta na 752 mm |
 | Element dachowy — długość (w poprzek) | 2942 | W − 2·t − 2·luz (luz z danych produkcji) — po skosie | **MEDIUM** | ✓ produkcja: ≈ 2940 mm |
 | Liczba płyt dachowych | 6 | ⌈6010 / 1050⌉ | **MEDIUM** | — |
 | Słup narożny przedni — długość | 2874 | t + podłoga + ściana przednia + dach + 50 (ponad dach) | **MEDIUM** | — |
@@ -79,14 +81,15 @@ Pewność: VERIFIED 8 · HIGH 9 · MEDIUM 15 · LOW 5 · UNKNOWN 8
 
 | klucz | stan | co rozstrzygnie |
 |---|---|---|
-| topFramePosition | MEDIUM — dospawana do słupów wystających ~5 cm nad dach (produkcja 2026-10-02, WA0019); orientacja ramienia poziomego nadal do potwierdzenia | zdjęcie górnego narożnika przed obróbką |
+| topFramePosition | HIGH — leży na dachu, dospawana do słupów wystających ~5 cm (produkcja 2026-10-02, WA0019) | — |
+| topFrameCornerRaise | UNKNOWN — w narożnikach rama wyżej o warstwę silikonu + wasserstopu; w modelu 0 | grubość uszczelnienia |
 | cornerAngleHeight | HIGH — słup = rama + podłoga + ściana + dach + ~50 mm (produkcja: „jakieś 5 cm” nad dach) | — |
 | roofSupportDetail | MEDIUM — dach leży na ścianach, luz 6 mm/stronę z danych 2,94 m | przekrój/rysunek oparcia dachu |
 | sideWallCalculatedLength | HIGH — 2752 mm = W − 2·4 − 2·100, zgodne z produkcją 2740–2760 | — |
 | flashingOffset | UNKNOWN — „1,5 / 2,5” bez jednostki; przyjęto 15 mm (zdjęcie 11: daszek ≈ 15–20 mm) | rysunek gięcia obróbki |
 | squareFlashing („na kwadraty”) | UNKNOWN — brak przykładu na zdjęciach | zdjęcie/rysunek |
 | intermediateFloorSupports | UNKNOWN — opis wymienia tylko obwód | potwierdzenie produkcji |
-| wallModuleVsFrameLength | ROZSTRZYGNIĘTE — rama 6030 × 2960 (produkcja), 6 płyt × 1000 na froncie; 22 mm = zamek/tolerancja płyt skrajnych (czoła dotykają słupów) | która płyta skrajna ma zamek, a która jest docinana |
+| wallModuleVsFrameLength | ROZSTRZYGNIĘTE — rama 6030 × 2960, 6 płyt × 1000 na froncie, ostatnia płyta docinana gdy się nie mieści; ściana boczna 3 płyty (2 × 1000 + 752) | — |
 | cornerContact | VERIFIED — blacha płyty skrajnej o ramię słupa, czoło (rdzeń/zamek) o drugie ramię | — |
 | flashingBendDrawing | czeka na rysunek gięcia (zapowiedziany przez produkcję) | rysunek gięcia obróbek A/B i „na kwadraty” |
 | screwSpacing (podłoga, słupy) | UNKNOWN — wizualizacja co 600 / 500 mm | technologia montażu |

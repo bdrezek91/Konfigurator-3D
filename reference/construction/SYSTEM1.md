@@ -39,7 +39,7 @@ Na razie tylko System 1. `ConstructionSystemId` przewiduje `system_2` i `system_
 | ściana boczna | **2752 mm** | 2960 − 2·4 − 2·100 | ✓ produkcja 2740–2760 mm |
 | element dachowy | **2942 mm** | 2960 − 2·4 − 2·6 (po skosie) | ✓ produkcja ≈ 2940 mm |
 | ściana przednia / tylna | 6022 mm między słupami = 6 × 1000 + 22 mm | 6030 − 2·4 | ✓ produkcja: 6 płyt w module metrowym; 22 mm = zamek/tolerancja płyt skrajnych |
-| ściana boczna — płyty | 2 × 1000 + docięta 752 mm | 2752 / 1000 | do potwierdzenia |
+| ściana boczna — płyty | 3 szt.: 2 × 1000 + docięta 752 mm | 2752 / 1000 | ✓ produkcja |
 | płyty podłogowe | 3 szt. | ⌈2952 / 1000⌉, ostatnia 952 mm | zgodne z opisem „np. 3” |
 | poziom podłogi | 104 mm nad spodem ramy | 4 + 100 | — |
 | słup przedni / tylny | 2874 / 2774 mm | 4 + 100 + ściana + 100 + 50 | ✓ produkcja: słup wystaje ~5 cm nad dach pod dospawanie górnej ramy |
@@ -53,6 +53,9 @@ Na razie tylko System 1. `ConstructionSystemId` przewiduje `system_2` i `system_
 - Płyty ścienne w **module 1000 mm**; front pawilonu 6 × 3 = **6 płyt** (VERIFIED).
 - Dach zakrywa górę ściany przedniej i bocznej. Słup narożny wystaje **~5 cm nad dach**, do dospawania górnej ramy.
 - Narożnik: blacha płyty skrajnej opiera się o jedno ramię kątownika, a czoło (rdzeń albo zamek, jeśli nie był odcięty) dotyka drugiego ramienia.
+- Ostatnia płyta ściany jest docinana, gdy się nie mieści; zależy to od złożenia zamków.
+- Ściana boczna: 3 płyty (2 × 1000 + 752).
+- Górna rama leży na dachu. W narożnikach jest wyżej, bo pod nią jest silikon i wasserstop (wartość UNKNOWN).
 - Rysunek gięcia obróbek: zapowiedziany.
 
 ## Niewiadome

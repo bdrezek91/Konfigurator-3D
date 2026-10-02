@@ -207,18 +207,27 @@ export const PHYS = {
       confidence: 'MEDIUM', status: 'OK', todo: 'Potwierdzić sposób oparcia dachu i kierunek ułożenia.',
     }),
     topFrameOnRoof: P({
-      element: 'Górna rama: dospawana do słupów wystających ponad dach (kątownik na dachu, ramię poziome do środka)', value: 1, unit: '-', rank: 5,
-      source: 'Produkcja Dampol (2026-10-02): kątownik wystaje nad dach ~5 cm, „żeby potem dospawać górę”; film WA0019: ciemny pas ≈ 55 mm nad obróbką',
-      confidence: 'MEDIUM', status: 'OK', todo: 'Orientacja ramienia poziomego górnej ramy (na dachu / nad dachem) — zdjęcie przed obróbką.',
+      element: 'Górna rama: leży na dachu, dospawana do słupów wystających ponad dach', value: 1, unit: '-', rank: 5,
+      source: 'Produkcja Dampol (2026-10-02): rama leży na dachu (w rogach wyżej — uszczelnienie), słup wystaje ~5 cm pod dospawanie; film WA0019',
+      confidence: 'HIGH', status: 'OK',
     }),
     postAboveRoof: P({
       element: 'Wysunięcie słupa ponad płytę dachową', value: 50, rank: 5,
       source: 'Produkcja Dampol (2026-10-02): „jakieś 5 cm”; film WA0019: ≈ 55 mm', confidence: 'HIGH', status: 'OK',
     }),
     wallLockTolerance: P({
-      element: 'Ściana przednia/tylna: nadwyżka ponad 6 × 1000 (zamek + tolerancja płyt skrajnych)', value: 22, rank: 5,
-      source: 'Wyliczona: między ramionami słupów 6030 − 2·4 = 6022 mm; produkcja: 6 płyt w module 1000, czoła płyt skrajnych dotykają ramion słupów',
-      confidence: 'HIGH', status: 'OK', todo: 'Na której płycie zostaje zamek (pióro), a która jest docinana na czole?',
+      element: 'Ściana przednia/tylna: nadwyżka ponad 6 × 1000 (tolerancja, przejmowana przez ostatnią płytę)', value: 22, rank: 5,
+      source: 'Wyliczona: między ramionami słupów 6030 − 2·4 = 6022 mm. Produkcja: 6 płyt w module 1000; ostatnia płyta docinana, gdy się nie mieści (zależnie od złożenia zamków)',
+      confidence: 'HIGH', status: 'OK',
+    }),
+    sideWallPanels: P({
+      element: 'Ściana boczna: 3 płyty = 2 × 1000 + 1 docięta na 752 mm', value: 3, unit: '-', rank: 5,
+      source: 'Produkcja Dampol (2026-10-02); wyliczenie 2752 = 2 × 1000 + 752', confidence: 'VERIFIED', status: 'OK',
+    }),
+    topFrameCornerRaise: P({
+      element: 'Górna rama: podniesienie w narożnikach (silikon + wasserstop pod kątownikiem)', value: 0, rank: 5,
+      source: 'Produkcja Dampol (2026-10-02): rama leży na dachu, w rogach „troszkę wyżej” — narożnik wcześniej uszczelniany. Wartość nieznana — w modelu 0',
+      confidence: 'UNKNOWN', status: 'OPEN', todo: 'Grubość warstwy uszczelnienia w narożniku (mm).',
     }),
     cornerContact: P({
       element: 'Narożnik: blacha płyty skrajnej oparta o jedno ramię słupa, czoło (rdzeń/zamek) dotyka drugiego ramienia', value: 1, unit: '-', rank: 5,

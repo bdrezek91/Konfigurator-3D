@@ -318,7 +318,7 @@ export function buildSystem1(config: PavilionConfig, finish: FinishVariant): Con
         key: 'wallModules', label: 'Płyty ściany przedniej', valueMm: lay.count,
         formula: lay.cut
           ? `⌈${Math.round(len * 1000)} / ${Math.round(wallModule * 1000)}⌉, ostatnia docięta ${Math.round(lay.last * 1000)} mm`
-          : `${Math.round(len * 1000)} mm między słupami = ${lay.count} × ${Math.round(wallModule * 1000)} + ${Math.round(lay.rest * 1000)} mm (zamek/tolerancja płyty skrajnej)`,
+          : `${Math.round(len * 1000)} mm między słupami = ${lay.count} × ${Math.round(wallModule * 1000)} + ${Math.round(lay.rest * 1000)} mm tolerancji (ostatnia płyta docinana, gdy się nie mieści)`,
         confidence: 'VERIFIED' as Confidence,
         check: { expected: 'produkcja: 6 płyt dla 6 × 3', ok: Math.abs(config.length - 6.03) > 0.01 || lay.count === 6 },
       }
@@ -328,7 +328,8 @@ export function buildSystem1(config: PavilionConfig, finish: FinishVariant): Con
       return {
         key: 'sideWallPanels', label: 'Płyty ściany bocznej', valueMm: lay.count,
         formula: lay.cut ? `${lay.count - 1} × ${Math.round(wallModule * 1000)} + docięta ${Math.round(lay.last * 1000)} mm` : `${lay.count} × ${Math.round(wallModule * 1000)}`,
-        confidence: 'MEDIUM' as Confidence,
+        confidence: 'VERIFIED' as Confidence,
+        check: { expected: 'produkcja: 3 płyty, jedna docięta na 752 mm', ok: Math.abs(W - 2.96) > 0.01 || (lay.count === 3 && Math.abs(lay.last - 0.752) < 0.002) },
       }
     })(),
     {
@@ -352,8 +353,8 @@ export function buildSystem1(config: PavilionConfig, finish: FinishVariant): Con
 }
 
 /**
- * Układ płyt w module. Jeśli reszta ≤ 30 mm, nie ma docinanej płyty: płyty skrajne dotykają ramion słupów
- * (czoło — rdzeń albo zamek, produkcja 2026-10-02), a reszta to zamek + tolerancja na płycie skrajnej.
+ * Układ płyt w module: pełne płyty od jednego końca, ostatnia przejmuje resztę — docinana, gdy się nie mieści
+ * (produkcja 2026-10-02). Jeśli reszta ≤ 30 mm, to tolerancja złożenia zamków, a nie osobny pasek płyty.
  * Przykład: 6022 mm między słupami → 6 płyt w module 1000 (produkcja: 6 płyt na froncie 6 × 3), 22 mm w zamku/tolerancji.
  */
 export function panelLayout(available: number, module: number, tolerance = 0.03) {
