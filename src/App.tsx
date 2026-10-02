@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { buildComponentModel, componentModelToCsv, geometryOf } from './components'
 import { buildBom, validateConfig } from './logic'
 import { PRESETS } from './presets'
@@ -10,9 +10,11 @@ import { applyUpdate, CUSTOM_PROJECT, type Setter } from './ui/configState'
 import { Icon } from './ui/icons'
 import { MetricGrid, TechnicalTab } from './ui/MetricsPanel'
 import { useMetrics } from './ui/metrics'
-import { TechnicalWorkspace } from './ui/TechnicalWorkspace'
 import { Viewer } from './ui/Viewer'
 import './App.css'
+
+// tryb techniczny ładowany na żądanie — nie obciąża pierwszego wczytania konfiguratora
+const TechnicalWorkspace = lazy(() => import('./ui/TechnicalWorkspace').then((m) => ({ default: m.TechnicalWorkspace })))
 
 type SceneMode = 'visual' | 'technical'
 
@@ -137,7 +139,9 @@ export default function App() {
           {mode === 'visual' ? (
             <Viewer config={config} lighting={lighting} onLighting={setLighting} view={view} onView={setView} />
           ) : (
-            <TechnicalWorkspace config={config} model={model} />
+            <Suspense fallback={<div className="stage-loading">Ładowanie widoku technicznego…</div>}>
+              <TechnicalWorkspace config={config} model={model} />
+            </Suspense>
           )}
           {mode === 'visual' && (
             <div className="stage-caption">

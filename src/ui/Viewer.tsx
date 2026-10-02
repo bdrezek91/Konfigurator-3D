@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import Pavilion3D, { type CameraApi, type CameraPose, type LightingMode, type PavilionView } from '../scene/Pavilion3D'
 import { cameraPose, GALLERY03_PHOTO_POSE } from '../scene/camera/presets'
 import type { PavilionConfig } from '../types'
-import { HQPanel } from './HQPanel'
 import { Icon } from './icons'
+
+// panel HQ (path tracer) ładowany dopiero po kliknięciu
+const HQPanel = lazy(() => import('./HQPanel').then((m) => ({ default: m.HQPanel })))
 
 const VIEWS: Array<[PavilionView, string]> = [
   ['perspective', 'Perspektywa'],
@@ -94,7 +96,9 @@ export function Viewer({
             <figcaption>Render interaktywny</figcaption>
           </div>
           <div className="compare-pane">
-            <HQPanel config={config} pose={GALLERY03_PHOTO_POSE} lighting={lighting} compact />
+            <Suspense fallback={null}>
+              <HQPanel config={config} pose={GALLERY03_PHOTO_POSE} lighting={lighting} compact />
+            </Suspense>
             <figcaption>Render HQ</figcaption>
           </div>
           <aside className="compare-notes">
@@ -119,7 +123,9 @@ export function Viewer({
 
       {hqPose && !compare && (
         <div className="hq-overlay">
-          <HQPanel config={config} pose={hqPose} lighting={lighting} onClose={() => setHqPose(null)} />
+          <Suspense fallback={null}>
+            <HQPanel config={config} pose={hqPose} lighting={lighting} onClose={() => setHqPose(null)} />
+          </Suspense>
         </div>
       )}
 
