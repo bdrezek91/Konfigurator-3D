@@ -600,10 +600,10 @@ function RoofRib({
   y: number
 }) {
   const shape = new Shape()
-  shape.moveTo(-0.055, 0)
-  shape.lineTo(-0.032, 0.002)
-  shape.lineTo(0.032, 0.002)
-  shape.lineTo(0.055, 0)
+  shape.moveTo(-0.060, 0)
+  shape.lineTo(-0.032, 0.045)
+  shape.lineTo(0.032, 0.045)
+  shape.lineTo(0.060, 0)
   shape.closePath()
 
   return (
