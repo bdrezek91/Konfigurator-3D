@@ -47,6 +47,14 @@ function FixedCamera({ pose }: { pose: CameraPose }) {
     camera.lookAt(...pose.target)
     camera.updateProjectionMatrix()
     camera.updateMatrixWorld()
+    // uchwyt diagnostyczny dla testów wizualnych (porównanie kadru HQ z podglądem)
+    const root = window as typeof window & { __DAMPOL3D_HQ_CAMERA__?: PerspectiveCamera; __DAMPOL3D_HQ_RASTER__?: () => string }
+    root.__DAMPOL3D_HQ_CAMERA__ = camera
+    root.__DAMPOL3D_HQ_RASTER__ = () => {
+      const { gl, scene } = get()
+      gl.render(scene, camera)
+      return gl.domElement.toDataURL('image/png')
+    }
   }, [get, pose])
   return null
 }

@@ -8,15 +8,14 @@ export type CameraPose = {
 }
 
 /**
- * Kadr galerii-03 wyznaczony z perspektywy zdjęcia 03 (reference/gallery/POMIARY.md):
- * stosunek wysokości lewego i prawego końca ściany ≈ 2:1, pawilon wypełnia ~92% szerokości kadru,
- * aparat ok. 0,45 m nad gruntem. FOV 60° (pionowe, kadr 4:3) — skalibrowane porównaniem z renderem HQ
- * (szersze niż nominalne 55° dla 26 mm ekw.; zdjęcie z telefonu jest lekko kadrowane szerzej).
+ * Kadr galerii-03 wyznaczony fotogrametrycznie ze zdjęcia 03 (punkty zbiegu poziomu i pionu fasady):
+ * ogniskowa ≈ 1221 px przy 1600×1200 → pionowe FOV ≈ 52°, aparat 0,72 m nad gruntem,
+ * 3,6 m od lica fasady, przy lewym końcu pawilonu, patrzy wzdłuż fasady i lekko w górę.
  */
 export const GALLERY03_PHOTO_POSE: CameraPose = {
-  position: [-2.8, 0.45, 4.83],
-  target: [-1.0, 1.45, 1.48],
-  fov: 60,
+  position: [-3.295, 0.715, 5.168],
+  target: [-1.314, 1.255, 1.735],
+  fov: 52.3,
 }
 
 export function cameraPose(config: PavilionConfig, view: PavilionView): CameraPose {

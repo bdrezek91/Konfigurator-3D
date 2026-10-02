@@ -32,6 +32,8 @@ export type FacadeCladdingSpec = {
   moduleWidth?: number
   moduleHeight?: number
   staggered?: boolean
+  /** Wysokość rzędu attyki [m] (2 rzędy). Domyślnie 0,315. */
+  atticRowHeight?: number
 }
 export type OpeningKind = 'door-glazed' | 'door-full' | 'door-double' | 'fixed-glass' | 'alu-window' | 'pvc-window'
 export type DecorKind =

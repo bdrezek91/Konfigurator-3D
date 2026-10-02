@@ -35,7 +35,7 @@ export const PRESETS: PavilionPreset[] = [
     source: 'reference/gallery/03-front-kasetony-poziome-zblizenie.jpg',
     notes: 'Wzorzec kalibracyjny: najpierw dopasowujemy ten pawilon 1:1 do zdjęcia 03. Pomiary z POMIARY.md.',
     config: p('GALERIA/03', {
-      length: 6.03, width: 2.96,
+      length: 6.67, width: 2.96,
       frontHeight: 2.62, backHeight: 2.62, roofSlope: 'flat',
       construction: 'angle50',
       wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',

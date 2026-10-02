@@ -690,13 +690,13 @@ function facadeSpecForSide(c: PavilionConfig, g: ProjectGeometry, side: WallSide
 }
 
 /** Rzędy kasetonów poziomych: pasy korpusu + (opcjonalnie) 2 rzędy attyki. */
-function horizontalBandRows(maxHeight: number, bandHeight: number, attic: boolean) {
+function horizontalBandRows(maxHeight: number, bandHeight: number, attic: boolean, atticRowH = ATTIC_ROW_H) {
   const rows: Array<{ y0: number; y1: number; attic: boolean; index: number }> = []
-  const atticStart = attic ? maxHeight - ATTIC_ROW_H * 2 : maxHeight
+  const atticStart = attic ? maxHeight - atticRowH * 2 : maxHeight
   const bodyRows = Math.max(1, Math.round(atticStart / bandHeight))
   const pitch = atticStart / bodyRows
   for (let row = 0; row < bodyRows; row++) rows.push({ y0: row * pitch, y1: (row + 1) * pitch, attic: false, index: row })
-  if (attic) for (let row = 0; row < 2; row++) rows.push({ y0: atticStart + row * ATTIC_ROW_H, y1: atticStart + (row + 1) * ATTIC_ROW_H, attic: true, index: row })
+  if (attic) for (let row = 0; row < 2; row++) rows.push({ y0: atticStart + row * atticRowH, y1: atticStart + (row + 1) * atticRowH, attic: true, index: row })
   return rows
 }
 
@@ -843,7 +843,7 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
     const maxHeight = Math.max(wallHeightAt(side, -span / 2, c), wallHeightAt(side, span / 2, c))
 
     if (spec.kind === 'cassette-horizontal' && spec.staggered === false) {
-      const rows = horizontalBandRows(maxHeight, spec.bandHeight ?? DEFAULT_BAND_HEIGHT, hasAtticBand(c))
+      const rows = horizontalBandRows(maxHeight, spec.bandHeight ?? DEFAULT_BAND_HEIGHT, hasAtticBand(c), spec.atticRowHeight)
       for (const row of rows) {
         const { y0, y1 } = row
         if (!row.attic) {
@@ -960,7 +960,7 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
           const mh = cassetteSpec.moduleHeight ?? DEFAULT_GRID_HEIGHT
           return { y0: i * mh, y1: Math.min(h, (i + 1) * mh) }
         })
-      : horizontalBandRows(h, cassetteSpec.bandHeight ?? DEFAULT_BAND_HEIGHT, hasAtticBand(c))
+      : horizontalBandRows(h, cassetteSpec.bandHeight ?? DEFAULT_BAND_HEIGHT, hasAtticBand(c), cassetteSpec.atticRowHeight)
     for (let row = 0; row < cornerRows.length; row++) {
       const { y0, y1 } = cornerRows[row]
       const pieceH = Math.max(0.025, y1 - y0 - gap)

@@ -21,3 +21,26 @@ Dokładność ok. ±15% (perspektywa, nisko ustawiony aparat). Do potwierdzenia 
 ## Wniosek
 Główna przyczyna efektu "lego": kasetony w modelu są **2× za wysokie i za krótkie** (ok. 470 × 550 mm
 zamiast ok. 240 mm × cała długość pola), a fugi są za słabe. Do tego wystający dach i grube czarne ramy.
+
+## Zdjęcie 03 — rektyfikacja fotogrametryczna (zastępuje szacunki powyżej)
+
+Metoda: fasada traktowana jako płaski prostokąt. Z czterech narożników okładziny wyznaczono punkty zbiegu
+poziomu i pionu; z warunku ortogonalności kierunków — ogniskową aparatu; następnie każdy punkt zdjęcia
+rzutowano na płaszczyznę fasady (metry). Skala: wysokość okładziny 0,03–2,82 m (2,79 m).
+Kontrola spójności: pion szkła mierzony u góry i u dołu zdjęcia różni się o ≤ 6 mm.
+
+Narożniki fasady (px, zdjęcie 1600×1200): TL (110,18), TR (1515,350), BR (1578,872), BL (65,1078).
+Ogniskowa ≈ 1221 px → pionowe FOV ≈ 52,3°.
+
+| Element | Pomiar (od lewego końca fasady) |
+|---|---|
+| Długość fasady | ≈ 6,67 m (proporcja L/H = 2,392) |
+| Przeszklenie | 0,50 → 3,545 m: FIX 1,04 · drzwi 0,86 (zawiasy lewe) · FIX 1,14 m; góra ramy ≈ 2,11 m |
+| Pole lameli | 3,98 → 6,25 m (2,27 m), wys. 0,04 → 2,11 m |
+| Attyka | dolna krawędź ≈ 2,12 m → 2 rzędy ≈ 0,35 m |
+| Pasy korpusu | ≈ 0,22–0,23 m (9 rzędów) |
+| Kamera | 0,72 m nad gruntem, 3,6 m od lica, 0,04 m od lewego końca; patrzy wzdłuż fasady i ~8° w górę |
+
+Weryfikacja: nakładka zdjęcia i renderu (`reference/comparisons/galeria-03-nakladka-zdjecie-render.png`)
+pokrywa krawędzie przeszklenia, lameli, rzędów kasetonów i attyki. Dokładność wymiarów ±3%
+(zależy od założonej wysokości okładziny).

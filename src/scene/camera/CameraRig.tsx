@@ -63,8 +63,9 @@ export function CameraRig({
     }
     if (apiRef) apiRef.current = api
     // uchwyt diagnostyczny dla testów wizualnych (Playwright)
-    const root = window as typeof window & { __DAMPOL3D_CAMERA__?: CameraApi }
+    const root = window as typeof window & { __DAMPOL3D_CAMERA__?: CameraApi; __DAMPOL3D_VIEW_CAMERA__?: PerspectiveCamera }
     root.__DAMPOL3D_CAMERA__ = api
+    root.__DAMPOL3D_VIEW_CAMERA__ = camera
     return () => {
       if (apiRef) apiRef.current = null
       delete root.__DAMPOL3D_CAMERA__

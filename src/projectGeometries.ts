@@ -35,6 +35,8 @@ const g = (
 
 export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
   'GALERIA/03': {
+    // Geometria z rektyfikacji zdjęcia 03 (punkty zbiegu + prostokąt fasady, skala: okładzina 0,03–2,82 m).
+    // Szczegóły i dokładność: reference/gallery/POMIARY.md.
     externalHeight: 2.82,
     foundationGap: 0.03,
     roofEdgeFlashing: false,
@@ -43,24 +45,25 @@ export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
         kind: 'cassette-horizontal',
         color: '#383E42',
         gap: 0.015,
-        bandHeight: 0.24,
+        bandHeight: 0.23,
+        atticRowHeight: 0.35,
         moduleWidth: 1.20,
         staggered: false,
       },
     },
     openings: [
-      o('G03-FIX-L','front',-1.38,1.20,2.05,'fixed-glass',{sill:0.04,frameColor:'#383E42',sourceAccuracy:'dimensioned'}),
-      o('G03-DOOR','front',-0.24,1.05,2.08,'door-glazed',{sill:0,frameColor:'#383E42',sourceAccuracy:'dimensioned'}),
-      o('G03-FIX-R','front',0.82,1.07,2.05,'fixed-glass',{sill:0.04,frameColor:'#383E42',sourceAccuracy:'dimensioned'}),
+      o('G03-FIX-L','front',-2.313,1.044,2.01,'fixed-glass',{sill:0,frameColor:'#383E42',profile:'alu-slim'}),
+      o('G03-DOOR','front',-1.362,0.858,2.01,'door-glazed',{sill:0,frameColor:'#383E42',profile:'alu-slim',hinge:'left',handle:'bar'}),
+      o('G03-FIX-R','front',-0.362,1.143,2.01,'fixed-glass',{sill:0,frameColor:'#383E42',profile:'alu-slim'}),
     ],
     decor: [
-      d('gallery03-lamella','front',2.08,1.30,1.145,2.05,'lamella-winchester',{sourceAccuracy:'dimensioned'}),
+      d('gallery03-lamella','front',1.779,2.27,1.073,2.066,'lamella-winchester'),
     ],
     exteriorLights: [],
     notes: [
-      'Wzorzec foto 03: 9 pasów kasetonów ~240 mm, fuga 15 mm, bez pionowych podziałów na pełnych polach.',
-      'Attyka: 2 rzędy po 315 mm, moduł 1200 mm z mijanką 600 mm.',
-      'Stolarka: trzy pola, profil 50–60 mm w kolorze antracytowym; lamele 40 mm / szczelina 18 mm.',
+      'Pomiar fotogrametryczny zdjęcia 03: fasada ≈ 6,67 m, 9 pasów kasetonów ≈ 0,23 m, attyka 2 × 0,35 m.',
+      'Przeszklenie 3 pola: 1,04 / 0,86 (drzwi, zawiasy lewe) / 1,14 m, od 0,50 m od lewego końca; lamele 2,27 m.',
+      'Dokładność ±3% (zakładana wysokość okładziny 2,79 m).',
     ],
   },
   '722/08/26': g(
