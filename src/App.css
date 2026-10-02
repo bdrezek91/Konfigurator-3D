@@ -280,7 +280,7 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 }
 .num-input .unit { font-size: 12px; color: var(--muted); padding-right: 4px; }
 .num-input button {
-  width: 32px; height: 100%; flex: none; border: 0; background: transparent; color: var(--muted);
+  width: 30px; height: 100%; flex: none; border: 0; background: transparent; color: var(--muted);
   display: grid; place-items: center;
 }
 .num-input button:hover { color: var(--text); background: var(--surface-2); }
@@ -542,7 +542,7 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   .tabs { position: sticky; top: 0; z-index: 3; width: auto; flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
   .tabs button { flex: none; min-width: 74px; }
   .tabs button.on::before { left: 14px; right: 14px; top: auto; bottom: -1px; width: auto; height: 3px; border-radius: 3px 3px 0 0; }
-  .summary { position: sticky; bottom: 0; padding: 12px 16px; }
+  .summary { position: static; padding: 14px 16px 24px; box-shadow: none; }
   .compare-grid { grid-template-columns: 1fr; grid-template-rows: none; overflow-y: auto; align-content: start; padding: 64px 12px 84px; }
   .compare-pane, .compare-notes { height: auto; width: 100%; }
   .tech-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }

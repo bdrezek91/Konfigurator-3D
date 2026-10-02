@@ -85,20 +85,20 @@ export function OpeningsEditor({ config, onChange }: { config: PavilionConfig; o
                     <input type="range" min={-limit} max={limit} step={0.01} value={Math.max(-limit, Math.min(limit, o.center))}
                       onChange={(e) => patch(o.id, { center: Number(e.target.value) })} />
                   </label>
-                  <div className="grid-3">
+                  <div className="grid-2">
                     <NumberField label="Szerokość" value={o.width} min={0.3} max={Math.max(0.4, span - 0.2)} step={0.01} unit="m" onChange={(width) => patch(o.id, { width })} />
                     <NumberField label="Wysokość" value={o.height} min={0.3} max={2.6} step={0.01} unit="m" onChange={(height) => patch(o.id, { height })} />
-                    <NumberField label="Parapet" value={o.sill ?? 0} min={0} max={2} step={0.01} unit="m" tip="Wysokość dolnej krawędzi otworu nad podłogą. Dla drzwi 0."
-                      onChange={(sill) => patch(o.id, { sill })} />
                   </div>
                   <div className="grid-2">
-                    <SelectField label="Profil" value={o.profile ?? (o.kind === 'pvc-window' ? 'pvc' : 'alu-standard')}
-                      tip="System profili — wpływa na widoczną szerokość ramy (ALU slim ≈ 50 mm, standard ≈ 62 mm, PVC ≈ 75 mm)."
-                      onChange={(profile) => patch(o.id, { profile })}
-                      options={[{ value: 'alu-slim', label: 'ALU slim' }, { value: 'alu-standard', label: 'ALU standard' }, { value: 'pvc', label: 'PVC' }]} />
+                    <NumberField label="Parapet" value={o.sill ?? 0} min={0} max={2} step={0.01} unit="m" tip="Wysokość dolnej krawędzi otworu nad podłogą. Dla drzwi 0."
+                      onChange={(sill) => patch(o.id, { sill })} />
                     <SelectField label="Szyba" value={o.glazing ?? config.glazing} onChange={(glazing) => patch(o.id, { glazing })}
                       options={[{ value: 'double', label: '2-szybowa' }, { value: 'triple', label: '3-szybowa' }]} />
                   </div>
+                  <SelectField label="Profil" value={o.profile ?? (o.kind === 'pvc-window' ? 'pvc' : 'alu-standard')}
+                    tip="System profili — wpływa na widoczną szerokość ramy (ALU slim ≈ 50 mm, standard ≈ 62 mm, PVC ≈ 75 mm)."
+                    onChange={(profile) => patch(o.id, { profile })}
+                    options={[{ value: 'alu-slim', label: 'ALU slim' }, { value: 'alu-standard', label: 'ALU standard' }, { value: 'pvc', label: 'PVC' }]} />
                   {isDoor && (
                     <div className="grid-2">
                       <Segmented label="Zawiasy" value={o.hinge ?? 'left'} size="sm" onChange={(hinge) => patch(o.id, { hinge })}
