@@ -1,6 +1,6 @@
 import { Canvas } from '@react-three/fiber'
-import { ContactShadows, Environment, OrbitControls } from '@react-three/drei'
-import { Path, Shape } from 'three'
+import { ContactShadows, Environment, Lightformer, OrbitControls, RoundedBox, SoftShadows } from '@react-three/drei'
+import { ACESFilmicToneMapping, CanvasTexture, Path, RepeatWrapping, Shape, SRGBColorSpace, type Texture } from 'three'
 import type { ReactNode } from 'react'
 import {
   PANEL_THICKNESS_M,
@@ -22,6 +22,9 @@ function Box({
   metalness = 0.08,
   roughness = 0.72,
   opacity = 1,
+  map,
+  normalMap,
+  envMapIntensity = 1,
 }: {
   size: [number, number, number]
   position: [number, number, number]
@@ -30,6 +33,9 @@ function Box({
   metalness?: number
   roughness?: number
   opacity?: number
+  map?: Texture
+  normalMap?: Texture
+  envMapIntensity?: number
 }) {
   return (
     <mesh position={position} rotation={rotation} castShadow receiveShadow>
@@ -40,8 +46,109 @@ function Box({
         roughness={roughness}
         transparent={opacity < 1}
         opacity={opacity}
+        map={map}
+        normalMap={normalMap}
+        normalScale={[0.22, 0.22]}
+        envMapIntensity={envMapIntensity}
       />
     </mesh>
+  )
+}
+
+const textureCache = new Map<string, CanvasTexture>()
+
+function panelNormalTexture(profile: PavilionConfig['wallProfile']) {
+  if (profile === 'smooth') return undefined
+  const key = 'panel-normal-' + profile
+  const cached = textureCache.get(key)
+  if (cached) return cached
+  const canvas = document.createElement('canvas')
+  canvas.width = 256
+  canvas.height = 256
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return undefined
+  ctx.fillStyle = 'rgb(128,128,255)'
+  ctx.fillRect(0, 0, 256, 256)
+  const spacing =
+    profile === 'microrib' ? 9 :
+    profile === 'microline' ? 14 :
+    profile === 'carbon' ? 12 :
+    profile === 'microwave' ? 22 : 36
+  const strength = profile === 'microrib' || profile === 'microline' ? 5 : 9
+  for (let x = 0; x < 256; x += spacing) {
+    const grad = ctx.createLinearGradient(x - 3, 0, x + 3, 0)
+    grad.addColorStop(0, 'rgb(128,128,255)')
+    grad.addColorStop(0.35, 'rgb(' + (128 - strength) + ',128,255)')
+    grad.addColorStop(0.65, 'rgb(' + (128 + strength) + ',128,255)')
+    grad.addColorStop(1, 'rgb(128,128,255)')
+    ctx.fillStyle = grad
+    ctx.fillRect(x - 3, 0, 6, 256)
+  }
+  const texture = new CanvasTexture(canvas)
+  texture.wrapS = RepeatWrapping
+  texture.wrapT = RepeatWrapping
+  texture.repeat.set(5, 1)
+  textureCache.set(key, texture)
+  return texture
+}
+
+function woodTexture(kind: 'winchester' | 'palisander' | 'natural') {
+  const key = 'wood-' + kind
+  const cached = textureCache.get(key)
+  if (cached) return cached
+  const canvas = document.createElement('canvas')
+  canvas.width = 128
+  canvas.height = 512
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return undefined
+  const palette =
+    kind === 'palisander'
+      ? ['#473126', '#5b3c2b', '#38261f', '#6a4932']
+      : kind === 'natural'
+        ? ['#8b684b', '#a77c55', '#79593f', '#b1845a']
+        : ['#8f633f', '#aa7547', '#775035', '#bd8751']
+  const grad = ctx.createLinearGradient(0, 0, 128, 0)
+  palette.forEach((c, i) => grad.addColorStop(i / (palette.length - 1), c))
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, 128, 512)
+  for (let y = 0; y < 512; y += 14) {
+    ctx.strokeStyle = y % 28 === 0 ? 'rgba(45,25,14,.24)' : 'rgba(255,225,180,.13)'
+    ctx.lineWidth = 1 + (y % 3) * 0.35
+    ctx.beginPath()
+    ctx.moveTo(0, y + Math.sin(y * 0.12) * 3)
+    ctx.bezierCurveTo(32, y - 4, 86, y + 6, 128, y + Math.sin(y * 0.08) * 4)
+    ctx.stroke()
+  }
+  const texture = new CanvasTexture(canvas)
+  texture.colorSpace = SRGBColorSpace
+  texture.wrapS = RepeatWrapping
+  texture.wrapT = RepeatWrapping
+  texture.repeat.set(1, 1.5)
+  textureCache.set(key, texture)
+  return texture
+}
+
+function RoundedPiece({
+  size,
+  position,
+  color,
+  map,
+  metalness = 0.10,
+  roughness = 0.55,
+  radius = 0.006,
+}: {
+  size: [number, number, number]
+  position: [number, number, number]
+  color: string
+  map?: Texture
+  metalness?: number
+  roughness?: number
+  radius?: number
+}) {
+  return (
+    <RoundedBox args={size} position={position} radius={Math.min(radius, size[0] / 5, size[1] / 5)} smoothness={2} castShadow receiveShadow>
+      <meshStandardMaterial color={color} map={map} metalness={metalness} roughness={roughness} envMapIntensity={1.15} />
+    </RoundedBox>
   )
 }
 
@@ -96,55 +203,65 @@ function OpeningFrame({
 }) {
   const sill = openingSill(opening)
   const y = floorOffset + sill + opening.height / 2
-  const frame = opening.frameColor ?? '#15181a'
+  const frame = opening.frameColor ?? '#17191b'
   const isDoor = opening.kind.startsWith('door-')
+  const rail = Math.min(0.068, Math.max(0.052, opening.width * 0.055))
+  const innerW = Math.max(0.12, opening.width - rail * 2)
+  const innerH = Math.max(0.12, opening.height - rail * 2)
+  const z = depth / 2 + 0.018
 
   if (opening.kind === 'door-full') {
     return (
-      <group position={[opening.center, y, depth / 2 + 0.035]}>
-        <Box size={[opening.width + 0.075, opening.height + 0.075, 0.075]} position={[0, 0, 0]} color={frame} metalness={0.16} roughness={0.40} />
-        <Box size={[opening.width - 0.06, opening.height - 0.06, 0.055]} position={[0, 0, 0.045]} color={frame} metalness={0.10} roughness={0.36} />
-        <Box size={[0.024, 0.58, 0.035]} position={[opening.width * 0.30, 0, 0.085]} color="#c4c7c7" metalness={0.75} roughness={0.20} />
+      <group position={[opening.center, y, z]}>
+        <RoundedPiece size={[opening.width, opening.height, 0.058]} position={[0, 0, 0]} color={frame} metalness={0.34} roughness={0.46} radius={0.004} />
+        <Box size={[0.018, 0.54, 0.018]} position={[opening.width * 0.30, 0, 0.040]} color="#bfc3c4" metalness={0.82} roughness={0.18} />
+        <Box size={[opening.width, 0.035, 0.075]} position={[0, -opening.height / 2 + 0.018, -0.005]} color="#111315" metalness={0.42} roughness={0.40} />
       </group>
     )
   }
 
   return (
-    <group position={[opening.center, y, depth / 2 + 0.025]}>
-      <Box size={[opening.width + 0.075, opening.height + 0.075, 0.070]} position={[0, 0, 0]} color={frame} metalness={0.18} roughness={0.35} />
-      <mesh position={[0, 0, 0.048]} castShadow>
-        <boxGeometry args={[opening.width, opening.height, 0.032]} />
+    <group position={[opening.center, y, z]}>
+      <mesh position={[0, 0, -0.002]} castShadow receiveShadow>
+        <boxGeometry args={[innerW, innerH, 0.016]} />
         <meshPhysicalMaterial
-          color="#6f8791"
+          color="#48606b"
           transparent
-          opacity={0.34}
-          roughness={0.08}
+          opacity={0.48}
+          roughness={0.10}
           metalness={0.02}
-          transmission={0.52}
-          ior={1.45}
-          thickness={0.018}
-          clearcoat={0.28}
-          clearcoatRoughness={0.10}
+          transmission={0.36}
+          ior={1.46}
+          thickness={0.014}
+          clearcoat={0.42}
+          clearcoatRoughness={0.08}
+          envMapIntensity={1.35}
         />
       </mesh>
-      {opening.kind === 'door-double' && <Box size={[0.032, opening.height, 0.078]} position={[0, 0, 0.075]} color={frame} />}
-      {opening.kind === 'alu-window' && <Box size={[0.026, opening.height, 0.072]} position={[opening.width * 0.18, 0, 0.075]} color={frame} />}
+      <Box size={[rail, opening.height, 0.060]} position={[-opening.width / 2 + rail / 2, 0, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
+      <Box size={[rail, opening.height, 0.060]} position={[opening.width / 2 - rail / 2, 0, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
+      <Box size={[innerW, rail, 0.060]} position={[0, opening.height / 2 - rail / 2, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
+      <Box size={[innerW, rail, 0.060]} position={[0, -opening.height / 2 + rail / 2, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
+      {opening.kind === 'door-double' && <Box size={[0.052, innerH, 0.064]} position={[0, 0, 0.024]} color={frame} metalness={0.42} roughness={0.44} />}
+      {opening.kind === 'alu-window' && <Box size={[0.046, innerH, 0.064]} position={[opening.width * 0.18, 0, 0.024]} color={frame} metalness={0.42} roughness={0.44} />}
       {opening.kind === 'pvc-window' && (
         <>
-          <Box size={[0.026, opening.height, 0.072]} position={[0, 0, 0.075]} color={frame} />
-          <Box size={[opening.width, 0.026, 0.072]} position={[0, 0, 0.075]} color={frame} />
+          <Box size={[0.042, innerH, 0.064]} position={[0, 0, 0.024]} color={frame} metalness={0.30} roughness={0.48} />
+          <Box size={[innerW, 0.042, 0.064]} position={[0, 0, 0.024]} color={frame} metalness={0.30} roughness={0.48} />
         </>
       )}
-      {isDoor && opening.kind !== 'door-double' && (
-        <Box size={[0.024, 0.58, 0.035]} position={[opening.width * 0.30, 0, 0.090]} color="#c4c7c7" metalness={0.78} roughness={0.18} />
+      {isDoor && (
+        <Box size={[0.018, 0.54, 0.018]} position={[opening.width * 0.30, 0, 0.065]} color="#c3c7c8" metalness={0.85} roughness={0.16} />
       )}
+      {isDoor && <Box size={[opening.width, 0.035, 0.075]} position={[0, -opening.height / 2 + 0.018, 0.006]} color="#111315" metalness={0.45} roughness={0.38} />}
       {opening.roller && (
-        <Box
-          size={[opening.width + 0.10, 0.13, 0.13]}
-          position={[0, opening.height / 2 + 0.085, 0.02]}
+        <RoundedPiece
+          size={[opening.width + 0.09, 0.14, 0.105]}
+          position={[0, opening.height / 2 + 0.086, 0.006]}
           color="#1a1d1f"
-          metalness={0.18}
+          metalness={0.36}
           roughness={0.45}
+          radius={0.008}
         />
       )}
     </group>
@@ -304,6 +421,9 @@ function DecorLocal({
         segment.kind === 'lamella-palisander'
           ? ['#5a3a28', '#694630', '#4f3324', '#74503a']
           : ['#9a693f', '#b27a49', '#8f603a', '#a97044']
+      const slatMap =
+        segment.kind === 'lamella-palisander' ? woodTexture('palisander') :
+        segment.kind === 'lamella-winchester' ? woodTexture('winchester') : undefined
       let slatIndex = 0
 
       if (!segment.shape || segment.shape === 'rect') {
@@ -331,12 +451,14 @@ function DecorLocal({
               ? color
               : woodPalette[slatIndex % woodPalette.length]
           out.push(
-            <Box
+            <RoundedPiece
               key={segment.id + '-l-' + x.toFixed(2)}
               size={[slatWidth, localH, 0.052]}
               position={[x, localY, z + 0.010]}
-              color={slatColor}
-              roughness={0.80}
+              color={slatMap ? '#ffffff' : slatColor}
+              map={slatMap}
+              roughness={0.68}
+              radius={0.005}
             />,
           )
           slatIndex++
@@ -361,12 +483,14 @@ function DecorLocal({
       for (let x = x0 + barW / 2; x <= x0 + segment.width; x += barW + gap) {
         if (!overlapsOpening(x, effectiveY, barW, effectiveHeight, openings, floorOffset)) {
           out.push(
-            <Box
+            <RoundedPiece
               key={segment.id + '-s-' + i}
               size={[barW, effectiveHeight, 0.058]}
               position={[x, effectiveY, z + 0.010]}
-              color="#a36f45"
-              roughness={0.80}
+              color="#ffffff"
+              map={woodTexture('winchester')}
+              roughness={0.70}
+              radius={0.006}
             />,
           )
         }
@@ -380,12 +504,14 @@ function DecorLocal({
       for (let y = y0 + boardH / 2; y < y0 + effectiveHeight; y += boardH + 0.018) {
         if (!overlapsOpening(segment.center, y, segment.width, boardH, openings, floorOffset)) {
           out.push(
-            <Box
+            <RoundedPiece
               key={segment.id + '-b-' + y.toFixed(2)}
               size={[segment.width, boardH, 0.060]}
               position={[segment.center, y, z]}
-              color="#9a704e"
-              roughness={0.82}
+              color="#ffffff"
+              map={woodTexture('natural')}
+              roughness={0.72}
+              radius={0.006}
             />,
           )
         }
@@ -406,26 +532,32 @@ function DecorLocal({
       const isSquare = segment.kind === 'cassette-black' || segment.kind === 'cassette-square-graphite'
       const cellW = isSquare ? 0.66 : segment.kind === 'cassette-winchester' ? 0.72 : 0.70
       const cellH = isSquare ? 0.66 : Math.min(0.40, effectiveHeight - 0.02)
+      const gap = 0.009
       const color =
-        segment.kind === 'cassette-black' ? '#17191b' :
-        segment.kind === 'cassette-white' ? '#e8e8e1' :
-        segment.kind === 'cassette-winchester' ? '#9c7049' :
+        segment.kind === 'cassette-black' ? '#151719' :
+        segment.kind === 'cassette-white' ? '#e7e6df' :
+        segment.kind === 'cassette-winchester' ? '#ffffff' :
         segment.kind === 'silver-rect' ? '#aeb3b5' : '#343a3f'
-      const metalness = segment.kind === 'silver-rect' ? 0.32 : 0.10
+      const metalness =
+        segment.kind === 'cassette-winchester' ? 0.02 :
+        segment.kind === 'silver-rect' ? 0.42 : 0.32
+      const cassetteMap = segment.kind === 'cassette-winchester' ? woodTexture('winchester') : undefined
 
-      for (let x = x0 + cellW / 2; x < x0 + segment.width; x += cellW + 0.025) {
-        for (let y = y0 + cellH / 2; y < y0 + effectiveHeight; y += cellH + 0.025) {
+      for (let x = x0 + cellW / 2; x < x0 + segment.width; x += cellW + gap) {
+        for (let y = y0 + cellH / 2; y < y0 + effectiveHeight; y += cellH + gap) {
           const cw = Math.min(cellW, x0 + segment.width - x + cellW / 2)
           const ch = Math.min(cellH, y0 + effectiveHeight - y + cellH / 2)
           if (cw > 0.08 && ch > 0.08 && !overlapsOpening(x, y, cw, ch, openings, floorOffset)) {
             out.push(
-              <Box
+              <RoundedPiece
                 key={segment.id + '-c-' + x.toFixed(2) + '-' + y.toFixed(2)}
-                size={[cw, ch, 0.066]}
+                size={[Math.max(0.02, cw - gap), Math.max(0.02, ch - gap), 0.050]}
                 position={[x, y, z]}
                 color={color}
+                map={cassetteMap}
                 metalness={metalness}
-                roughness={segment.kind === 'cassette-winchester' ? 0.78 : 0.48}
+                roughness={segment.kind === 'cassette-winchester' ? 0.68 : 0.46}
+                radius={0.006}
               />,
             )
           }
@@ -478,45 +610,70 @@ function DampolFrameLocal({
 }) {
   const { roofT, floorT } = envelope(config)
   const [topLeft, topRight] = wallTopHeights(side, config)
-  const topBand = Math.max(0.20, roofT + 0.15)
-  const bottomBand = Math.max(0.13, floorT + 0.035)
-  const sidePost = side === 'front' ? 0.14 : 0.12
-  const z = wallDepth / 2 + 0.030
+  const topBand = Math.max(0.22, roofT + 0.13)
+  const bottomBand = Math.max(0.105, floorT + 0.012)
+  const sidePost = side === 'front' ? 0.105 : 0.095
+  const z = wallDepth / 2 + 0.018
   const delta = topRight - topLeft
   const angle = Math.atan2(delta, span)
   const railLength = Math.hypot(span, delta)
   const railY = (topLeft + topRight) / 2 - topBand / 2
+  const metalness = 0.42
+  const roughness = 0.46
 
   return (
     <group>
       <Box
-        size={[railLength, topBand, 0.075]}
+        size={[railLength, topBand, 0.052]}
         position={[0, railY, z]}
         rotation={[0, 0, angle]}
         color={config.flashingColor}
-        metalness={0.18}
-        roughness={0.46}
+        metalness={metalness}
+        roughness={roughness}
+        envMapIntensity={1.1}
       />
       <Box
-        size={[span, bottomBand, 0.075]}
+        size={[railLength + 0.035, 0.024, 0.105]}
+        position={[0, railY - topBand / 2 + 0.012, z + 0.012]}
+        rotation={[0, 0, angle]}
+        color={config.flashingColor}
+        metalness={metalness}
+        roughness={0.40}
+      />
+      <Box
+        size={[span, bottomBand, 0.052]}
         position={[0, bottomBand / 2, z]}
         color="#15181a"
-        metalness={0.18}
-        roughness={0.45}
+        metalness={0.38}
+        roughness={0.46}
       />
       <Box
-        size={[sidePost, topLeft, 0.075]}
+        size={[sidePost, topLeft, 0.052]}
         position={[-span / 2 + sidePost / 2, topLeft / 2, z]}
         color={config.flashingColor}
-        metalness={0.18}
-        roughness={0.46}
+        metalness={metalness}
+        roughness={roughness}
       />
       <Box
-        size={[sidePost, topRight, 0.075]}
+        size={[0.030, topLeft, 0.112]}
+        position={[-span / 2 + 0.015, topLeft / 2, z - 0.025]}
+        color={config.flashingColor}
+        metalness={metalness}
+        roughness={roughness}
+      />
+      <Box
+        size={[sidePost, topRight, 0.052]}
         position={[span / 2 - sidePost / 2, topRight / 2, z]}
         color={config.flashingColor}
-        metalness={0.18}
-        roughness={0.46}
+        metalness={metalness}
+        roughness={roughness}
+      />
+      <Box
+        size={[0.030, topRight, 0.112]}
+        position={[span / 2 - 0.015, topRight / 2, z - 0.025]}
+        color={config.flashingColor}
+        metalness={metalness}
+        roughness={roughness}
       />
     </group>
   )
@@ -547,8 +704,11 @@ function Wall({
         <extrudeGeometry args={[shape, { depth, bevelEnabled: false, steps: 1 }]} />
         <meshStandardMaterial
           color={config.exteriorColor}
-          metalness={0.06}
-          roughness={0.63}
+          metalness={0.38}
+          roughness={0.50}
+          normalMap={panelNormalTexture(config.wallProfile)}
+          normalScale={[0.18, 0.18]}
+          envMapIntensity={1.05}
           transparent={opacity < 1}
           opacity={opacity}
         />
@@ -938,57 +1098,70 @@ function ProjectPavilion({ config }: Props) {
 }
 
 export default function Pavilion3D({ config, view = 'perspective' }: Props) {
-  const cameraDistance = Math.max(9.5, config.length * 1.35)
+  const cameraDistance = Math.max(9.0, config.length * 1.28)
   const { outerFront, outerBack } = envelope(config)
-  const targetHeight = (outerFront + outerBack) * 0.24
-  const cameraHeight = targetHeight + 1.25
+  const targetHeight = Math.min(1.34, (outerFront + outerBack) * 0.245)
+  const cameraHeight = 1.68
   const cameraPosition: [number, number, number] =
     view === 'front' ? [0, cameraHeight, cameraDistance] :
     view === 'back' ? [0, cameraHeight, -cameraDistance] :
     view === 'left' ? [-cameraDistance, cameraHeight, 0] :
     view === 'right' ? [cameraDistance, cameraHeight, 0] :
-    [cameraDistance * 0.62, 3.35, cameraDistance]
+    [cameraDistance * 0.52, 1.78, cameraDistance * 0.94]
 
   return (
     <Canvas
       shadows
-      dpr={[1, 2]}
-      camera={{ position: cameraPosition, fov: 27 }}
+      dpr={[1, 1.75]}
+      camera={{ position: cameraPosition, fov: 32 }}
+      onCreated={({ gl }) => {
+        gl.toneMapping = ACESFilmicToneMapping
+        gl.toneMappingExposure = 1.04
+        gl.outputColorSpace = SRGBColorSpace
+      }}
     >
-      <color attach="background" args={['#e7e7e3']} />
-      <ambientLight intensity={0.82} />
+      <SoftShadows size={24} samples={10} focus={0.55} />
+      <color attach="background" args={['#dfe2e2']} />
+      <hemisphereLight color="#eef4f7" groundColor="#9a958a" intensity={0.54} />
+      <ambientLight intensity={0.34} />
       <directionalLight
-        position={[7, 10, 8]}
-        intensity={2.15}
+        position={[8, 10, 7]}
+        intensity={2.35}
+        color="#fff7ea"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
+        shadow-bias={-0.00018}
       />
-      <directionalLight position={[-7, 5, -5]} intensity={0.55} />
+      <directionalLight position={[-8, 5, -3]} intensity={0.26} color="#c9d9ea" />
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, 0]} receiveShadow>
-        <planeGeometry args={[42, 42]} />
-        <meshStandardMaterial color="#e3e1dc" roughness={1} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.014, 0]} receiveShadow>
+        <planeGeometry args={[44, 44]} />
+        <meshStandardMaterial color="#d5d2cb" roughness={0.96} metalness={0.02} />
       </mesh>
 
       <ProjectPavilion config={config} />
 
       <ContactShadows
-        position={[0, 0.005, 0]}
-        opacity={0.34}
+        position={[0, 0.004, 0]}
+        opacity={0.38}
         scale={26}
-        blur={3.2}
-        far={12}
+        blur={2.6}
+        far={10}
       />
-      <Environment preset="city" />
+      <Environment resolution={128}>
+        <Lightformer form="rect" intensity={1.8} color="#eef5ff" position={[0, 7, -8]} scale={[12, 5, 1]} />
+        <Lightformer form="rect" intensity={1.15} color="#fff3de" position={[8, 4, 5]} scale={[5, 5, 1]} rotation={[0, -Math.PI / 2, 0]} />
+        <Lightformer form="rect" intensity={0.9} color="#d9e7f2" position={[-8, 3, 2]} scale={[5, 4, 1]} rotation={[0, Math.PI / 2, 0]} />
+      </Environment>
 
       <OrbitControls
         makeDefault
         target={[0, targetHeight, 0]}
-        minDistance={Math.max(6.5, config.length * 0.82)}
+        minDistance={Math.max(6.3, config.length * 0.78)}
         maxDistance={Math.max(24, config.length * 2.4)}
-        minPolarAngle={Math.PI * 0.20}
-        maxPolarAngle={Math.PI * 0.48}
+        minPolarAngle={Math.PI * 0.25}
+        maxPolarAngle={Math.PI * 0.50}
         enablePan={false}
         enableDamping
         dampingFactor={0.08}
