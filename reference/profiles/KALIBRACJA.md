@@ -74,3 +74,11 @@ Na ścianie pawilonu (zbliżenie z kamery 0,72 m, 2,43 px/mm) stara wersja dawa�
 
 - Moduł płyty Paneltech PW PIR-S to standardowo 1130 mm (opcjonalnie 1000 lub 1050 mm). W modelu styki są co 1000 mm, zgodnie z dotychczasowymi projektami Dampol.
 - Szerokość przejść stopni (≈3 mm) i szerokości żeber trapezu odczytano z rysunków, a nie z opisanych wymiarów.
+
+## Zrzuty
+
+- `lab-test-1m-MF.jpg` — test 1 m: A (stara metoda), B (normal mapa z profilu), C (pełna geometria).
+- `przed-po-MF-zblizenie.jpg` — ściana pawilonu z bliska: przed | Paneltech MF (pierwsza wersja, 15 mm) | Balex.
+- `po-MF-M16-Carbon-gladka.jpg` — zbliżenie po kalibracji: Paneltech MF | Balex M16 | Paneltech Carbon | gładka.
+- `regresja-galeria-03.jpg` — przed | po: 0 pikseli różnicy (okładzina kasetonowa zasłania płytę).
+- `regresja-722-08-26.jpg` — przed | po: 389 pikseli różnicy na 1132×936 (żebra dachu wg katalogu), elewacja bez zmian.
