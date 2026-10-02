@@ -107,7 +107,13 @@ function dimsForBox(c: ModelComponent): [number, number, number] {
 function opacityFor(c: ModelComponent, selectedId?: string, hoveredId?: string, isolatedId?: string) {
   if (isolatedId && c.id !== isolatedId) return 0.10
   if (selectedId === c.id || hoveredId === c.id) return 1
-  return 0.92
+  return 1
+}
+
+function normalizedExplodeDirection(direction: Vec3): Vec3 {
+  const length = Math.hypot(direction[0], direction[1], direction[2])
+  if (length < 0.0001) return [0, 1, 0]
+  return [direction[0] / length, direction[1] / length, direction[2] / length]
 }
 
 function technicalColor(c: ModelComponent, selectedId?: string, hoveredId?: string) {
@@ -142,10 +148,11 @@ function useExplodedGroup(
     if (!g) return
     g.visible = visible && component.assemblyStage <= assemblyStage
     const scale = explodeScale(component.category) * exploded
+    const direction = normalizedExplodeDirection(component.explodeDirection)
     const target = new Vector3(
-      component.position[0] + component.explodeDirection[0] * scale,
-      component.position[1] + component.explodeDirection[1] * scale,
-      component.position[2] + component.explodeDirection[2] * scale,
+      component.position[0] + direction[0] * scale,
+      component.position[1] + direction[1] * scale,
+      component.position[2] + direction[2] * scale,
     )
     const k = 1 - Math.exp(-delta * 10)
     g.position.lerp(target, k)
@@ -382,12 +389,13 @@ function FastenerInstances({
 
     components.forEach((c, i) => {
       const shown = active && c.assemblyStage <= assemblyStage
+      const direction = normalizedExplodeDirection(c.explodeDirection)
       const pos = new Vector3(
-        c.position[0] + c.explodeDirection[0] * scale,
-        c.position[1] + c.explodeDirection[1] * scale,
-        c.position[2] + c.explodeDirection[2] * scale,
+        c.position[0] + direction[0] * scale,
+        c.position[1] + direction[1] * scale,
+        c.position[2] + direction[2] * scale,
       )
-      const dir = new Vector3(c.explodeDirection[0], c.explodeDirection[1], c.explodeDirection[2]).normalize()
+      const dir = new Vector3(direction[0], direction[1], direction[2]).normalize()
       if (dir.lengthSq() < 0.01) dir.set(0, 1, 0)
       q.setFromUnitVectors(up, dir)
       dummy.position.copy(pos)
@@ -501,15 +509,16 @@ function Balloons({
     <>
       {candidates.map((c) => {
         const scale = explodeScale(c.category) * exploded
+        const direction = normalizedExplodeDirection(c.explodeDirection)
         const p: Vec3 = [
-          c.position[0] + c.explodeDirection[0] * scale,
-          c.position[1] + c.explodeDirection[1] * scale + 0.15,
-          c.position[2] + c.explodeDirection[2] * scale,
+          c.position[0] + direction[0] * scale,
+          c.position[1] + direction[1] * scale + 0.15,
+          c.position[2] + direction[2] * scale,
         ]
         const label: Vec3 = [
-          p[0] + c.explodeDirection[0] * 0.35,
+          p[0] + direction[0] * 0.35,
           p[1] + 0.20,
-          p[2] + c.explodeDirection[2] * 0.35,
+          p[2] + direction[2] * 0.35,
         ]
         return (
           <group key={'balloon-' + c.id}>

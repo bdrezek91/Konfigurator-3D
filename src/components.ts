@@ -604,10 +604,10 @@ function addFlashings(list: ModelComponent[], c: PavilionConfig, g: ProjectGeome
 
   const x = c.length / 2
   const z = c.width / 2
-  addFlashing(list, c, { id: 'fl-corner-fl', name: 'Narożnik zewnętrzny FL', lengthM: outerFront, developedWidthM: 0.25, position: [-x, outerFront / 2, z], direction: [-1, 0, 1], profile2Dmm: cornerProfile })
-  addFlashing(list, c, { id: 'fl-corner-fr', name: 'Narożnik zewnętrzny FR', lengthM: outerFront, developedWidthM: 0.25, position: [x, outerFront / 2, z], direction: [1, 0, 1], profile2Dmm: cornerProfile })
-  addFlashing(list, c, { id: 'fl-corner-bl', name: 'Narożnik zewnętrzny BL', lengthM: outerBack, developedWidthM: 0.25, position: [-x, outerBack / 2, -z], direction: [-1, 0, -1], profile2Dmm: cornerProfile })
-  addFlashing(list, c, { id: 'fl-corner-br', name: 'Narożnik zewnętrzny BR', lengthM: outerBack, developedWidthM: 0.25, position: [x, outerBack / 2, -z], direction: [1, 0, -1], profile2Dmm: cornerProfile })
+  addFlashing(list, c, { id: 'fl-corner-fl', name: 'Narożnik zewnętrzny FL', lengthM: outerFront, developedWidthM: 0.25, position: [-x, outerFront / 2, z], rotation: [0, 0, Math.PI / 2], direction: [-1, 0, 1], profile2Dmm: cornerProfile })
+  addFlashing(list, c, { id: 'fl-corner-fr', name: 'Narożnik zewnętrzny FR', lengthM: outerFront, developedWidthM: 0.25, position: [x, outerFront / 2, z], rotation: [0, 0, Math.PI / 2], direction: [1, 0, 1], profile2Dmm: cornerProfile })
+  addFlashing(list, c, { id: 'fl-corner-bl', name: 'Narożnik zewnętrzny BL', lengthM: outerBack, developedWidthM: 0.25, position: [-x, outerBack / 2, -z], rotation: [0, Math.PI, Math.PI / 2], direction: [-1, 0, -1], profile2Dmm: cornerProfile })
+  addFlashing(list, c, { id: 'fl-corner-br', name: 'Narożnik zewnętrzny BR', lengthM: outerBack, developedWidthM: 0.25, position: [x, outerBack / 2, -z], rotation: [0, Math.PI, Math.PI / 2], direction: [1, 0, -1], profile2Dmm: cornerProfile })
 
   addFlashing(list, c, { id: 'fl-top-front', name: 'Attyka / pas górny front', lengthM: c.length, developedWidthM: 0.28, position: [0, outerFront - 0.14, z + 0.03], direction: [0, 0.4, 1], wall: 'front', profile2Dmm: topProfile })
   addFlashing(list, c, { id: 'fl-top-back', name: 'Attyka / pas górny tył', lengthM: c.length, developedWidthM: 0.28, position: [0, outerBack - 0.14, -z - 0.03], rotation: [0, Math.PI, 0], direction: [0, 0.4, -1], wall: 'back', profile2Dmm: topProfile })
@@ -640,6 +640,7 @@ function addFlashings(list: ModelComponent[], c: PavilionConfig, g: ProjectGeome
     const cy = sill + opening.height / 2
     const normal = wallNormal(opening.wall)
     const rot = wallRotation(opening.wall)
+    const verticalRot: Vec3 = [0, rot[1], Math.PI / 2]
     const leftCenter = opening.center - opening.width / 2
     const rightCenter = opening.center + opening.width / 2
     const source = opening.sourceAccuracy === 'dimensioned' ? 'exact' : 'project-estimate'
@@ -659,7 +660,7 @@ function addFlashings(list: ModelComponent[], c: PavilionConfig, g: ProjectGeome
         lengthM: len,
         developedWidthM: tag === 'sill' ? 0.195 : 0.16,
         position: [pos[0] + normal[0] * 0.055, pos[1], pos[2] + normal[2] * 0.055],
-        rotation: rot,
+        rotation: tag === 'left' || tag === 'right' ? verticalRot : rot,
         direction: normal,
         wall: opening.wall,
         profile2Dmm: profile,
@@ -677,13 +678,14 @@ function addFlashings(list: ModelComponent[], c: PavilionConfig, g: ProjectGeome
       const local = -span / 2 + i * WALL_MODULE_M
       const h = wallHeightAt(side, local, c)
       const p = wallPosition(side, local, h / 2, c)
+      const sideRot = wallRotation(side)
       addFlashing(list, c, {
         id: 'fl-joint-' + side + '-' + i,
         name: 'Listwa łączenia paneli ' + side + ' ' + i,
         lengthM: h,
         developedWidthM: 0.12,
         position: p,
-        rotation: wallRotation(side),
+        rotation: [0, sideRot[1], Math.PI / 2],
         direction: wallNormal(side),
         wall: side,
         profile2Dmm: [[0, 0], [20, 0], [20, 80], [40, 80], [40, 120], [0, 120]],
@@ -830,18 +832,21 @@ function addSeals(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry)
     addSeal(list, 'seal-base-' + side, 'Uszczelnienie podwaliny ' + side, wallSpan(side, c), p, wallRotation(side), wallNormal(side))
   })
   for (const o of g.openings) {
-    const y = floorT + openingSill(o) + o.height / 2
-    const p = wallPosition(o.wall, o.center, y, c)
-    addSeal(
-      list,
-      'seal-opening-' + o.id,
-      'Taśma/uszczelnienie obwodu stolarki ' + o.id,
-      2 * (o.width + o.height),
-      p,
-      wallRotation(o.wall),
-      wallNormal(o.wall),
-      'joinery-' + o.id,
-    )
+    const sill = floorT + openingSill(o)
+    const yCenter = sill + o.height / 2
+    const rotation = wallRotation(o.wall)
+    const verticalRotation: Vec3 = [0, rotation[1], Math.PI / 2]
+    const direction = wallNormal(o.wall)
+    const parentId = 'joinery-' + o.id
+    const leftPos = wallPosition(o.wall, o.center - o.width / 2, yCenter, c)
+    const rightPos = wallPosition(o.wall, o.center + o.width / 2, yCenter, c)
+    const topPos = wallPosition(o.wall, o.center, sill + o.height, c)
+    const bottomPos = wallPosition(o.wall, o.center, sill, c)
+
+    addSeal(list, 'seal-opening-' + o.id + '-left', 'Uszczelnienie ościeża lewego ' + o.id, o.height, leftPos, verticalRotation, direction, parentId)
+    addSeal(list, 'seal-opening-' + o.id + '-right', 'Uszczelnienie ościeża prawego ' + o.id, o.height, rightPos, verticalRotation, direction, parentId)
+    addSeal(list, 'seal-opening-' + o.id + '-top', 'Uszczelnienie nadproża ' + o.id, o.width, topPos, rotation, direction, parentId)
+    addSeal(list, 'seal-opening-' + o.id + '-bottom', 'Uszczelnienie progu/parapetu ' + o.id, o.width, bottomPos, rotation, direction, parentId)
   }
 }
 
