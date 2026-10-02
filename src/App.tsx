@@ -314,6 +314,7 @@ function initialConfig(): PavilionConfig {
 export default function App() {
   const [config, setConfig] = useState<PavilionConfig>(initialConfig)
   const [sceneKey, setSceneKey] = useState(0)
+  const [showHQ, setShowHQ] = useState(() => new URLSearchParams(window.location.search).get('hq') === '1')
   const [viewMode, setViewMode] = useState<PavilionView>(() => {
     const value = new URLSearchParams(window.location.search).get('rview') as PavilionView | null
     const allowed: PavilionView[] = ['perspective', 'front', 'front-left', 'front-right', 'left', 'right', 'back']
@@ -409,6 +410,7 @@ export default function App() {
     const preset = PRESETS.find((item) => item.id === id)
     if (!preset) return
     setConfig({ ...preset.config })
+    setShowHQ(false)
     setViewMode('perspective')
     if (id === 'galeria-03') setSceneMode('realistic')
     setTechnicalView('axon')
@@ -431,7 +433,7 @@ export default function App() {
 
   const exportConfig = () => {
     const payload = JSON.stringify({
-      version: 6,
+      version: 7,
       generatedAt: new Date().toISOString(),
       config,
       validation,
@@ -476,7 +478,7 @@ export default function App() {
           <div className="brand-row"><span className="brand-mark">D</span><strong>DAMPOL 3D</strong></div>
           <p>Konfigurator techniczno-sprzedażowy · 15 projektów referencyjnych</p>
         </div>
-        <span className="status-pill">V6</span>
+        <span className="status-pill">V7</span>
       </header>
 
       <section className="preset-bar">
@@ -599,16 +601,29 @@ export default function App() {
 
             {sceneMode === 'realistic' ? (
               config.project === 'GALERIA/03' ? (
-                <div className="gallery-compare">
+                <div className="gallery-compare gallery-compare-3up">
                   <figure className="gallery-reference-pane">
                     <img src="./reference/gallery-03.jpg" alt="Zdjęcie referencyjne 03 z galerii Dampol" />
                     <figcaption>ZDJĘCIE 03 · REFERENCJA</figcaption>
                   </figure>
                   <div className="gallery-render-pane">
-                    <div className="gallery-pane-label">RENDER · GALERIA-03</div>
+                    <div className="gallery-pane-label">RENDER · INTERAKTYWNY</div>
                     <div className="canvas-wrap gallery-render-canvas">
                       <Pavilion3D key={sceneKey} config={config} view={viewMode} />
                     </div>
+                  </div>
+                  <div className="gallery-render-pane gallery-hq-pane">
+                    <div className="gallery-pane-label">RENDER HQ · PATH TRACER</div>
+                    {showHQ ? (
+                      <div className="canvas-wrap gallery-render-canvas">
+                        <Pavilion3D key={'hq-' + sceneKey} config={config} view={viewMode} hq />
+                      </div>
+                    ) : (
+                      <button className="gallery-hq-button" type="button" onClick={() => setShowHQ(true)}>
+                        Render HQ
+                        <small>three-gpu-pathtracer · ten sam kadr</small>
+                      </button>
+                    )}
                   </div>
                 </div>
               ) : (

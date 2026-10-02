@@ -725,8 +725,8 @@ function pushFacadePiece(
   const p = wallPosition(side, center, y0 + height / 2, c)
   const isRibbed = kind === 'vertical-ribbed'
   const gallery03 = c.project === 'GALERIA/03'
-  const thicknessMm = isRibbed ? 35 : gallery03 ? 15 : 30
-  const facadeOffset = 0.075
+  const thicknessMm = isRibbed ? 35 : gallery03 ? 22 : 30
+  const facadeOffset = gallery03 ? 0.073 : 0.075
   list.push({
     id,
     positionNo: 0,
@@ -822,10 +822,11 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
         const visible = visibleIntervalsForGallery03Band(side, -span / 2, span / 2, y0, y1, floorT, g)
         for (let part = 0; part < visible.length; part++) {
           const [v0, v1] = visible[part]
-          const shrink = gap / 2
+          const leftShrink = Math.abs(v0 + span / 2) < 0.001 ? 0 : gap / 2
+          const rightShrink = Math.abs(v1 - span / 2) < 0.001 ? 0 : gap / 2
           pushFacadePiece(
             list, c, side, 'facade-cassette-gallery03-body-' + row + '-' + part,
-            spec.kind, v0 + shrink, v1 - shrink, y0 + shrink, y1 - shrink, spec.color ?? c.exteriorColor,
+            spec.kind, v0 + leftShrink, v1 - rightShrink, y0 + gap / 2, y1 - gap / 2, spec.color ?? c.exteriorColor,
           )
         }
       }
@@ -838,10 +839,11 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
           const cell0 = Math.max(-span / 2, x0)
           const cell1 = Math.min(span / 2, x0 + atticModuleW)
           if (cell1 - cell0 <= 0.025) continue
-          const shrink = gap / 2
+          const leftShrink = Math.abs(cell0 + span / 2) < 0.001 ? 0 : gap / 2
+          const rightShrink = Math.abs(cell1 - span / 2) < 0.001 ? 0 : gap / 2
           pushFacadePiece(
             list, c, side, 'facade-cassette-gallery03-attic-' + row + '-' + col,
-            spec.kind, cell0 + shrink, cell1 - shrink, y0 + shrink, y1 - shrink, spec.color ?? c.exteriorColor,
+            spec.kind, cell0 + leftShrink, cell1 - rightShrink, y0 + gap / 2, y1 - gap / 2, spec.color ?? c.exteriorColor,
           )
         }
       }

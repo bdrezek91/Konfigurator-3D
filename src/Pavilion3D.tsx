@@ -1,7 +1,8 @@
 import { Canvas, useThree } from '@react-three/fiber'
 import { ContactShadows, Environment, Lightformer, OrbitControls, RoundedBox, Sky, SoftShadows, useTexture } from '@react-three/drei'
-import { ACESFilmicToneMapping, CanvasTexture, Path, RepeatWrapping, Shape, SRGBColorSpace, type Texture } from 'three'
+import { ACESFilmicToneMapping, CanvasTexture, Path, PCFSoftShadowMap, RepeatWrapping, Shape, SRGBColorSpace, type Texture } from 'three'
 import { useEffect, useMemo, type ReactNode } from 'react'
+import { EffectComposer, N8AO } from '@react-three/postprocessing'
 import {
   PANEL_THICKNESS_M,
   type DecorPlacement,
@@ -13,7 +14,7 @@ import {
 import { buildComponentModel } from './components'
 
 export type PavilionView = 'perspective' | 'front' | 'front-left' | 'front-right' | 'left' | 'right' | 'back'
-type Props = { config: PavilionConfig; view?: PavilionView }
+type Props = { config: PavilionConfig; view?: PavilionView; hq?: boolean }
 
 function Box({
   size,
@@ -199,6 +200,90 @@ function glassReflectionTexture() {
   return texture
 }
 
+function GalleryGround() {
+  const [
+    grassDiffuse,
+    grassNormal,
+    grassRoughness,
+    gravelDiffuse,
+    gravelNormal,
+    gravelRoughness,
+  ] = useTexture([
+    './textures/pbr/grass_diff.jpg',
+    './textures/pbr/grass_nor.jpg',
+    './textures/pbr/grass_rough.jpg',
+    './textures/pbr/gravel_diff.jpg',
+    './textures/pbr/gravel_nor.jpg',
+    './textures/pbr/gravel_rough.jpg',
+  ])
+
+  const textures = useMemo(() => {
+    const prep = (source: Texture, repeat: number, srgb = false) => {
+      const texture = source.clone()
+      texture.wrapS = RepeatWrapping
+      texture.wrapT = RepeatWrapping
+      texture.repeat.set(repeat, repeat)
+      if (srgb) texture.colorSpace = SRGBColorSpace
+      texture.needsUpdate = true
+      return texture
+    }
+    return {
+      grassDiffuse: prep(grassDiffuse, 7, true),
+      grassNormal: prep(grassNormal, 7),
+      grassRoughness: prep(grassRoughness, 7),
+      gravelDiffuse: prep(gravelDiffuse, 4.5, true),
+      gravelNormal: prep(gravelNormal, 4.5),
+      gravelRoughness: prep(gravelRoughness, 4.5),
+    }
+  }, [grassDiffuse, grassNormal, grassRoughness, gravelDiffuse, gravelNormal, gravelRoughness])
+
+  const gravelShape = useMemo(() => {
+    const shape = new Shape()
+    shape.moveTo(-5.0, -0.75)
+    shape.lineTo(5.0, -0.70)
+    shape.lineTo(4.6, 0.62)
+    shape.lineTo(2.6, 0.48)
+    shape.lineTo(0.3, 0.66)
+    shape.lineTo(-2.2, 0.45)
+    shape.lineTo(-4.8, 0.64)
+    shape.closePath()
+    return shape
+  }, [])
+
+  useEffect(() => () => {
+    Object.values(textures).forEach((texture) => texture.dispose())
+  }, [textures])
+
+  return (
+    <>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.020, 0]} receiveShadow>
+        <planeGeometry args={[48, 48]} />
+        <meshStandardMaterial
+          map={textures.grassDiffuse}
+          normalMap={textures.grassNormal}
+          roughnessMap={textures.grassRoughness}
+          color="#817865"
+          normalScale={[0.55, 0.55]}
+          roughness={0.96}
+          metalness={0}
+        />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.011, 1.95]} receiveShadow>
+        <shapeGeometry args={[gravelShape]} />
+        <meshStandardMaterial
+          map={textures.gravelDiffuse}
+          normalMap={textures.gravelNormal}
+          roughnessMap={textures.gravelRoughness}
+          color="#898277"
+          normalScale={[0.70, 0.70]}
+          roughness={0.93}
+          metalness={0}
+        />
+      </mesh>
+    </>
+  )
+}
+
 function PhotoEnvironment() {
   const loadedGround = useTexture('./textures/dampol-gravel.jpg')
   const ground = useMemo(() => {
@@ -226,6 +311,48 @@ function PhotoEnvironment() {
       />
     </mesh>
   )
+}
+
+function HQPathTracer({ enabled }: { enabled: boolean }) {
+  const { gl, scene, camera } = useThree()
+
+  useEffect(() => {
+    if (!enabled) return
+    let cancelled = false
+    let animationFrame = 0
+    let tracer: import('three-gpu-pathtracer').WebGLPathTracer | undefined
+
+    const run = async () => {
+      const { WebGLPathTracer } = await import('three-gpu-pathtracer')
+      if (cancelled) return
+      tracer = new WebGLPathTracer(gl)
+      tracer.bounces = 4
+      tracer.transmissiveBounces = 2
+      tracer.renderDelay = 0
+      tracer.fadeDuration = 0
+      tracer.minSamples = 1
+      tracer.dynamicLowRes = false
+      tracer.renderScale = 0.50
+      tracer.tiles.set(3, 3)
+      tracer.setScene(scene, camera)
+
+      const sample = () => {
+        if (cancelled || !tracer) return
+        tracer.renderSample()
+        if (tracer.samples < 24) animationFrame = requestAnimationFrame(sample)
+      }
+      sample()
+    }
+
+    void run()
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(animationFrame)
+      tracer?.dispose()
+    }
+  }, [enabled, gl, scene, camera])
+
+  return null
 }
 
 function RoundedPiece({
@@ -317,7 +444,8 @@ function OpeningFrame({
   const frame = opening.frameColor ?? '#17191b'
   const isDoor = opening.kind.startsWith('door-')
   const gallery03Opening = opening.id.startsWith('G03-')
-  const rail = gallery03Opening ? 0.055 : Math.min(0.068, Math.max(0.052, opening.width * 0.055))
+  const rail = gallery03Opening ? 0.060 : Math.min(0.068, Math.max(0.052, opening.width * 0.055))
+  const frameDepth = gallery03Opening ? 0.070 : 0.060
   const innerW = Math.max(0.12, opening.width - rail * 2)
   const innerH = Math.max(0.12, opening.height - rail * 2)
   const z = depth / 2 + 0.018
@@ -338,36 +466,68 @@ function OpeningFrame({
 
   return (
     <group position={[opening.center, y, z]}>
-      <mesh position={[0, 0, -0.002]} castShadow receiveShadow>
-        <boxGeometry args={[innerW, innerH, 0.016]} />
-        <meshPhysicalMaterial
-          color={gallery03Opening ? '#91bed3' : '#526975'}
-          transparent
-          opacity={gallery03Opening ? 0.16 : 0.38}
-          roughness={0.08}
-          metalness={0.02}
-          transmission={gallery03Opening ? 0.80 : 0.50}
-          ior={1.46}
-          thickness={0.014}
-          clearcoat={0.52}
-          clearcoatRoughness={0.06}
-          envMapIntensity={gallery03Opening ? 2.50 : 1.85}
-        />
+      {gallery03Opening && (
+        <>
+          <Box
+            size={[innerW * 0.99, innerH * 0.99, 0.025]}
+            position={[0, 0, -0.205]}
+            color="#16191b"
+            metalness={0}
+            roughness={0.94}
+          />
+          <Box
+            size={[innerW * 0.99, 0.055, 0.26]}
+            position={[0, -innerH / 2 + 0.030, -0.105]}
+            color="#292a28"
+            metalness={0}
+            roughness={0.90}
+          />
+        </>
+      )}
+      <mesh position={[0, 0, gallery03Opening ? -0.011 : -0.002]} castShadow receiveShadow>
+        <boxGeometry args={[innerW, innerH, gallery03Opening ? 0.012 : 0.016]} />
+        {gallery03Opening ? (
+          <meshPhysicalMaterial
+            color="#1a2228"
+            roughness={0.02}
+            metalness={0}
+            envMapIntensity={2.7}
+            ior={1.5}
+            clearcoat={0.30}
+            clearcoatRoughness={0.025}
+          />
+        ) : (
+          <meshPhysicalMaterial
+            color="#526975"
+            transparent
+            opacity={0.38}
+            roughness={0.08}
+            metalness={0.02}
+            transmission={0.50}
+            ior={1.46}
+            thickness={0.014}
+            clearcoat={0.52}
+            clearcoatRoughness={0.06}
+            envMapIntensity={1.85}
+          />
+        )}
       </mesh>
-      <mesh position={[0, 0, 0.010]}>
-        <planeGeometry args={[innerW * 0.985, innerH * 0.985]} />
-        <meshBasicMaterial
-          map={glassReflectionTexture()}
-          transparent
-          opacity={gallery03Opening ? 0.36 : 0.14}
-          depthWrite={false}
-          toneMapped={false}
-        />
-      </mesh>
-      <Box size={[rail, opening.height, 0.060]} position={[-opening.width / 2 + rail / 2, 0, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
-      <Box size={[rail, opening.height, 0.060]} position={[opening.width / 2 - rail / 2, 0, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
-      <Box size={[innerW, rail, 0.060]} position={[0, opening.height / 2 - rail / 2, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
-      <Box size={[innerW, rail, 0.060]} position={[0, -opening.height / 2 + rail / 2, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
+      {!gallery03Opening && (
+        <mesh position={[0, 0, 0.010]}>
+          <planeGeometry args={[innerW * 0.985, innerH * 0.985]} />
+          <meshBasicMaterial
+            map={glassReflectionTexture()}
+            transparent
+            opacity={0.14}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+      )}
+      <Box size={[rail, opening.height, frameDepth]} position={[-opening.width / 2 + rail / 2, 0, 0.020]} color={frame} metalness={gallery03Opening ? 0.30 : 0.42} roughness={gallery03Opening ? 0.55 : 0.44} />
+      <Box size={[rail, opening.height, frameDepth]} position={[opening.width / 2 - rail / 2, 0, 0.020]} color={frame} metalness={gallery03Opening ? 0.30 : 0.42} roughness={gallery03Opening ? 0.55 : 0.44} />
+      <Box size={[innerW, rail, frameDepth]} position={[0, opening.height / 2 - rail / 2, 0.020]} color={frame} metalness={gallery03Opening ? 0.30 : 0.42} roughness={gallery03Opening ? 0.55 : 0.44} />
+      <Box size={[innerW, rail, frameDepth]} position={[0, -opening.height / 2 + rail / 2, 0.020]} color={frame} metalness={gallery03Opening ? 0.30 : 0.42} roughness={gallery03Opening ? 0.55 : 0.44} />
       {opening.kind === 'door-double' && <Box size={[0.052, innerH, 0.064]} position={[0, 0, 0.024]} color={frame} metalness={0.42} roughness={0.44} />}
       {opening.kind === 'alu-window' && <Box size={[0.046, innerH, 0.064]} position={[opening.width * 0.18, 0, 0.024]} color={frame} metalness={0.42} roughness={0.44} />}
       {opening.kind === 'pvc-window' && (
@@ -380,15 +540,15 @@ function OpeningFrame({
         gallery03Opening ? (
           <>
             <Box
-              size={[0.018, 0.72, 0.024]}
-              position={[opening.width / 2 - 0.11, 0.05, 0.078]}
+              size={[0.018, 1.00, 0.026]}
+              position={[opening.width / 2 - 0.11, 0.02, 0.082]}
               color="#c6c9c8"
               metalness={0.86}
               roughness={0.18}
             />
             <Box
               size={[0.035, 0.028, 0.050]}
-              position={[opening.width / 2 - 0.11, -0.34, 0.058]}
+              position={[opening.width / 2 - 0.11, -0.49, 0.060]}
               color="#b7bcbd"
               metalness={0.78}
               roughness={0.20}
@@ -636,9 +796,9 @@ function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) {
               <Box
                 size={[w, h, depth]}
                 position={[0, 0, 0]}
-                color={color}
-                metalness={0.34}
-                roughness={0.46}
+                color="#383E42"
+                metalness={0.30}
+                roughness={0.55}
               />
             ) : (
               <RoundedPiece
@@ -1518,14 +1678,14 @@ function RealExportBridge() {
   return null
 }
 
-export default function Pavilion3D({ config, view = 'perspective' }: Props) {
+export default function Pavilion3D({ config, view = 'perspective', hq = false }: Props) {
   const gallery03 = config.project === 'GALERIA/03'
   const cameraDistance = Math.max(9.0, config.length * 1.28)
   const { outerFront, outerBack } = envelope(config)
   const targetHeight = gallery03 ? 1.30 : Math.min(1.34, (outerFront + outerBack) * 0.245)
-  const cameraHeight = gallery03 ? 1.28 : 1.68
+  const cameraHeight = gallery03 ? 0.60 : 1.68
   const cameraPosition: [number, number, number] =
-    gallery03 && view === 'perspective' ? [-2.05, 1.28, 7.45] :
+    gallery03 && view === 'perspective' ? [-0.90, 0.60, 4.45] :
     view === 'front' ? [0, cameraHeight, cameraDistance] :
     view === 'back' ? [0, cameraHeight, -cameraDistance] :
     view === 'left' ? [-cameraDistance, cameraHeight, 0] :
@@ -1537,68 +1697,127 @@ export default function Pavilion3D({ config, view = 'perspective' }: Props) {
   return (
     <Canvas
       shadows
+      frameloop={hq ? 'never' : 'always'}
       dpr={[1, 1.75]}
-      camera={{ position: cameraPosition, fov: gallery03 ? 37 : 32 }}
+      camera={{ position: cameraPosition, fov: gallery03 ? 68 : 32 }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping
-        gl.toneMappingExposure = 1.18
+        gl.toneMappingExposure = gallery03 ? 1.0 : 1.18
         gl.outputColorSpace = SRGBColorSpace
+        gl.shadowMap.enabled = true
+        gl.shadowMap.type = PCFSoftShadowMap
       }}
     >
-      <SoftShadows size={24} samples={10} focus={0.55} />
-      <color attach="background" args={['#dfe2e2']} />
-      <fog attach="fog" args={['#d6dde0', 20, 46]} />
-      <Sky
-        distance={450000}
-        sunPosition={[10, 5, 8]}
-        turbidity={5.2}
-        rayleigh={2.2}
-        mieCoefficient={0.0038}
-        mieDirectionalG={0.80}
-      />
-      <hemisphereLight color="#f1f6f8" groundColor="#aaa49a" intensity={0.72} />
-      <ambientLight intensity={0.44} />
-      <directionalLight
-        position={[8, 10, 7]}
-        intensity={2.65}
-        color="#fff7ea"
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-bias={-0.00018}
-      />
-      <directionalLight position={[-8, 5, -3]} intensity={0.26} color="#c9d9ea" />
+      {!gallery03 && <SoftShadows size={24} samples={10} focus={0.55} />}
+      {gallery03 ? (
+        <Environment
+          files="./hdr/kloofendal_48d_partly_cloudy_2k.hdr"
+          background
+          backgroundBlurriness={0}
+        />
+      ) : (
+        <>
+          <color attach="background" args={['#dfe2e2']} />
+          <fog attach="fog" args={['#d6dde0', 20, 46]} />
+          <Sky
+            distance={450000}
+            sunPosition={[10, 5, 8]}
+            turbidity={5.2}
+            rayleigh={2.2}
+            mieCoefficient={0.0038}
+            mieDirectionalG={0.80}
+          />
+        </>
+      )}
+      {gallery03 ? (
+        <>
+          <hemisphereLight color="#f4f5f1" groundColor="#77766f" intensity={0.22} />
+          <ambientLight intensity={0.10} />
+          <directionalLight
+            position={[-8, 8, 8]}
+            intensity={3.05}
+            color="#fff5df"
+            castShadow
+            shadow-mapSize-width={4096}
+            shadow-mapSize-height={4096}
+            shadow-bias={-0.00014}
+            shadow-normalBias={0.015}
+            shadow-camera-near={0.5}
+            shadow-camera-far={40}
+            shadow-camera-left={-10}
+            shadow-camera-right={10}
+            shadow-camera-top={10}
+            shadow-camera-bottom={-10}
+          />
+        </>
+      ) : (
+        <>
+          <hemisphereLight color="#f1f6f8" groundColor="#aaa49a" intensity={0.72} />
+          <ambientLight intensity={0.44} />
+          <directionalLight
+            position={[8, 10, 7]}
+            intensity={2.65}
+            color="#fff7ea"
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-bias={-0.00018}
+          />
+          <directionalLight position={[-8, 5, -3]} intensity={0.26} color="#c9d9ea" />
+        </>
+      )}
 
-      <PhotoEnvironment />
+      {gallery03 ? <GalleryGround /> : <PhotoEnvironment />}
 
       <RealExportBridge />
       <ProjectPavilion config={config} />
 
-      <ContactShadows
+      {gallery03 && !hq && (
+        <EffectComposer multisampling={0}>
+          <N8AO
+            aoRadius={0.30}
+            distanceFalloff={1}
+            intensity={3}
+            quality="high"
+            aoSamples={16}
+            denoiseSamples={8}
+            denoiseRadius={10}
+            halfRes={false}
+            screenSpaceRadius={false}
+            color="#000000"
+          />
+        </EffectComposer>
+      )}
+
+      {!hq && <ContactShadows
         position={[0, 0.004, 0]}
         opacity={0.38}
         scale={26}
         blur={2.6}
         far={10}
-      />
-      <Environment resolution={128}>
-        <Lightformer form="rect" intensity={1.8} color="#eef5ff" position={[0, 7, -8]} scale={[12, 5, 1]} />
-        <Lightformer form="rect" intensity={1.35} color="#e9f2f6" position={[0, 3.2, 8]} scale={[10, 4.5, 1]} rotation={[0, Math.PI, 0]} />
-        <Lightformer form="rect" intensity={1.15} color="#fff3de" position={[8, 4, 5]} scale={[5, 5, 1]} rotation={[0, -Math.PI / 2, 0]} />
-        <Lightformer form="rect" intensity={0.9} color="#d9e7f2" position={[-8, 3, 2]} scale={[5, 4, 1]} rotation={[0, Math.PI / 2, 0]} />
-      </Environment>
+      />}
+      {!gallery03 && (
+        <Environment resolution={128}>
+          <Lightformer form="rect" intensity={1.8} color="#eef5ff" position={[0, 7, -8]} scale={[12, 5, 1]} />
+          <Lightformer form="rect" intensity={1.35} color="#e9f2f6" position={[0, 3.2, 8]} scale={[10, 4.5, 1]} rotation={[0, Math.PI, 0]} />
+          <Lightformer form="rect" intensity={1.15} color="#fff3de" position={[8, 4, 5]} scale={[5, 5, 1]} rotation={[0, -Math.PI / 2, 0]} />
+          <Lightformer form="rect" intensity={0.9} color="#d9e7f2" position={[-8, 3, 2]} scale={[5, 4, 1]} rotation={[0, Math.PI / 2, 0]} />
+        </Environment>
+      )}
 
-      <OrbitControls
+      {hq && <HQPathTracer enabled />}
+
+      {!hq && <OrbitControls
         makeDefault
-        target={gallery03 ? [0.08, 1.25, 0] : [0, targetHeight, 0]}
-        minDistance={Math.max(6.3, config.length * 0.78)}
-        maxDistance={Math.max(24, config.length * 2.4)}
+        target={gallery03 ? [0.22, 1.25, 0] : [0, targetHeight, 0]}
+        minDistance={gallery03 ? 2.6 : Math.max(6.3, config.length * 0.78)}
+        maxDistance={gallery03 ? 12 : Math.max(24, config.length * 2.4)}
         minPolarAngle={Math.PI * 0.25}
         maxPolarAngle={Math.PI * 0.50}
         enablePan={false}
         enableDamping
         dampingFactor={0.08}
-      />
+      />}
     </Canvas>
   )
 }

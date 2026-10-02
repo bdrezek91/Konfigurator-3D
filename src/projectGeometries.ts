@@ -41,7 +41,7 @@ export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
     facadeCladding: {
       front: {
         kind: 'cassette-horizontal',
-        color: '#34495b',
+        color: '#383E42',
         gap: 0.015,
         bandHeight: 0.24,
         moduleWidth: 1.20,
@@ -49,9 +49,9 @@ export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
       },
     },
     openings: [
-      o('G03-FIX-L','front',-1.38,1.20,2.05,'fixed-glass',{sill:0.04,frameColor:'#34495b',sourceAccuracy:'dimensioned'}),
-      o('G03-DOOR','front',-0.24,1.05,2.08,'door-glazed',{sill:0,frameColor:'#34495b',sourceAccuracy:'dimensioned'}),
-      o('G03-FIX-R','front',0.82,1.07,2.05,'fixed-glass',{sill:0.04,frameColor:'#34495b',sourceAccuracy:'dimensioned'}),
+      o('G03-FIX-L','front',-1.38,1.20,2.05,'fixed-glass',{sill:0.04,frameColor:'#383E42',sourceAccuracy:'dimensioned'}),
+      o('G03-DOOR','front',-0.24,1.05,2.08,'door-glazed',{sill:0,frameColor:'#383E42',sourceAccuracy:'dimensioned'}),
+      o('G03-FIX-R','front',0.82,1.07,2.05,'fixed-glass',{sill:0.04,frameColor:'#383E42',sourceAccuracy:'dimensioned'}),
     ],
     decor: [
       d('gallery03-lamella','front',2.08,1.30,1.145,2.05,'lamella-winchester',{sourceAccuracy:'dimensioned'}),

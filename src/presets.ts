@@ -43,7 +43,7 @@ export const PRESETS: PavilionPreset[] = [
       interiorFinish: 'white', floorFinish: 'wood',
       facade: 'cassette-horizontal',
       facadeFront: true, facadeLeft: false, facadeRight: false, facadeBack: false,
-      exteriorColor: '#34495b', flashingColor: '#34495b',
+      exteriorColor: '#383E42', flashingColor: '#383E42',
       glazing: 'double',
       electrical: 'none', doubleSockets: 0, singleSockets: 0, ledCeiling: 0, switches: 0,
       distributionBoard: false, externalConnection: false, externalLights: 0,
