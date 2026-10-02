@@ -150,6 +150,19 @@ export function profileHeight(def: SurfaceProfileDef, xMm: number, yMm = 0) {
 
 const cache = new Map<string, DataTexture>()
 
+let flat: DataTexture | undefined
+/**
+ * Płaska normal mapa (1 × 1 px) dla blachy gładkiej i ścian z okładziną. Dzięki temu materiał ściany
+ * zawsze ma normalMap i zmiana profilacji podmienia tylko teksturę — bez rekompilacji shaderów (lag przy G ↔ profil).
+ */
+export function flatNormalMap() {
+  if (flat) return flat
+  flat = new DataTexture(new Uint8Array([128, 128, 255, 255]), 1, 1, RGBAFormat, UnsignedByteType)
+  flat.colorSpace = NoColorSpace
+  flat.needsUpdate = true
+  return flat
+}
+
 /**
  * Normal mapa wygenerowana z fizycznego profilu [mm]. Jeden kafel = jeden okres; repeat ustawiony
  * tak, by przy UV w metrach (ściany z ExtrudeGeometry) wypadało dokładnie 1000 / pitchMm okresów na metr.
