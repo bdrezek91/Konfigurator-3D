@@ -1,5 +1,6 @@
 import { Canvas, useThree } from '@react-three/fiber'
 import { ContactShadows, Environment, Lightformer, OrbitControls, RoundedBox, Sky, SoftShadows, useTexture } from '@react-three/drei'
+import { EffectComposer, N8AO, SMAA } from '@react-three/postprocessing'
 import { ACESFilmicToneMapping, CanvasTexture, Path, RepeatWrapping, Shape, SRGBColorSpace, type Texture } from 'three'
 import { useEffect, useMemo, type ReactNode } from 'react'
 import {
@@ -338,7 +339,21 @@ function OpeningFrame({
 
   return (
     <group position={[opening.center, y, z]}>
-      <mesh position={[0, 0, -0.002]} castShadow receiveShadow>
+      {gallery03Opening ? (
+        <mesh position={[0, 0, -0.030]}>
+          <boxGeometry args={[innerW, innerH, 0.012]} />
+          <meshPhysicalMaterial
+            color="#5d6b74"
+            roughness={0.015}
+            metalness={0.85}
+            clearcoat={1}
+            clearcoatRoughness={0.0}
+            envMapIntensity={1.7}
+          />
+        </mesh>
+      ) : (
+        <>
+        <mesh position={[0, 0, -0.002]} castShadow receiveShadow>
         <boxGeometry args={[innerW, innerH, 0.016]} />
         <meshPhysicalMaterial
           color={gallery03Opening ? '#91bed3' : '#526975'}
@@ -353,8 +368,8 @@ function OpeningFrame({
           clearcoatRoughness={0.06}
           envMapIntensity={gallery03Opening ? 2.50 : 1.85}
         />
-      </mesh>
-      <mesh position={[0, 0, 0.010]}>
+        </mesh>
+        <mesh position={[0, 0, 0.010]}>
         <planeGeometry args={[innerW * 0.985, innerH * 0.985]} />
         <meshBasicMaterial
           map={glassReflectionTexture()}
@@ -363,7 +378,9 @@ function OpeningFrame({
           depthWrite={false}
           toneMapped={false}
         />
-      </mesh>
+        </mesh>
+        </>
+      )}
       <Box size={[rail, opening.height, 0.060]} position={[-opening.width / 2 + rail / 2, 0, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
       <Box size={[rail, opening.height, 0.060]} position={[opening.width / 2 - rail / 2, 0, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
       <Box size={[innerW, rail, 0.060]} position={[0, opening.height / 2 - rail / 2, 0.020]} color={frame} metalness={0.42} roughness={0.44} />
@@ -451,17 +468,37 @@ function makeWallShape(
   shape.lineTo(-span / 2, topLeft)
   shape.closePath()
 
-  for (const opening of openings) {
-    const x1 = Math.max(-span / 2 + 0.001, opening.center - opening.width / 2)
-    const x2 = Math.min(span / 2 - 0.001, opening.center + opening.width / 2)
-    const y1 = floorT + openingSill(opening)
-    const y2 = y1 + opening.height
-    if (x2 <= x1 || y2 <= y1) continue
+  // Otwory stykające się lub prawie stykające się (np. drzwi + FIX w jednym zestawie) łączymy w jeden
+  // prostokąt — sąsiadujące/stykające się dziury psują triangulację i zostawiają fragmenty ściany na szybie.
+  const rects = openings
+    .map((opening) => {
+      const y1 = Math.max(0.002, floorT + openingSill(opening))
+      return {
+        x1: Math.max(-span / 2 + 0.002, opening.center - opening.width / 2),
+        x2: Math.min(span / 2 - 0.002, opening.center + opening.width / 2),
+        y1,
+        y2: y1 + opening.height,
+      }
+    })
+    .filter((r) => r.x2 > r.x1 && r.y2 > r.y1)
+    .sort((a, b) => a.x1 - b.x1)
+  const merged: typeof rects = []
+  for (const r of rects) {
+    const last = merged[merged.length - 1]
+    if (last && r.x1 <= last.x2 + 0.03 && r.y1 < last.y2 && r.y2 > last.y1) {
+      last.x2 = Math.max(last.x2, r.x2)
+      last.y1 = Math.min(last.y1, r.y1)
+      last.y2 = Math.max(last.y2, r.y2)
+    } else {
+      merged.push({ ...r })
+    }
+  }
+  for (const r of merged) {
     const hole = new Path()
-    hole.moveTo(x1, y1)
-    hole.lineTo(x1, y2)
-    hole.lineTo(x2, y2)
-    hole.lineTo(x2, y1)
+    hole.moveTo(r.x1, r.y1)
+    hole.lineTo(r.x1, r.y2)
+    hole.lineTo(r.x2, r.y2)
+    hole.lineTo(r.x2, r.y1)
     hole.closePath()
     shape.holes.push(hole)
   }
@@ -633,12 +670,13 @@ function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) {
         return (
           <group key={item.id} position={item.position} rotation={item.rotation}>
             {config.project === 'GALERIA/03' ? (
-              <Box
+              <RoundedPiece
                 size={[w, h, depth]}
                 position={[0, 0, 0]}
-                color={color}
-                metalness={0.34}
-                roughness={0.46}
+                color={item.color}
+                metalness={0.12}
+                roughness={0.62}
+                radius={0.004}
               />
             ) : (
               <RoundedPiece
@@ -746,11 +784,11 @@ function DecorLocal({
           out.push(
             <RoundedPiece
               key={segment.id + '-l-' + x.toFixed(2)}
-              size={[slatWidth, localH, gallery03Lamella ? 0.015 : 0.052]}
-              position={[x, localY, gallery03Lamella ? z : z + 0.010]}
+              size={[slatWidth, localH, gallery03Lamella ? 0.045 : 0.052]}
+              position={[x, localY, gallery03Lamella ? z + 0.012 : z + 0.010]}
               rotation={[0, 0, diagonal ? -0.35 : 0]}
-              color={gallery03Lamella ? '#826f66' : (slatMap ? '#ffffff' : slatColor)}
-              map={gallery03Lamella ? undefined : slatMap}
+              color={gallery03Lamella ? '#e2c8b4' : (slatMap ? '#ffffff' : slatColor)}
+              map={slatMap}
               roughness={0.68}
               radius={0.005}
             />,
@@ -1518,6 +1556,64 @@ function RealExportBridge() {
   return null
 }
 
+
+// Fotorealistyczna scena kalibracyjna (galeria-03): prawdziwe niebo HDRI jako tło i odbicia,
+// jedno słońce zgodne z HDRI, grunt PBR i ambient occlusion w fugach.
+const PHOTO_SUN: [number, number, number] = [-6.5, 5.2, 9.5]
+const PHOTO_ENV_ROT = Math.PI
+
+function PhotoGround() {
+  const [map, normalMap, roughnessMap] = useTexture([
+    './textures/pbr/aerial_grass_rock_diff_1k.jpg',
+    './textures/pbr/aerial_grass_rock_nor_gl_1k.jpg',
+    './textures/pbr/aerial_grass_rock_rough_1k.jpg',
+  ], (textures) => {
+    textures.forEach((t, i) => {
+      t.wrapS = RepeatWrapping
+      t.wrapT = RepeatWrapping
+      t.repeat.set(14, 14)
+      t.anisotropy = 8
+      if (i === 0) t.colorSpace = SRGBColorSpace
+      t.needsUpdate = true
+    })
+  })
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+      <circleGeometry args={[60, 64]} />
+      <meshStandardMaterial map={map} normalMap={normalMap} roughnessMap={roughnessMap} color="#b9b2a0" envMapIntensity={0.6} />
+    </mesh>
+  )
+}
+
+function PhotoRealLighting() {
+  return (
+    <>
+      <Environment files="./hdri/kloofendal_43d_clear_2k.hdr" background environmentIntensity={0.85} backgroundIntensity={0.85} environmentRotation={[0, PHOTO_ENV_ROT, 0]} backgroundRotation={[0, PHOTO_ENV_ROT, 0]} />
+      <directionalLight
+        position={PHOTO_SUN}
+        intensity={2.4}
+        color="#fff1dc"
+        castShadow
+        shadow-mapSize-width={4096}
+        shadow-mapSize-height={4096}
+        shadow-camera-left={-7}
+        shadow-camera-right={7}
+        shadow-camera-top={6}
+        shadow-camera-bottom={-3}
+        shadow-camera-near={1}
+        shadow-camera-far={30}
+        shadow-bias={-0.0002}
+        shadow-normalBias={0.02}
+      />
+      <PhotoGround />
+      <EffectComposer multisampling={4}>
+        <N8AO aoRadius={0.35} intensity={2.6} distanceFalloff={0.6} halfRes={false} />
+        <SMAA />
+      </EffectComposer>
+    </>
+  )
+}
+
 export default function Pavilion3D({ config, view = 'perspective' }: Props) {
   const gallery03 = config.project === 'GALERIA/03'
   const cameraDistance = Math.max(9.0, config.length * 1.28)
@@ -1525,7 +1621,7 @@ export default function Pavilion3D({ config, view = 'perspective' }: Props) {
   const targetHeight = gallery03 ? 1.30 : Math.min(1.34, (outerFront + outerBack) * 0.245)
   const cameraHeight = gallery03 ? 1.28 : 1.68
   const cameraPosition: [number, number, number] =
-    gallery03 && view === 'perspective' ? [-2.05, 1.28, 7.45] :
+    gallery03 && view === 'perspective' ? [-2.8, 0.45, 4.83] :
     view === 'front' ? [0, cameraHeight, cameraDistance] :
     view === 'back' ? [0, cameraHeight, -cameraDistance] :
     view === 'left' ? [-cameraDistance, cameraHeight, 0] :
@@ -1538,13 +1634,15 @@ export default function Pavilion3D({ config, view = 'perspective' }: Props) {
     <Canvas
       shadows
       dpr={[1, 1.75]}
-      camera={{ position: cameraPosition, fov: gallery03 ? 37 : 32 }}
+      camera={{ position: cameraPosition, fov: gallery03 ? 55 : 32 }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping
-        gl.toneMappingExposure = 1.18
+        gl.toneMappingExposure = gallery03 ? 0.82 : 1.18
         gl.outputColorSpace = SRGBColorSpace
       }}
     >
+      {gallery03 ? <PhotoRealLighting /> : (
+        <>
       <SoftShadows size={24} samples={10} focus={0.55} />
       <color attach="background" args={['#dfe2e2']} />
       <fog attach="fog" args={['#d6dde0', 20, 46]} />
@@ -1571,9 +1669,14 @@ export default function Pavilion3D({ config, view = 'perspective' }: Props) {
 
       <PhotoEnvironment />
 
+        </>
+      )}
+
       <RealExportBridge />
       <ProjectPavilion config={config} />
 
+      {!gallery03 && (
+        <>
       <ContactShadows
         position={[0, 0.004, 0]}
         opacity={0.38}
@@ -1587,11 +1690,13 @@ export default function Pavilion3D({ config, view = 'perspective' }: Props) {
         <Lightformer form="rect" intensity={1.15} color="#fff3de" position={[8, 4, 5]} scale={[5, 5, 1]} rotation={[0, -Math.PI / 2, 0]} />
         <Lightformer form="rect" intensity={0.9} color="#d9e7f2" position={[-8, 3, 2]} scale={[5, 4, 1]} rotation={[0, Math.PI / 2, 0]} />
       </Environment>
+        </>
+      )}
 
       <OrbitControls
         makeDefault
-        target={gallery03 ? [0.08, 1.25, 0] : [0, targetHeight, 0]}
-        minDistance={Math.max(6.3, config.length * 0.78)}
+        target={gallery03 ? [-1.0, 1.45, 1.48] : [0, targetHeight, 0]}
+        minDistance={gallery03 ? 2 : Math.max(6.3, config.length * 0.78)}
         maxDistance={Math.max(24, config.length * 2.4)}
         minPolarAngle={Math.PI * 0.25}
         maxPolarAngle={Math.PI * 0.50}
