@@ -243,8 +243,7 @@ export const PHYS = {
     postAboveRoof: P({
       element: 'Wysunięcie słupa ponad płytę dachową', value: 50, rank: 5,
       source: 'Produkcja Dampol (2026-10-02): „jakieś 5 cm”; film WA0019: ≈ 55 mm', confidence: 'HIGH', status: 'OK',
-      conflict: 'Zdjęcie z produkcji (zdjecie-produkcja-naroznik-slup-nad-dachem.jpg): słup ≈ 120–150 mm nad dachem — możliwe, że przed przycięciem / dospawaniem górnej ramy. Model zostaje przy 50 mm do potwierdzenia.',
-      todo: 'Potwierdzić: wysunięcie docelowe (po dospawaniu ramy) vs stan na zdjęciu.',
+      conflict: 'Zdjęcie z produkcji (zdjecie-produkcja-naroznik-slup-nad-dachem.jpg): słup ≈ 120–150 mm nad dachem — stan przed przycięciem i dospawaniem górnej ramy (potwierdzone przez produkcję 2026-10-03). Docelowo ~50 mm.',
     }),
     wallLockTolerance: P({
       element: 'Ściana przednia/tylna: nadwyżka ponad 6 × 1000 (tolerancja, przejmowana przez ostatnią płytę)', value: 22, rank: 5,
@@ -299,10 +298,21 @@ export const PHYS = {
       confidence: 'MEDIUM', status: 'OK',
     }),
     baseFlashingOffset: P({
-      element: 'Obróbka cokołowa — odsunięcie lica od ściany (skośny powrót do ściany, kołnierz przykręcony, owija narożnik)', value: 25, rank: 3,
-      source: 'Zdjęcie cokołu w narożniku (zdjecie-cokol-naroznik.jpg) — szacunek z perspektywy, bez wymiaru odniesienia',
-      confidence: 'LOW', status: 'CHANGED', previous: 1.2,
-      todo: 'Wymiar odsunięcia i kąt skosu z rysunku gięcia (mm).',
+      element: 'Obróbka cokołowa — odsunięcie lica od ściany (skośny powrót do ściany, kołnierz przykręcony, owija narożnik)', value: 15, rank: 5,
+      source: 'Produkcja Dampol (2026-10-03): „półtora cm ma obróbki kawałek”; kształt ze zdjęcia cokołu w narożniku (zdjecie-cokol-naroznik.jpg)',
+      confidence: 'HIGH', status: 'CHANGED', previous: 25,
+    }),
+    baseFlashingSlope: P({
+      element: 'Obróbka cokołowa — kąt skosu powrotu do ściany (od poziomu)', value: 16, unit: 'deg', rank: 3,
+      source: 'Wyliczony ze zdjęcia cokołu (2026-10-03): model afiniczny kamery z trzech kierunków naroża (orto-normalność), skala z lica 140 mm; '
+        + 'pas skosu 82,9 mm w kolumnie obrazu = 15 mm odsunięcia + wzniesienie ≈ 4,3 mm → atan(4,3 / 15) ≈ 16°. Dwie kolumny pomiarowe dają ten sam wynik (±1 mm)',
+      confidence: 'MEDIUM', status: 'OK',
+      todo: 'Wynik zależy od lica 140 mm (film, MEDIUM) — potwierdzić z rysunkiem gięcia.',
+    }),
+    baseFlashingFlange: P({
+      element: 'Obróbka cokołowa — kołnierz pionowy na ścianie (przykręcany)', value: 16, rank: 3,
+      source: 'Zdjęcie cokołu (2026-10-03): ciemny pas z wkrętami nad skosem, ≈ 15,6 mm w obu kolumnach pomiarowych',
+      confidence: 'MEDIUM', status: 'OK',
     }),
     intermediateFloorSupports: P({
       element: 'Podpory pośrednie podłogi (poprzeczki)', value: 0, unit: '-', rank: 8,

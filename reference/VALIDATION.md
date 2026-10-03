@@ -5,7 +5,7 @@
 Hierarchia źródeł: 1 zdjęcie gotowego pawilonu · 2 film · 3 pomiar zdjęcia ze skalą · 4 katalog · 5 produkcja · 6 rysunek · 7 szkic · 8 założenie.
 Przy sprzeczności wygrywa źródło wyżej; sprzeczność opisana w kolumnie „problem”.
 
-Pewność: VERIFIED 22 · HIGH 16 · MEDIUM 14 · LOW 7 · UNKNOWN 4
+Pewność: VERIFIED 22 · HIGH 17 · MEDIUM 16 · LOW 6 · UNKNOWN 4
 
 ## Wartości fizyczne
 
@@ -52,7 +52,7 @@ Pewność: VERIFIED 22 · HIGH 16 · MEDIUM 14 · LOW 7 · UNKNOWN 4
 | `system1.wallScrewSpacing` Mocowanie ściany skrajnej do słupa — rozstaw | 500 mm | założenie: Założenie wizualizacyjne | **UNKNOWN** | — | zmierzyć | OPEN |
 | `system1.roofClearance` Luz płyty dachowej przy kątowniku (na stronę) | 6 mm | produkcja: Wyliczony z danych produkcji: element dachowy 2,94 m przy ramie 2,96 m → (2,96 − 2·0,004 − 2,94) / 2 | **MEDIUM** | Potwierdzić sposób oparcia dachu i kierunek ułożenia. | — | OK |
 | `system1.topFrameOnRoof` Górna rama: leży na dachu, dospawana do słupów wystających ponad dach | 1 | produkcja: Produkcja Dampol (2026-10-02): rama leży na dachu (w rogach wyżej — uszczelnienie), słup wystaje ~5 cm pod dospawanie; film WA0019 | **HIGH** | — | — | OK |
-| `system1.postAboveRoof` Wysunięcie słupa ponad płytę dachową | 50 mm | produkcja: Produkcja Dampol (2026-10-02): „jakieś 5 cm”; film WA0019: ≈ 55 mm | **HIGH** | Zdjęcie z produkcji (zdjecie-produkcja-naroznik-slup-nad-dachem.jpg): słup ≈ 120–150 mm nad dachem — możliwe, że przed przycięciem / dospawaniem górnej ramy. Model zostaje przy 50 mm do potwierdzenia. · Potwierdzić: wysunięcie docelowe (po dospawaniu ramy) vs stan na zdjęciu. | — | OK |
+| `system1.postAboveRoof` Wysunięcie słupa ponad płytę dachową | 50 mm | produkcja: Produkcja Dampol (2026-10-02): „jakieś 5 cm”; film WA0019: ≈ 55 mm | **HIGH** | Zdjęcie z produkcji (zdjecie-produkcja-naroznik-slup-nad-dachem.jpg): słup ≈ 120–150 mm nad dachem — stan przed przycięciem i dospawaniem górnej ramy (potwierdzone przez produkcję 2026-10-03). Docelowo ~50 mm. | — | OK |
 | `system1.wallLockTolerance` Ściana przednia/tylna: nadwyżka ponad 6 × 1000 (tolerancja, przejmowana przez ostatnią płytę) | 22 mm | produkcja: Wyliczona: między ramionami słupów 6030 − 2·4 = 6022 mm. Produkcja: 6 płyt w module 1000; ostatnia płyta docinana, gdy się nie mieści (zależnie od złożenia zamków) | **HIGH** | — | — | OK |
 | `system1.sideWallPanels` Ściana boczna: 3 płyty = 2 × 1000 + 1 docięta na 752 mm | 3 | produkcja: Produkcja Dampol (2026-10-02); wyliczenie 2752 = 2 × 1000 + 752 | **VERIFIED** | — | — | OK |
 | `system1.topFrameCornerRaise` Górna rama: podniesienie w narożnikach (silikon + wasserstop pod kątownikiem), zakres 3–8 mm | 5 mm | produkcja: Produkcja Dampol (2026-10-03): 3–8 mm „zależy jak ktoś położy”. W geometrii nie podnoszone (wartość zmienna, poniżej skali obrazu) | **HIGH** | — | — | OK |
@@ -64,7 +64,9 @@ Pewność: VERIFIED 22 · HIGH 16 · MEDIUM 14 · LOW 7 · UNKNOWN 4
 | `system1.cornerFlashingSide` Obróbka narożna — ramię od strony ściany bocznej | 124 mm | film: Wyliczone: musi zakryć czoło ściany przedniej/tylnej (t + grubość ściany = 104 mm) + zakład 20 mm; film WA0017: ciemna listwa narożna | **MEDIUM** | Zmierzyć listwę narożną na gotowym pawilonie. | — | OK |
 | `system1.cornerFlashingFront` Obróbka narożna — ramię od strony ściany przedniej/tylnej | 60 mm | film: Wyliczone: zakrywa ramię słupa 50 mm + zakład 10 mm | **LOW** | — | zmierzyć | OPEN |
 | `system1.baseFlashingFace` Obróbka cokołowa — wysokość lica | 140 mm | film: Film WA0017: 135–140 mm (kątownik 50 + krawędź podłogi + zakład) | **MEDIUM** | — | — | OK |
-| `system1.baseFlashingOffset` Obróbka cokołowa — odsunięcie lica od ściany (skośny powrót do ściany, kołnierz przykręcony, owija narożnik) | 25 mm | pomiar zdjęcia: Zdjęcie cokołu w narożniku (zdjecie-cokol-naroznik.jpg) — szacunek z perspektywy, bez wymiaru odniesienia | **LOW** | Wymiar odsunięcia i kąt skosu z rysunku gięcia (mm). | było 1.2 → 25 mm | CHANGED |
+| `system1.baseFlashingOffset` Obróbka cokołowa — odsunięcie lica od ściany (skośny powrót do ściany, kołnierz przykręcony, owija narożnik) | 15 mm | produkcja: Produkcja Dampol (2026-10-03): „półtora cm ma obróbki kawałek”; kształt ze zdjęcia cokołu w narożniku (zdjecie-cokol-naroznik.jpg) | **HIGH** | — | było 25 → 15 mm | CHANGED |
+| `system1.baseFlashingSlope` Obróbka cokołowa — kąt skosu powrotu do ściany (od poziomu) | 16 deg | pomiar zdjęcia: Wyliczony ze zdjęcia cokołu (2026-10-03): model afiniczny kamery z trzech kierunków naroża (orto-normalność), skala z lica 140 mm; pas skosu 82,9 mm w kolumnie obrazu = 15 mm odsunięcia + wzniesienie ≈ 4,3 mm → atan(4,3 / 15) ≈ 16°. Dwie kolumny pomiarowe dają ten sam wynik (±1 mm) | **MEDIUM** | Wynik zależy od lica 140 mm (film, MEDIUM) — potwierdzić z rysunkiem gięcia. | — | OK |
+| `system1.baseFlashingFlange` Obróbka cokołowa — kołnierz pionowy na ścianie (przykręcany) | 16 mm | pomiar zdjęcia: Zdjęcie cokołu (2026-10-03): ciemny pas z wkrętami nad skosem, ≈ 15,6 mm w obu kolumnach pomiarowych | **MEDIUM** | — | — | OK |
 | `system1.intermediateFloorSupports` Podpory pośrednie podłogi (poprzeczki) | 0 | założenie: Opis produkcji wymienia tylko obwód; brak danych o poprzeczkach | **UNKNOWN** | — | zmierzyć | OPEN |
 | `system1.squareFlashing` Obróbka „na kwadraty” — geometria: przez ostatnie żebro dachu, lico pionowe, powrót poziomy do ściany, kapinos | 1 | produkcja: Szkic produkcji (2026-10-02). Stosowana, gdy deska/lamele/dekor wymagają większego odsunięcia | **HIGH** | Długość powrotu i kapinosu (mm). | — | CHANGED |
 | `floor.board` Płyta podłogowa na PIR — MFP 12 mm (nie OSB) | 12 mm | produkcja: Produkcja Dampol (2026-10-02/03): płyta MFP, grubość 12 mm | **VERIFIED** | — | — | OK |

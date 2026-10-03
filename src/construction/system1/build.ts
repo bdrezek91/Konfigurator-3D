@@ -463,9 +463,10 @@ function flashingProfiles(f: FlashCtx, finish: FinishVariant) {
   // cokół (zdjęcie narożnika): lico odsunięte od ściany, u góry skośny powrót do ściany i kołnierz przykręcony do płyty
   const uB = baseFlashingFaceU(f)
   const uFl = uWall + FLASH_T / 2
+  const baseRise = (uB - uFl) * Math.tan((PHYS.system1.baseFlashingSlope.value * Math.PI) / 180)
   const base: Array<[number, number]> = finish === 'cassette'
     ? [[o, 0], [o, baseFace], [-f.t - 0.002, baseFace + 0.004]]
-    : [[uB, -0.01], [uB, baseFace - (uB - uFl)], [uFl, baseFace], [uFl, baseFace + 0.03]]
+    : [[uB, -0.01], [uB, baseFace - baseRise], [uFl, baseFace], [uFl, baseFace + m(PHYS.system1.baseFlashingFlange)]]
   return { crownSec: thicken(crown, FLASH_T), baseSec: thicken(base, FLASH_T), label, conf }
 }
 

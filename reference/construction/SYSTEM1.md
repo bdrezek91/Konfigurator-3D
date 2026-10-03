@@ -16,8 +16,8 @@ Na razie tylko System 1. `ConstructionSystemId` przewiduje `system_2` i `system_
 | Z zewnątrz w narożu widać ciemny pionowy pas | `dowod-wa0017-gotowy-goly-pir.jpg` (WA0017) | słup / obróbka narożna na zewnętrznym obrysie |
 | Nad jasną obróbką korony jest ciemny pas ~55 mm, a słup kończy się na jego górze | `dowod-wa0019-naroznik-gorny.jpg` (WA0019, w produkcji) | górna rama z kątownika leży ponad dachem i jest spięta ze słupami, które wystają ponad dach |
 | Pas korony na gotowym pawilonie ma ~200–220 mm, dolny pas ~135–140 mm | WA0017 | obróbka A korony 215 mm, obróbka cokołowa 140 mm (kątownik 50 + krawędź podłogi + zakład) |
-| Cokół w narożniku: lico odsunięte od ściany, u góry skośny powrót do płyty, kołnierz przykręcony; obróbka owija narożnik | `zdjecie-cokol-naroznik.jpg` | cokół z odsunięciem ~25 mm (szacunek LOW, bez wymiaru odniesienia), przebiegi wydłużone o odsunięcie w narożach |
-| Słup narożny w produkcji wystaje wyraźnie ponad dach | `zdjecie-produkcja-naroznik-slup-nad-dachem.jpg` | ≈ 120–150 mm na zdjęciu vs „~5 cm” z opisu — **konflikt otwarty**, model zostaje przy 50 mm |
+| Cokół w narożniku: lico odsunięte od ściany, u góry skośny powrót do płyty, kołnierz przykręcony; obróbka owija narożnik | `zdjecie-cokol-naroznik.jpg` | cokół: odsunięcie 15 mm (produkcja), skos ≈ 16° (wzniesienie ≈ 4 mm, wyliczony ze zdjęcia), kołnierz ≈ 16 mm z wkrętami; przebiegi wydłużone o odsunięcie w narożach |
+| Słup narożny w produkcji wystaje wyraźnie ponad dach | `zdjecie-produkcja-naroznik-slup-nad-dachem.jpg` | ≈ 120–150 mm na zdjęciu — stan przed przycięciem i dospawaniem górnej ramy (potwierdzone); docelowo ~50 mm |
 
 ## Budowa (warstwy i etapy)
 
@@ -31,7 +31,7 @@ Na razie tylko System 1. `ConstructionSystemId` przewiduje `system_2` i `system_
 | 6 | ściana przednia | jak tylna; otwory wycięte w płytach, stolarka w otworach | HIGH |
 | 7 | dach | płyty w poprzek, oparte na ścianach. Długość = W − 2·4 − 2·luz (luz 6 mm wyliczony z danych produkcji 2,94 m), trapez wg katalogu | MEDIUM |
 | 8 | górna rama | kątownik na płycie dachowej (ramię pionowe na obrysie, poziome do środka), zespawany ze słupami | LOW |
-| 9 | obróbki | półtorówka 15 mm (goły PIR), na kwadraty 25 mm (deska/dekor), płaska techniczna (pod kaseton); cokół 140 mm z odsunięciem ~25 mm i skośnym powrotem (owija narożnik), narożniki L 124 mm | HIGH / płaska LOW / odsunięcie cokołu LOW |
+| 9 | obróbki | półtorówka 15 mm (goły PIR), na kwadraty 25 mm (deska/dekor), płaska techniczna (pod kaseton); cokół 140 mm, odsunięcie 15 mm, skos 16°, kołnierz 16 mm (owija narożnik), narożniki L 124 mm | HIGH / płaska LOW / skos cokołu MEDIUM |
 | 10 | elewacja | kasetony na odsunięciu 75 mm (UNKNOWN). Konstrukcja jest identyczna dla każdej elewacji | MEDIUM |
 
 ## Wymiary wyliczone (rama 6030 × 2960 mm, PIR 100, preset 722/08/26)
