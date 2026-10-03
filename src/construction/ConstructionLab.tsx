@@ -157,7 +157,7 @@ function sections(config: PavilionConfig, lv: Record<string, number>): Record<'A
       title: 'F — wariant z kasetonem (obróbka B + kaseton)', finish: 'cassette', plane: cutX,
       camera: { position: [xs - 1.6, lv.yTopF - 0.12, zf - 0.02], target: [xs, lv.yTopF - 0.12, zf - 0.02], fov: 22, viewHeight: 0.6 },
       labels: [
-        { at: [xs, lv.yTopF - 0.2, zf + 0.06], text: 'Kaseton (odsunięcie 75 mm — UNKNOWN)' },
+        { at: [xs, lv.yTopF - 0.2, zf + 0.06], text: 'Kaseton: blacha 0,5 mm, podkonstrukcja 20 mm + taca (głębokość UNKNOWN)' },
         { at: [xs, lv.yTopF + 0.05, zf + 0.002], text: 'Obróbka B — płaska techniczna' },
       ],
     },

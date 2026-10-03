@@ -108,24 +108,15 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
 
         return (
           <group key={item.id} position={item.position} rotation={item.rotation}>
-            {config.project === 'GALERIA/03' ? (
-              <Box
-                size={[w, h, depth]}
-                position={[0, 0, 0]}
-                color="#383E42"
-                metalness={0.30}
-                roughness={0.55}
-              />
-            ) : (
-              <RoundedPiece
-                size={[w, h, depth]}
-                position={[0, 0, 0]}
-                color={color}
-                metalness={0.38}
-                roughness={0.48}
-                radius={0.003}
-              />
-            )}
+            {/* kaseton: blacha stalowa 0,5 mm, RAL 7016 mat (produkcja Dampol) */}
+            <RoundedPiece
+              size={[w, h, depth]}
+              position={[0, 0, 0]}
+              color={color}
+              metalness={RENDER.flashingMattMetalness.value}
+              roughness={RENDER.flashingMattRoughness.value}
+              radius={0.002}
+            />
           </group>
         )
       })}

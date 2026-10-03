@@ -5,7 +5,7 @@
 Hierarchia źródeł: 1 zdjęcie gotowego pawilonu · 2 film · 3 pomiar zdjęcia ze skalą · 4 katalog · 5 produkcja · 6 rysunek · 7 szkic · 8 założenie.
 Przy sprzeczności wygrywa źródło wyżej; sprzeczność opisana w kolumnie „problem”.
 
-Pewność: VERIFIED 16 · HIGH 16 · MEDIUM 15 · LOW 5 · UNKNOWN 7
+Pewność: VERIFIED 21 · HIGH 17 · MEDIUM 15 · LOW 5 · UNKNOWN 4
 
 ## Wartości fizyczne
 
@@ -19,21 +19,24 @@ Pewność: VERIFIED 16 · HIGH 16 · MEDIUM 15 · LOW 5 · UNKNOWN 7
 | `cassette.bodyBandHeight` Wysokość pasa kasetonu poziomego (korpus) | 240 mm | pomiar zdjęcia: Zdjęcie 11: 9 pasów, średnio 242 mm (234–254); zdjęcie 03: 232 mm | **HIGH** | Zdjęcie 09 (inna realizacja): kasetony korpusu ≈ 550 mm — inny wariant elewacji, nie domyślny. | było 300 → 240 mm | CHANGED |
 | `cassette.atticRowHeight` Wysokość rzędu kasetonu attyki (2 rzędy) | 330 mm | pomiar zdjęcia: Zdjęcie 11: 2 × 320 mm; zdjęcie 03: 2 × 335 mm | **HIGH** | Zdjęcie 09: attyka 1 rząd ≈ 650 mm — inny wariant. | było 315 → 330 mm | CHANGED |
 | `cassette.atticModuleTarget` Docelowa szerokość kasetonu attyki (długość dzielona na równe moduły) | 1100 mm | pomiar zdjęcia: Zdjęcie 03: 6 równych modułów ≈ 1,10 m; zdjęcie 11: 9 modułów ≈ 0,77 m. Łączenia obu rzędów w jednej linii (bez mijanki) | **HIGH** | Model miał mijankę co 600 mm — żadne zdjęcie jej nie pokazuje. | było 1200 → 1100 mm | CHANGED |
-| `cassette.thickness` Grubość kasetonu | 30 mm | założenie: Założenie (nie widać na zdjęciach frontalnych) | **UNKNOWN** | Zdjęcie narożnika z boku / karta kasetonu. | zmierzyć | OPEN |
-| `cassette.offsetFromPanel` Odsunięcie lica kasetonu od lica płyty (podkonstrukcja) | 75 mm | założenie: Założenie | **UNKNOWN** | Przekrój/rysunek podkonstrukcji Dampol. | zmierzyć | OPEN |
+| `cassette.sheet` Kaseton — blacha stalowa powlekana 0,5 mm, RAL 7016 mat | 0.5 mm | produkcja: Produkcja Dampol (2026-10-03) | **VERIFIED** | — | — | OK |
+| `cassette.substructureGap` Kaseton — odsunięcie od lica płyty (podkonstrukcja, szczelina za kasetonem) | 20 mm | produkcja: Produkcja Dampol (2026-10-03): „odsunięcie od lica 20 mm” | **VERIFIED** | — | — | CHANGED |
+| `cassette.thickness` Kaseton — głębokość tacy (zagięcie krawędzi) | 25 mm | założenie: Założenie — nie podana przez produkcję, niewidoczna na zdjęciach frontalnych | **UNKNOWN** | Wymiar zagięcia kasetonu (mm). | było 30 → 25 mm | OPEN |
+| `cassette.offsetFromPanel` Kaseton — lico od lica płyty (wyliczone: podkonstrukcja 20 + taca 25) | 45 mm | produkcja: Wyliczone: substructureGap (produkcja) + thickness (założenie) | **MEDIUM** | — | było 75 → 45 mm | CHANGED |
 | `cassette.cornerWrap` Zawinięcie kasetonu narożnego L (na każdą ścianę) | 150 mm | założenie: Założenie; zdjęcia 19–21 pokazują zawinięcie bez listwy | **LOW** | Zmierzyć na zdjęciu narożnika ze skalą. | zmierzyć | OPEN |
 | `lamella.pitch` Rozstaw lameli pionowych | 82 mm | pomiar zdjęcia: Zdjęcie 03 (drewnopodobne): 28 lameli, 82 ± 2 mm; zdjęcie 11 (aluminiowe): 80,6 mm | **VERIFIED** | Model galerii-03 miał 58 mm (39 lameli zamiast 28). Zdjęcie 09 (inny produkt): ≈ 150 mm — wariant szeroki. | było 72 → 82 mm | CHANGED |
 | `lamella.face` Szerokość czoła lameli | 45 mm | pomiar zdjęcia: Zdjęcie 03: jasne czoło 45–50 mm; zdjęcie 11 (alu): 40 mm | **MEDIUM** | — | było 40 → 45 mm | CHANGED |
-| `lamella.depth` Głębokość lameli | 40 mm | założenie: Założenie — niewidoczna na zdjęciach frontalnych | **UNKNOWN** | Zdjęcie z boku pola lameli / karta produktu. | było 52 → 40 mm | OPEN |
+| `lamella.depth` Lamela — blacha 0,4 mm winchester gięta w U, 30 mm; profile U wsadzane jeden w drugi na zakładkę | 30 mm | produkcja: Produkcja Dampol (2026-10-03): „jeden lamel ma 30 mm”, wyginane w U, wsadzane na zakładkę | **HIGH** | Czy 30 mm to głębokość U, czy szerokość czoła? Rozstaw 82 mm i czoło ≈ 45 mm z pomiaru zdjęć. | było 52 → 30 mm | CHANGED |
+| `lamella.sheet` Lamela — blacha 0,4 mm z nadrukiem winchester | 0.4 mm | produkcja: Produkcja Dampol (2026-10-03) | **VERIFIED** | — | — | OK |
 | `lamella.widePitch` Rozstaw lameli — wariant szeroki | 150 mm | pomiar zdjęcia: Zdjęcie 09: 0,053 H ≈ 150 mm (19 szczelin) | **MEDIUM** | — | — | OK |
 | `board.height` Deska elewacyjna pozioma — wysokość | 140 mm | film: Film WA0016: 0,13–0,15 m | **MEDIUM** | — | — | OK |
 | `board.gap` Deska — szczelina cieniowa | 12 mm | film: Film WA0016 (ocena wizualna) | **LOW** | — | — | OK |
-| `joinery.fixFrameFace` Widoczna szerokość ramy FIX (ALU) | 62 mm | pomiar zdjęcia: Zdjęcie 11: 55–75 mm (bok 70, góra 70, prawa 50 + cień ościeża) | **MEDIUM** | System profili (Aluprof/Ponzio?) — karta przekroju. | — | OK |
+| `joinery.fixFrameFace` Widoczna szerokość ramy FIX (ALU) | 62 mm | pomiar zdjęcia: Zdjęcie 11: 55–75 mm (bok 70, góra 70, prawa 50 + cień ościeża). Produkcja nie zna wymiaru | **MEDIUM** | Karta przekrojów Ponzio PE52 (widok ościeżnicy/skrzydła). | — | OK |
 | `joinery.doorSashFace` Widoczne skrzydło drzwi (ponad ościeżnicę) | 45 mm | pomiar zdjęcia: Zdjęcie 11: ościeżnica + skrzydło 95 mm (bok), 125 mm (góra) | **MEDIUM** | — | było 55 → 45 mm | CHANGED |
 | `joinery.frameDepth` Głębokość ościeżnicy — Ponzio PE52 (system domyślny) | 52 mm | katalog: Produkcja Dampol (2026-10-02): profile aluminiowe PE52 albo PE78; PE52: ościeżnica 52 mm, skrzydło 60 mm (opisy systemu u dystrybutorów Ponzio) | **HIGH** | Widoczna szerokość ościeżnicy/skrzydła PE52 i PE78 z karty przekrojów (teraz z pomiaru zdjęcia 11). | było 70 → 52 mm | CHANGED |
 | `joinery.sashDepthPE52` Głębokość skrzydła — Ponzio PE52 | 60 mm | katalog: Opisy systemu PE52 (dystrybutorzy Ponzio) | **HIGH** | — | — | OK |
 | `joinery.frameDepthPE78` Głębokość ościeżnicy — Ponzio PE78N (wariant ciepły) | 78 mm | katalog: Opisy systemu PE78N: drzwi ościeżnica/skrzydło 78/78 mm, okna 78/86 mm | **HIGH** | — | — | OK |
-| `joinery.slidingDoorPSK` Drzwi przesuwne PSK — typ stolarki | 1 | produkcja: Produkcja Dampol (2026-10-02) | **HIGH** | Dodać typ PSK w edytorze stolarki (wymiary skrzydeł, prowadnice). | zmierzyć | OPEN |
+| `joinery.slidingDoorPSK` Drzwi przesuwne PSK — typ stolarki (wymiary i układ skrzydeł różne) | 1 | produkcja: Produkcja Dampol (2026-10-02/03) | **HIGH** | Dodać typ PSK w edytorze stolarki z parametrami (szerokość, liczba skrzydeł). | zmierzyć | OPEN |
 | `joinery.pvcWindows` Okna PCV — pakiet dwuszybowy standard (bez ciepłej ramki), czasem trzyszybowy | 2 | produkcja: Produkcja Dampol (2026-10-02) | **VERIFIED** | — | — | OK |
 | `joinery.glazingTop` Góra ramy przeszklenia nad dołem okładziny | 2110 mm | pomiar zdjęcia: Zdjęcie 03: 2,11 m; zdjęcie 11: 2,17 m | **HIGH** | — | — | OK |
 | `base.groundGap` Prześwit pod ramą (domyślny) | 60 mm | zdjęcie: Zdjęcia 03 i 11: ≈ 30 mm; film WA0019: 50–100 mm; zdjęcie 09: widoczny cokół ≈ 150 mm | **MEDIUM** | Zależy od montażu (podkłady/bloczki). Wysokie bloczki 120 mm z modelu nie występują na zdjęciach gotowych pawilonów. | było 120 → 60 mm | CHANGED |
@@ -52,7 +55,7 @@ Pewność: VERIFIED 16 · HIGH 16 · MEDIUM 15 · LOW 5 · UNKNOWN 7
 | `system1.postAboveRoof` Wysunięcie słupa ponad płytę dachową | 50 mm | produkcja: Produkcja Dampol (2026-10-02): „jakieś 5 cm”; film WA0019: ≈ 55 mm | **HIGH** | — | — | OK |
 | `system1.wallLockTolerance` Ściana przednia/tylna: nadwyżka ponad 6 × 1000 (tolerancja, przejmowana przez ostatnią płytę) | 22 mm | produkcja: Wyliczona: między ramionami słupów 6030 − 2·4 = 6022 mm. Produkcja: 6 płyt w module 1000; ostatnia płyta docinana, gdy się nie mieści (zależnie od złożenia zamków) | **HIGH** | — | — | OK |
 | `system1.sideWallPanels` Ściana boczna: 3 płyty = 2 × 1000 + 1 docięta na 752 mm | 3 | produkcja: Produkcja Dampol (2026-10-02); wyliczenie 2752 = 2 × 1000 + 752 | **VERIFIED** | — | — | OK |
-| `system1.topFrameCornerRaise` Górna rama: podniesienie w narożnikach (silikon + wasserstop pod kątownikiem) | 0 mm | produkcja: Produkcja Dampol (2026-10-02): rama leży na dachu, w rogach „troszkę wyżej” — narożnik wcześniej uszczelniany. Wartość nieznana — w modelu 0 | **UNKNOWN** | Grubość warstwy uszczelnienia w narożniku (mm). | zmierzyć | OPEN |
+| `system1.topFrameCornerRaise` Górna rama: podniesienie w narożnikach (silikon + wasserstop pod kątownikiem), zakres 3–8 mm | 5 mm | produkcja: Produkcja Dampol (2026-10-03): 3–8 mm „zależy jak ktoś położy”. W geometrii nie podnoszone (wartość zmienna, poniżej skali obrazu) | **HIGH** | — | — | OK |
 | `system1.cornerContact` Narożnik: blacha płyty skrajnej oparta o jedno ramię słupa, czoło (rdzeń/zamek) dotyka drugiego ramienia | 1 | produkcja: Produkcja Dampol (2026-10-02) | **VERIFIED** | — | — | OK |
 | `system1.crownFlashingFace` Obróbka korony A (goły PIR) — wysokość lica | 215 mm | film: Film WA0017 (gotowy): pas 200–220 mm; WA0019 (w produkcji): obróbka 180 mm + kątownik 55 mm | **MEDIUM** | — | — | OK |
 | `system1.flashingOffsetPoltorowka` Obróbka korony „półtorówka” (goły PIR) — odsunięcie lica od ściany | 15 mm | produkcja: Produkcja Dampol (2026-10-02): szkic z wymiarem „1,5 cm” (reference/construction/szkic-obrobka-poltorowka-15mm.jpg); zdjęcie 11: daszek ≈ 15–20 mm | **VERIFIED** | Wcześniej jednostka nieznana — rozstrzygnięte: cm. | — | CHANGED |
@@ -63,8 +66,8 @@ Pewność: VERIFIED 16 · HIGH 16 · MEDIUM 15 · LOW 5 · UNKNOWN 7
 | `system1.baseFlashingFace` Obróbka cokołowa — wysokość lica | 140 mm | film: Film WA0017: 135–140 mm (kątownik 50 + krawędź podłogi + zakład) | **MEDIUM** | — | — | OK |
 | `system1.intermediateFloorSupports` Podpory pośrednie podłogi (poprzeczki) | 0 | założenie: Opis produkcji wymienia tylko obwód; brak danych o poprzeczkach | **UNKNOWN** | — | zmierzyć | OPEN |
 | `system1.squareFlashing` Obróbka „na kwadraty” — geometria: przez ostatnie żebro dachu, lico pionowe, powrót poziomy do ściany, kapinos | 1 | produkcja: Szkic produkcji (2026-10-02). Stosowana, gdy deska/lamele/dekor wymagają większego odsunięcia | **HIGH** | Długość powrotu i kapinosu (mm). | — | CHANGED |
-| `floor.board` Płyta podłogowa na PIR — MFP (nie OSB) | 12 mm | produkcja: Produkcja Dampol (2026-10-02): płyta MFP; grubość 12 mm z konfiguratora (mfpThickness) | **HIGH** | Potwierdzić grubość MFP (12 / 15 / 18 mm). | — | OK |
-| `floor.covering` Wykładzina PVC — Tarkett, kolekcja Intero (produkcja Serbia), odcień „Aurora Activia Lator 3” (zapis z przekazu ustnego) | 1 | produkcja: Produkcja Dampol (2026-10-02) | **MEDIUM** | Dokładna nazwa/kod odcienia i zdjęcie próbki — kolor podłogi w renderze jest nadal przybliżony. | zmierzyć | OPEN |
+| `floor.board` Płyta podłogowa na PIR — MFP 12 mm (nie OSB) | 12 mm | produkcja: Produkcja Dampol (2026-10-02/03): płyta MFP, grubość 12 mm | **VERIFIED** | — | — | OK |
+| `floor.covering` Wykładzina PVC Tarkett Activia Latur 3 — deska brązowa, 2,0 mm, warstwa użytkowa 0,40 mm | 2 mm | produkcja: Produkcja Dampol (2026-10-03): „Activia Latur 3”; parametry z opisów sklepów (Castorama, ewinyl, it-pol) | **VERIFIED** | Kolor/tekstura w renderze przybliżone (strony z próbką zablokowane) — zdjęcie podłogi z realizacji pomoże. | — | OK |
 | `coating.panelOuter` Płyta warstwowa — okładzina zewn.: RAL 7016 półmat (lekki połysk), poliester 25 µm | 25 | produkcja: Produkcja Dampol (2026-10-02): „zwykła 25 mikronów”, półmat | **VERIFIED** | — | — | OK |
 | `coating.flashings` Obróbki blacharskie — RAL 7016M (faktura, mat) | 7016 | produkcja: Produkcja Dampol (2026-10-02): „wszystkie obróbki w fakturze 7016M” | **VERIFIED** | Faktura (struktura powłoki) — w renderze tylko wyższa chropowatość, bez mapy struktury. | — | OK |
 | `coating.panelInner` Okładzina wewnętrzna ścian i dachu — zawsze RAL 9010, gładka (PIR); w płycie styropianowej — linia | 9010 | produkcja: Produkcja Dampol (2026-10-02) | **VERIFIED** | — | — | OK |

@@ -494,8 +494,8 @@ type CassCtx = { L: number; W: number; y0: number; yFloorTop: number; yTopF: num
 /** Kasetony poziome (pas korpusu 240, attyka 2 × 330, fuga 15) na licu odsuniętym od płyty — wariant B. */
 function addCassettes(ctx: Ctx, k: CassCtx) {
   const gap = m(PHYS.cassette.gap)
-  const off = m(PHYS.cassette.offsetFromPanel)
   const th = m(PHYS.cassette.thickness)
+  const off = m(PHYS.cassette.substructureGap) + th // lico kasetonu od lica ściany
   const band = m(PHYS.cassette.bodyBandHeight)
   const attic = m(PHYS.cassette.atticRowHeight)
   for (const side of ['front', 'back'] as const) {

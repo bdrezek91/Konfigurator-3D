@@ -86,13 +86,21 @@ export const PHYS = {
       confidence: 'HIGH', status: 'CHANGED', previous: 1200,
       conflict: 'Model miał mijankę co 600 mm — żadne zdjęcie jej nie pokazuje.',
     }),
+    sheet: P({
+      element: 'Kaseton — blacha stalowa powlekana 0,5 mm, RAL 7016 mat', value: 0.5, rank: 5,
+      source: 'Produkcja Dampol (2026-10-03)', confidence: 'VERIFIED', status: 'OK',
+    }),
+    substructureGap: P({
+      element: 'Kaseton — odsunięcie od lica płyty (podkonstrukcja, szczelina za kasetonem)', value: 20, rank: 5,
+      source: 'Produkcja Dampol (2026-10-03): „odsunięcie od lica 20 mm”', confidence: 'VERIFIED', status: 'CHANGED',
+    }),
     thickness: P({
-      element: 'Grubość kasetonu', value: 30, rank: 8, source: 'Założenie (nie widać na zdjęciach frontalnych)',
-      confidence: 'UNKNOWN', status: 'OPEN', todo: 'Zdjęcie narożnika z boku / karta kasetonu.',
+      element: 'Kaseton — głębokość tacy (zagięcie krawędzi)', value: 25, rank: 8, source: 'Założenie — nie podana przez produkcję, niewidoczna na zdjęciach frontalnych',
+      confidence: 'UNKNOWN', status: 'OPEN', previous: 30, todo: 'Wymiar zagięcia kasetonu (mm).',
     }),
     offsetFromPanel: P({
-      element: 'Odsunięcie lica kasetonu od lica płyty (podkonstrukcja)', value: 75, rank: 8, source: 'Założenie',
-      confidence: 'UNKNOWN', status: 'OPEN', todo: 'Przekrój/rysunek podkonstrukcji Dampol.',
+      element: 'Kaseton — lico od lica płyty (wyliczone: podkonstrukcja 20 + taca 25)', value: 45, rank: 5,
+      source: 'Wyliczone: substructureGap (produkcja) + thickness (założenie)', confidence: 'MEDIUM', status: 'CHANGED', previous: 75,
     }),
     cornerWrap: P({
       element: 'Zawinięcie kasetonu narożnego L (na każdą ścianę)', value: 150, rank: 8, source: 'Założenie; zdjęcia 19–21 pokazują zawinięcie bez listwy',
@@ -112,8 +120,12 @@ export const PHYS = {
       confidence: 'MEDIUM', status: 'CHANGED', previous: 40,
     }),
     depth: P({
-      element: 'Głębokość lameli', value: 40, rank: 8, source: 'Założenie — niewidoczna na zdjęciach frontalnych',
-      confidence: 'UNKNOWN', status: 'OPEN', previous: 52, todo: 'Zdjęcie z boku pola lameli / karta produktu.',
+      element: 'Lamela — blacha 0,4 mm winchester gięta w U, 30 mm; profile U wsadzane jeden w drugi na zakładkę', value: 30, rank: 5,
+      source: 'Produkcja Dampol (2026-10-03): „jeden lamel ma 30 mm”, wyginane w U, wsadzane na zakładkę', confidence: 'HIGH', status: 'CHANGED', previous: 52,
+      todo: 'Czy 30 mm to głębokość U, czy szerokość czoła? Rozstaw 82 mm i czoło ≈ 45 mm z pomiaru zdjęć.',
+    }),
+    sheet: P({
+      element: 'Lamela — blacha 0,4 mm z nadrukiem winchester', value: 0.4, rank: 5, source: 'Produkcja Dampol (2026-10-03)', confidence: 'VERIFIED', status: 'OK',
     }),
     widePitch: P({
       element: 'Rozstaw lameli — wariant szeroki', value: 150, rank: 3, source: 'Zdjęcie 09: 0,053 H ≈ 150 mm (19 szczelin)',
@@ -133,8 +145,8 @@ export const PHYS = {
   joinery: {
     fixFrameFace: P({
       element: 'Widoczna szerokość ramy FIX (ALU)', value: 62, rank: 3,
-      source: 'Zdjęcie 11: 55–75 mm (bok 70, góra 70, prawa 50 + cień ościeża)',
-      confidence: 'MEDIUM', status: 'OK', todo: 'System profili (Aluprof/Ponzio?) — karta przekroju.',
+      source: 'Zdjęcie 11: 55–75 mm (bok 70, góra 70, prawa 50 + cień ościeża). Produkcja nie zna wymiaru',
+      confidence: 'MEDIUM', status: 'OK', todo: 'Karta przekrojów Ponzio PE52 (widok ościeżnicy/skrzydła).',
     }),
     doorSashFace: P({
       element: 'Widoczne skrzydło drzwi (ponad ościeżnicę)', value: 45, rank: 3,
@@ -155,8 +167,8 @@ export const PHYS = {
       source: 'Opisy systemu PE78N: drzwi ościeżnica/skrzydło 78/78 mm, okna 78/86 mm', confidence: 'HIGH', status: 'OK',
     }),
     slidingDoorPSK: P({
-      element: 'Drzwi przesuwne PSK — typ stolarki', value: 1, unit: '-', rank: 5, source: 'Produkcja Dampol (2026-10-02)',
-      confidence: 'HIGH', status: 'OPEN', todo: 'Dodać typ PSK w edytorze stolarki (wymiary skrzydeł, prowadnice).',
+      element: 'Drzwi przesuwne PSK — typ stolarki (wymiary i układ skrzydeł różne)', value: 1, unit: '-', rank: 5, source: 'Produkcja Dampol (2026-10-02/03)',
+      confidence: 'HIGH', status: 'OPEN', todo: 'Dodać typ PSK w edytorze stolarki z parametrami (szerokość, liczba skrzydeł).',
     }),
     pvcWindows: P({
       element: 'Okna PCV — pakiet dwuszybowy standard (bez ciepłej ramki), czasem trzyszybowy', value: 2, unit: '-', rank: 5,
@@ -242,9 +254,9 @@ export const PHYS = {
       source: 'Produkcja Dampol (2026-10-02); wyliczenie 2752 = 2 × 1000 + 752', confidence: 'VERIFIED', status: 'OK',
     }),
     topFrameCornerRaise: P({
-      element: 'Górna rama: podniesienie w narożnikach (silikon + wasserstop pod kątownikiem)', value: 0, rank: 5,
-      source: 'Produkcja Dampol (2026-10-02): rama leży na dachu, w rogach „troszkę wyżej” — narożnik wcześniej uszczelniany. Wartość nieznana — w modelu 0',
-      confidence: 'UNKNOWN', status: 'OPEN', todo: 'Grubość warstwy uszczelnienia w narożniku (mm).',
+      element: 'Górna rama: podniesienie w narożnikach (silikon + wasserstop pod kątownikiem), zakres 3–8 mm', value: 5, rank: 5,
+      source: 'Produkcja Dampol (2026-10-03): 3–8 mm „zależy jak ktoś położy”. W geometrii nie podnoszone (wartość zmienna, poniżej skali obrazu)',
+      confidence: 'HIGH', status: 'OK',
     }),
     cornerContact: P({
       element: 'Narożnik: blacha płyty skrajnej oparta o jedno ramię słupa, czoło (rdzeń/zamek) dotyka drugiego ramienia', value: 1, unit: '-', rank: 5,
@@ -296,14 +308,13 @@ export const PHYS = {
   },
   floor: {
     board: P({
-      element: 'Płyta podłogowa na PIR — MFP (nie OSB)', value: 12, rank: 5,
-      source: 'Produkcja Dampol (2026-10-02): płyta MFP; grubość 12 mm z konfiguratora (mfpThickness)', confidence: 'HIGH', status: 'OK',
-      todo: 'Potwierdzić grubość MFP (12 / 15 / 18 mm).',
+      element: 'Płyta podłogowa na PIR — MFP 12 mm (nie OSB)', value: 12, rank: 5,
+      source: 'Produkcja Dampol (2026-10-02/03): płyta MFP, grubość 12 mm', confidence: 'VERIFIED', status: 'OK',
     }),
     covering: P({
-      element: 'Wykładzina PVC — Tarkett, kolekcja Intero (produkcja Serbia), odcień „Aurora Activia Lator 3” (zapis z przekazu ustnego)', value: 1, unit: '-', rank: 5,
-      source: 'Produkcja Dampol (2026-10-02)', confidence: 'MEDIUM', status: 'OPEN',
-      todo: 'Dokładna nazwa/kod odcienia i zdjęcie próbki — kolor podłogi w renderze jest nadal przybliżony.',
+      element: 'Wykładzina PVC Tarkett Activia Latur 3 — deska brązowa, 2,0 mm, warstwa użytkowa 0,40 mm', value: 2, rank: 5,
+      source: 'Produkcja Dampol (2026-10-03): „Activia Latur 3”; parametry z opisów sklepów (Castorama, ewinyl, it-pol)', confidence: 'VERIFIED', status: 'OK',
+      todo: 'Kolor/tekstura w renderze przybliżone (strony z próbką zablokowane) — zdjęcie podłogi z realizacji pomoże.',
     }),
   },
   /** Powłoki i kolory wg produkcji Dampol (2026-10-02). */

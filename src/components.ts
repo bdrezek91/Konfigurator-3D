@@ -762,9 +762,10 @@ function pushFacadePiece(
   const p = wallPosition(side, center, y0 + height / 2, c)
   const isRibbed = kind === 'vertical-ribbed'
   const gallery03 = c.project === 'GALERIA/03'
-  // galeria-03: wartości dopasowane do nakładki zdjęcia 03; pozostałe: PHYS (grubość i odsunięcie — niepotwierdzone)
-  const thicknessMm = isRibbed ? 35 : gallery03 ? 22 : PHYS.cassette.thickness.value
-  const facadeOffset = gallery03 ? 0.073 : m(PHYS.cassette.offsetFromPanel)
+  // kaseton: podkonstrukcja 20 mm (produkcja) + taca (głębokość UNKNOWN); środek kasetonu od osi ściany
+  const thicknessMm = isRibbed ? 35 : PHYS.cassette.thickness.value
+  const wallHalf = PANEL_THICKNESS_M[c.wallPanel] / 2
+  const facadeOffset = wallHalf + m(PHYS.cassette.substructureGap) + thicknessMm / 2000
   list.push({
     id,
     positionNo: 0,
