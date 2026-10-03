@@ -7,8 +7,11 @@ import type {
   WallSide,
 } from './types'
 import { CONSTRUCTION_LABELS, PANEL_LABELS, PANEL_THICKNESS_M } from './types'
-import { m, PHYS, RAL_7016_HEX } from './physical/spec'
+import { m, PHYS, RAL_7016_HEX, RENDER } from './physical/spec'
 import { frameDims } from './construction/frame'
+import { buildSystem1 } from './construction/system1/build'
+import { finishForConfig } from './construction/geometry'
+import type { Part } from './construction/types'
 
 export type ComponentCategory =
   | 'floor-frame'
@@ -137,8 +140,8 @@ const PANEL_MASS_KG_M2: Record<PavilionConfig['wallPanel'], number> = {
 const ASSUMPTIONS: ComponentAssumption[] = [
   {
     code: 'A-WALL-MODULE',
-    description: 'Moduł roboczy płyty ściennej przyjęto 1000 mm. Do podmiany, jeżeli konkretny projekt/producent przewiduje inny moduł.',
-    source: 'assumption',
+    description: 'Moduł płyty ściennej 1000 mm — potwierdzony przez produkcję Dampol (6 płyt na froncie 6 × 3; ostatnia docinana, reszta ≤ 30 mm to tolerancja zamków).',
+    source: 'project',
   },
   {
     code: 'A-ROOF-MODULE',
@@ -172,12 +175,12 @@ const ASSUMPTIONS: ComponentAssumption[] = [
   },
   {
     code: 'A-CASSETTE-LAYOUT',
-    description: 'Kasetony poziome: fuga 15 mm, pas korpusu 240 mm, attyka 2 × 330 mm z modułem ≈ 1,1 m bez mijanki — pomiary zdjęć 03 i 11 (src/physical/spec.ts).',
+    description: 'Kasetony poziome: fuga 20 mm (produkcja), pas korpusu 240 mm, attyka 2 × 330 mm z modułem ≈ 1,1 m bez mijanki — pomiary zdjęć 03 i 11 (src/physical/spec.ts).',
     source: 'assumption',
   },
   {
     code: 'A-CASSETTE-SUBSTRUCTURE',
-    description: 'Podkonstrukcja kasetonów jest modelowana ilościowo pośrednio; jej przekroje, rozstaw szyn i sposób kotwienia wymagają danych produkcyjnych Dampol.',
+    description: 'Kasetony bez podkonstrukcji: przykręcane wkrętami przez obrzeże bezpośrednio do płyty warstwowej (produkcja Dampol 2026-10-03). Głębokość tacy (25 mm) nieznana — założenie.',
     source: 'assumption',
   },
   {
@@ -192,7 +195,7 @@ const ASSUMPTIONS: ComponentAssumption[] = [
   },
   {
     code: 'A-CROWN-FLASHING',
-    description: 'Korona attyki: cienka obróbka o rozwinięciu 80 mm. Brak szerokiego okapu, chyba że projekt jawnie go wymaga.',
+    description: 'Korona attyki: System 1 — profil wg szkiców produkcji (półtorówka 15 mm / na kwadraty 25 mm / płaska pod kaseton), rozwinięcie z przekroju modelu; pozostałe konstrukcje — cienka obróbka 80 mm.',
     source: 'assumption',
   },
   {
@@ -646,6 +649,144 @@ function addRoofPanels(list: ModelComponent[], c: PavilionConfig) {
 }
 
 
+/* ---------- System 1: elementy konstrukcji z modelu warstwowego (ta sama geometria co render i przekroje) ---------- */
+
+type Box3 = { min: Vec3; max: Vec3 }
+function partBox(parts: Part[]): Box3 {
+  const min: Vec3 = [Infinity, Infinity, Infinity]
+  const max: Vec3 = [-Infinity, -Infinity, -Infinity]
+  for (const p of parts) {
+    const g = p.geometry
+    for (const s of [0, g.length]) {
+      for (const [u, v] of g.section) {
+        for (let i = 0; i < 3; i++) {
+          const x = g.start[i] + g.axis[i] * s + g.u[i] * u + g.v[i] * v
+          min[i] = Math.min(min[i], x)
+          max[i] = Math.max(max[i], x)
+        }
+      }
+    }
+  }
+  return { min, max }
+}
+const boxCenter = (b: Box3): Vec3 => [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2]
+function polygonArea(s: Array<[number, number]>) {
+  let a = 0
+  for (let i = 0; i < s.length; i++) a += s[i][0] * s[(i + 1) % s.length][1] - s[(i + 1) % s.length][0] * s[i][1]
+  return Math.abs(a) / 2
+}
+function polygonPerimeter(s: Array<[number, number]>) {
+  let l = 0
+  for (let i = 0; i < s.length; i++) l += Math.hypot(s[(i + 1) % s.length][0] - s[i][0], s[(i + 1) % s.length][1] - s[i][1])
+  return l
+}
+/** Obrót belki technicznej (oś lokalna x) na kierunek osi elementu. */
+function beamRotation(axis: Vec3): Vec3 {
+  if (Math.abs(axis[0]) > 0.99) return [0, 0, 0]
+  if (Math.abs(axis[1]) > 0.99) return [0, 0, Math.PI / 2]
+  return [-Math.atan2(axis[1], axis[2]), -Math.PI / 2, 0]
+}
+
+function addSystem1Structure(list: ModelComponent[], c: PavilionConfig) {
+  const model = buildSystem1(c, finishForConfig(c), { decor: false })
+  const parts = model.parts
+  const fr = frameDims(c)
+  const { roofSlope } = envelope(c)
+
+  // stal: dolna rama, słupy, górna rama — długości z modelu
+  for (const p of parts.filter((x) => x.material === 'steel')) {
+    const category: ComponentCategory = p.id.startsWith('post-') ? 'corner-posts' : p.layer === 'topFrame' ? 'roof-beams' : 'floor-frame'
+    const stage = p.id.startsWith('post-') ? 2 : p.layer === 'topFrame' ? 8 : 1
+    pushBeam(list, c, p.id, p.name.replace(' — kątownik 50×50×4', ''), category, p.geometry.length, boxCenter(partBox([p])),
+      beamRotation(p.geometry.axis), p.explode, stage, 'project-estimate')
+  }
+
+  // podłoga: płyty PIR wzdłuż długości + płyta MFP 12 mm na wierzchu
+  const floorCores = parts.filter((x) => x.layer === 'floor' && x.material === 'pirCore')
+  floorCores.forEach((p, i) => {
+    const b = partBox([p])
+    const l = b.max[0] - b.min[0]
+    const w = b.max[2] - b.min[2]
+    const area = l * w
+    list.push({
+      id: 'floor-panel-' + i, positionNo: 0, namePL: 'Płyta podłogowa ' + (i + 1), category: 'floor-panels', primitive: 'panel',
+      material: PANEL_LABELS[c.floorPanel], color: '#596168',
+      dimensions: { lengthMm: Math.round(l * 1000), widthMm: Math.round(w * 1000), thicknessMm: Math.round(PANEL_THICKNESS_M[c.floorPanel] * 1000), netAreaM2: round(area) },
+      quantity: 1, massKg: round(area * PANEL_MASS_KG_M2[c.floorPanel], 2),
+      position: [boxCenter(b)[0], fr.t + PANEL_THICKNESS_M[c.floorPanel] / 2, boxCenter(b)[2]], rotation: [0, Math.PI / 2, 0],
+      explodeDirection: [0, -0.8, 0], assemblyStage: 3, sourceAccuracy: 'project-estimate', assumptionCodes: ['A-WALL-MODULE'],
+    })
+  })
+  const innerL = c.length - 2 * (fr.t + PANEL_THICKNESS_M[c.wallPanel])
+  const innerW = c.width - 2 * (fr.t + PANEL_THICKNESS_M[c.wallPanel])
+  list.push({
+    id: 'floor-board-mfp', positionNo: 0, namePL: 'Płyta MFP na podłodze', category: 'interior', primitive: 'interior',
+    material: 'Płyta MFP ' + PHYS.floor.board.value + ' mm', color: '#b8a17a',
+    dimensions: { lengthMm: Math.round(innerL * 1000), widthMm: Math.round(innerW * 1000), thicknessMm: PHYS.floor.board.value, netAreaM2: round(innerL * innerW) },
+    quantity: 1, position: [0, fr.t + PANEL_THICKNESS_M[c.floorPanel] + m(PHYS.floor.board) / 2, 0], rotation: [0, 0, 0],
+    explodeDirection: [0, -0.3, 0], assemblyStage: 11, sourceAccuracy: 'project-estimate',
+  })
+
+  // ściany: płyta = wszystkie pola (wycięcia pod otwory) jednej płyty modułowej
+  const wallGroups = new Map<string, Part[]>()
+  for (const p of parts.filter((x) => x.layer === 'walls' && x.material === 'pirCore')) {
+    const key = p.id.replace(/-\d+-core$/, '')
+    wallGroups.set(key, [...(wallGroups.get(key) ?? []), p])
+  }
+  for (const [key, group] of wallGroups) {
+    const side = key.split('-')[1] as WallSide
+    const idx = Number(key.split('-')[2])
+    const b = partBox(group)
+    // szerokość zamawiana: moduł; nadwyżka ≤ 30 mm na ostatniej płycie to tolerancja zamków (panelLayout), nie szersza płyta
+    const span = Math.max(...group.map((p) => Math.max(...p.geometry.section.map((q) => q[0])))) - Math.min(...group.map((p) => Math.min(...p.geometry.section.map((q) => q[0]))))
+    const width = Math.min(span, m(PHYS.panel.wallModule))
+    const height = Math.max(...group.map((p) => Math.max(...p.geometry.section.map((q) => q[1]))))
+    const net = group.reduce((sum, p) => sum + polygonArea(p.geometry.section), 0)
+    list.push({
+      id: 'wall-panel-' + side + '-' + idx, positionNo: 0, namePL: 'Płyta ścienna ' + side + ' ' + (idx + 1), category: 'wall-panels', primitive: 'panel',
+      material: PANEL_LABELS[c.wallPanel], color: c.exteriorColor, ral: c.exteriorColor,
+      dimensions: { lengthMm: Math.round(height * 1000), widthMm: Math.round(width * 1000), thicknessMm: Math.round(PANEL_THICKNESS_M[c.wallPanel] * 1000), netAreaM2: round(net) },
+      quantity: 1, massKg: round(net * PANEL_MASS_KG_M2[c.wallPanel], 2),
+      position: boxCenter(b), rotation: wallRotation(side), explodeDirection: wallNormal(side),
+      assemblyStage: side === 'back' ? 4 : side === 'front' ? 6 : 5, wall: side, sourceAccuracy: 'project-estimate', assumptionCodes: ['A-WALL-MODULE'],
+    })
+  }
+
+  // dach: płyty w poprzek, długość po skosie z modelu
+  parts.filter((x) => x.layer === 'roof' && x.material === 'pirCore').forEach((p, i) => {
+    const xs = p.geometry.section.map((q) => q[0])
+    const vs = p.geometry.section.map((q) => q[1])
+    const w = Math.max(...xs) - Math.min(...xs)
+    const l = Math.max(...vs) - Math.min(...vs)
+    list.push({
+      id: 'roof-panel-' + i, positionNo: 0, namePL: 'Płyta dachowa ' + (i + 1), category: 'roof-panels', primitive: 'roof-panel',
+      material: PANEL_LABELS[c.roofPanel], color: c.flashingColor,
+      dimensions: { lengthMm: Math.round(l * 1000), widthMm: Math.round(w * 1000), thicknessMm: Math.round(PANEL_THICKNESS_M[c.roofPanel] * 1000), netAreaM2: round(l * w) },
+      quantity: 1, massKg: round(l * w * PANEL_MASS_KG_M2[c.roofPanel], 2),
+      position: boxCenter(partBox([p])), rotation: [-roofSlope, 0, 0], explodeDirection: [0, 1, 0],
+      assemblyStage: 7, sourceAccuracy: 'exact', assumptionCodes: ['A-ROOF-MODULE'],
+    })
+  })
+
+  // obróbki obwodowe (korona, cokół, narożniki): rozwinięcie = długość linii gięcia z przekroju modelu
+  const sheetT = RENDER.flashingSheetRenderMm.value / 1000
+  for (const p of parts.filter((x) => x.layer === 'flashings')) {
+    const sec = p.geometry.section
+    const developed = Math.max(0.01, (polygonPerimeter(sec) - 2 * sheetT) / 2)
+    const side = (['front', 'back', 'left', 'right'] as WallSide[]).find((w) => p.id.endsWith('-' + w))
+    const uMin = Math.min(...sec.map((q) => q[0]))
+    const vMin = Math.min(...sec.map((q) => q[1]))
+    const isSideCrown = p.id.startsWith('flash-crown-') && (side === 'left' || side === 'right')
+    addFlashing(list, c, {
+      id: p.id.replace('flash-', 'fl-'), name: p.name, lengthM: p.geometry.length, developedWidthM: developed,
+      position: boxCenter(partBox([p])), rotation: side ? (isSideCrown ? [-roofSlope, wallRotation(side)[1], 0] : wallRotation(side)) : [0, 0, 0],
+      direction: p.explode, wall: side,
+      profile2Dmm: sec.map(([u, v]) => [Math.round((u - uMin) * 1000 * 10) / 10, Math.round((v - vMin) * 1000 * 10) / 10]),
+      assumptionCodes: [],
+    })
+  }
+}
+
 function facadeEnabled(side: WallSide, c: PavilionConfig) {
   return side === 'front' ? c.facadeFront :
     side === 'back' ? c.facadeBack :
@@ -1074,7 +1215,7 @@ function addFlashing(list: ModelComponent[], c: PavilionConfig, f: FlashingInput
   })
 }
 
-function addFlashings(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry) {
+function addFlashings(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry, perimeter = true) {
   const { floorT, outerFront, outerBack, roofDepth, roofSlope } = envelope(c)
   const hAvg = (outerFront + outerBack) / 2
   const crownProfile: Array<[number, number]> = [[0, 0], [18, 0], [18, 45], [35, 45], [35, 80], [0, 80]]
@@ -1087,10 +1228,10 @@ function addFlashings(list: ModelComponent[], c: PavilionConfig, g: ProjectGeome
   const z = c.width / 2
 
   // Zdjęcia referencyjne pokazują kasetony do samej góry i tylko cienką koronę attyki.
-  addFlashing(list, c, { id: 'fl-crown-front', name: 'Korona attyki front', lengthM: c.length, developedWidthM: 0.08, position: [0, outerFront, z + 0.025], direction: [0, 0.5, 1], wall: 'front', profile2Dmm: crownProfile, assumptionCodes: ['A-CROWN-FLASHING'] })
-  addFlashing(list, c, { id: 'fl-crown-back', name: 'Korona attyki tył', lengthM: c.length, developedWidthM: 0.08, position: [0, outerBack, -z - 0.025], rotation: [0, Math.PI, 0], direction: [0, 0.5, -1], wall: 'back', profile2Dmm: crownProfile, assumptionCodes: ['A-CROWN-FLASHING'] })
-  addFlashing(list, c, { id: 'fl-crown-left', name: 'Korona attyki bok lewy', lengthM: roofDepth, developedWidthM: 0.08, position: [-x - 0.025, hAvg, 0], rotation: [-roofSlope, -Math.PI / 2, 0], direction: [-1, 0.5, 0], wall: 'left', profile2Dmm: crownProfile, assumptionCodes: ['A-CROWN-FLASHING'] })
-  addFlashing(list, c, { id: 'fl-crown-right', name: 'Korona attyki bok prawy', lengthM: roofDepth, developedWidthM: 0.08, position: [x + 0.025, hAvg, 0], rotation: [-roofSlope, Math.PI / 2, 0], direction: [1, 0.5, 0], wall: 'right', profile2Dmm: crownProfile, assumptionCodes: ['A-CROWN-FLASHING'] })
+  if (perimeter) addFlashing(list, c, { id: 'fl-crown-front', name: 'Korona attyki front', lengthM: c.length, developedWidthM: 0.08, position: [0, outerFront, z + 0.025], direction: [0, 0.5, 1], wall: 'front', profile2Dmm: crownProfile, assumptionCodes: ['A-CROWN-FLASHING'] })
+  if (perimeter) addFlashing(list, c, { id: 'fl-crown-back', name: 'Korona attyki tył', lengthM: c.length, developedWidthM: 0.08, position: [0, outerBack, -z - 0.025], rotation: [0, Math.PI, 0], direction: [0, 0.5, -1], wall: 'back', profile2Dmm: crownProfile, assumptionCodes: ['A-CROWN-FLASHING'] })
+  if (perimeter) addFlashing(list, c, { id: 'fl-crown-left', name: 'Korona attyki bok lewy', lengthM: roofDepth, developedWidthM: 0.08, position: [-x - 0.025, hAvg, 0], rotation: [-roofSlope, -Math.PI / 2, 0], direction: [-1, 0.5, 0], wall: 'left', profile2Dmm: crownProfile, assumptionCodes: ['A-CROWN-FLASHING'] })
+  if (perimeter) addFlashing(list, c, { id: 'fl-crown-right', name: 'Korona attyki bok prawy', lengthM: roofDepth, developedWidthM: 0.08, position: [x + 0.025, hAvg, 0], rotation: [-roofSlope, Math.PI / 2, 0], direction: [1, 0.5, 0], wall: 'right', profile2Dmm: crownProfile, assumptionCodes: ['A-CROWN-FLASHING'] })
 
   // Szerokie opierzenie/okap występuje tylko wtedy, gdy projekt jawnie go wymaga.
   if (g.roofEdgeFlashing) {
@@ -1101,7 +1242,7 @@ function addFlashings(list: ModelComponent[], c: PavilionConfig, g: ProjectGeome
   }
 
   const baseY = Math.max(0.05, floorT / 2)
-  ;(['front', 'back', 'left', 'right'] as WallSide[]).forEach((side) => {
+  ;(perimeter ? ['front', 'back', 'left', 'right'] as WallSide[] : []).forEach((side) => {
     const span = wallSpan(side, c)
     addFlashing(list, c, {
       id: 'fl-base-' + side,
@@ -1237,6 +1378,9 @@ function addDecor(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry)
     const normal = wallNormal(d.wall)
     const p = wallPosition(d.wall, d.center, d.yCenter, c)
     const isWood = d.kind.includes('winchester') || d.kind.includes('palisander') || d.kind === 'board-natural'
+    // lamele 30 mm od ściany, kasetony na płycie (głębokość tacy) — produkcja Dampol 2026-10-03
+    const decorT = d.kind.startsWith('lamella') ? m(PHYS.lamella.depth) : m(PHYS.cassette.thickness)
+    const decorOff = PANEL_THICKNESS_M[c.wallPanel] / 2 + decorT / 2
     list.push({
       id: 'decor-' + d.id,
       positionNo: 0,
@@ -1248,11 +1392,11 @@ function addDecor(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry)
       dimensions: {
         lengthMm: Math.round(d.height * 1000),
         widthMm: Math.round(d.width * 1000),
-        thicknessMm: d.kind.startsWith('lamella') ? 52 : 50,
+        thicknessMm: decorT * 1000,
         netAreaM2: round(d.width * d.height),
       },
       quantity: 1,
-      position: [p[0] + normal[0] * 0.085, p[1], p[2] + normal[2] * 0.085],
+      position: [p[0] + normal[0] * decorOff, p[1], p[2] + normal[2] * decorOff],
       rotation: wallRotation(d.wall),
       explodeDirection: [normal[0] * 1.6, 0.1, normal[2] * 1.6],
       assemblyStage: 9,
@@ -1520,7 +1664,13 @@ function addInstallations(list: ModelComponent[], c: PavilionConfig) {
 }
 
 function addInterior(list: ModelComponent[], c: PavilionConfig) {
-  const floorArea = c.length * c.width
+  // System 1: wykładzina wewnątrz ścian (L − 2·t − 2·ściana) × (W − 2·t − 2·ściana); Tarkett Activia Latur 3, 2 mm
+  const fr = frameDims(c)
+  const inset = fr.system1 ? 2 * (fr.t + PANEL_THICKNESS_M[c.wallPanel]) : 0
+  const fl = c.length - inset
+  const fw = c.width - inset
+  const floorArea = fl * fw
+  const finishT = fr.system1 ? PHYS.floor.covering.value : 4
   list.push({
     id: 'finish-floor',
     positionNo: 0,
@@ -1529,9 +1679,9 @@ function addInterior(list: ModelComponent[], c: PavilionConfig) {
     primitive: 'interior',
     material: c.floorFinish === 'wood' ? 'Wykładzina/PVC drewnopodobne' : c.floorFinish,
     color: c.floorFinish === 'wood' ? '#80634b' : '#9a9995',
-    dimensions: { lengthMm: Math.round(c.length * 1000), widthMm: Math.round(c.width * 1000), thicknessMm: 4, netAreaM2: round(floorArea) },
+    dimensions: { lengthMm: Math.round(fl * 1000), widthMm: Math.round(fw * 1000), thicknessMm: finishT, netAreaM2: round(floorArea) },
     quantity: 1,
-    position: [0, PANEL_THICKNESS_M[c.floorPanel] + 0.004, 0],
+    position: [0, fr.t + PANEL_THICKNESS_M[c.floorPanel] + (fr.system1 ? m(PHYS.floor.board) : 0) + 0.004, 0],
     rotation: [0, 0, 0],
     explodeDirection: [0, -0.35, 0],
     assemblyStage: 12,
@@ -1550,15 +1700,21 @@ function assignPositionNumbers(components: ModelComponent[]) {
 export function buildComponentModel(c: PavilionConfig): ComponentModel {
   const components: ModelComponent[] = []
   const g = geometryOf(c)
+  const system1 = frameDims(c).system1
   addFoundationBlocks(components, c, g)
-  addFloorFrame(components, c)
-  addCornerPosts(components, c)
-  addRoofStructure(components, c)
-  addFloorPanels(components, c)
-  addWallPanels(components, c, g)
-  addRoofPanels(components, c)
+  if (system1) {
+    // System 1: stal, podłoga, ściany, dach i obróbki obwodowe liczone z modelu konstrukcji (ta sama geometria co render)
+    addSystem1Structure(components, c)
+  } else {
+    addFloorFrame(components, c)
+    addCornerPosts(components, c)
+    addRoofStructure(components, c)
+    addFloorPanels(components, c)
+    addWallPanels(components, c, g)
+    addRoofPanels(components, c)
+  }
   addFacadeCladding(components, c, g)
-  addFlashings(components, c, g)
+  addFlashings(components, c, g, !system1)
   addJoinery(components, c, g)
   addDecor(components, c, g)
   addSeals(components, c, g)

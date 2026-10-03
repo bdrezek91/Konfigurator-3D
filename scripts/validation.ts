@@ -52,12 +52,13 @@ ${derived.join('\n')}
 | klucz | stan | co rozstrzygnie |
 |---|---|---|
 | topFramePosition | HIGH — leży na dachu, dospawana do słupów wystających ~5 cm (produkcja 2026-10-02, WA0019) | — |
-| topFrameCornerRaise | UNKNOWN — w narożnikach rama wyżej o warstwę silikonu + wasserstopu; w modelu 0 | grubość uszczelnienia |
-| cornerAngleHeight | HIGH — słup = rama + podłoga + ściana + dach + ~50 mm (produkcja: „jakieś 5 cm” nad dach) | — |
+| topFrameCornerRaise | HIGH — 3–8 mm (silikon + wasserstop, „zależy jak ktoś położy”, produkcja 2026-10-03); w geometrii 0 (poniżej skali) | — |
+| cornerAngleHeight | HIGH — słup = rama + podłoga + ściana + dach + ~50 mm (produkcja: „jakieś 5 cm” nad dach; zdjęcie 12–15 cm = przed przycięciem, potwierdzone 2026-10-03) | — |
 | roofSupportDetail | MEDIUM — dach leży na ścianach, luz 6 mm/stronę z danych 2,94 m | przekrój/rysunek oparcia dachu |
 | sideWallCalculatedLength | HIGH — 2752 mm = W − 2·4 − 2·100, zgodne z produkcją 2740–2760 | — |
-| flashingOffset | UNKNOWN — „1,5 / 2,5” bez jednostki; przyjęto 15 mm (zdjęcie 11: daszek ≈ 15–20 mm) | rysunek gięcia obróbki |
-| squareFlashing („na kwadraty”) | UNKNOWN — brak przykładu na zdjęciach | zdjęcie/rysunek |
+| flashingOffset | HIGH — „1,5 / 2,5” to cm: półtorówka 15 mm, na kwadraty 25 mm (produkcja + szkice 2026-10-02) | — |
+| squareFlashing („na kwadraty”) | HIGH — szkic produkcji; brak zdjęcia gotowej realizacji; długość powrotu i kapinosu nieznana | zdjęcie/rysunek gięcia |
+| baseFlashing (cokół) | odsunięcie 15 mm HIGH (produkcja), skos 16° i kołnierz 16 mm MEDIUM (wyliczone ze zdjęcia, skala z lica 140 mm) | rysunek gięcia |
 | intermediateFloorSupports | UNKNOWN — opis wymienia tylko obwód | potwierdzenie produkcji |
 | wallModuleVsFrameLength | ROZSTRZYGNIĘTE — rama 6030 × 2960, 6 płyt × 1000 na froncie, ostatnia płyta docinana gdy się nie mieści; ściana boczna 3 płyty (2 × 1000 + 752) | — |
 | cornerContact | VERIFIED — blacha płyty skrajnej o ramię słupa, czoło (rdzeń/zamek) o drugie ramię | — |

@@ -523,7 +523,7 @@ function addFlashings(ctx: Ctx, f: FlashCtx, finishBySide: FinishBySide) {
 
 type CassCtx = { L: number; W: number; y0: number; yFloorTop: number; yTopF: number; yTopB: number; t: number; walls: WallDef[]; openings: OpeningPlacement[]; color: string }
 
-/** Kasetony poziome (pas korpusu 240, attyka 2 × 330, fuga 15) na licu odsuniętym od płyty — wariant B. */
+/** Kasetony poziome (pas korpusu 240, attyka 2 × 330, fuga 20) przykręcane przez obrzeże do płyty — lico = głębokość tacy. */
 function addCassettes(ctx: Ctx, k: CassCtx) {
   const gap = m(PHYS.cassette.gap)
   const th = m(PHYS.cassette.thickness)

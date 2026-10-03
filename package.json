@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "validation": "tsx scripts/validation.ts"
+    "validation": "tsx scripts/validation.ts",
+    "check:system1": "tsx scripts/check-system1.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",

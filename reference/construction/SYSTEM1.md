@@ -1,7 +1,7 @@
 # System 1 — konstrukcja z kątownika 50×50×4 mm
 
 Kod: `src/construction/system1/build.ts` (geometria w kolejności produkcji), `src/construction/types.ts` (warstwy, etapy),
-parametry: `src/physical/spec.ts → PHYS.system1`. Podgląd: `?lab=construction&preset=722-08-26&view=assembled|exploded|A…F&finish=bare|cassette&step=1…10`.
+parametry: `src/physical/spec.ts → PHYS.system1`. Podgląd: `?lab=construction&preset=722-08-26&view=assembled|exploded|A…G&finish=bare|squares|cassette&step=1…10`.
 
 Zasada: **PRODUKCJA → GEOMETRIA → WYMIAR ZEWNĘTRZNY**. Model buduje ramę, płyty i obróbki w kolejności montażu.
 Zewnętrzny obrys wynika z warstw. Nie jest wpisany ręcznie.
@@ -32,7 +32,7 @@ Na razie tylko System 1. `ConstructionSystemId` przewiduje `system_2` i `system_
 | 7 | dach | płyty w poprzek, oparte na ścianach. Długość = W − 2·4 − 2·luz (luz 6 mm wyliczony z danych produkcji 2,94 m), trapez wg katalogu | MEDIUM |
 | 8 | górna rama | kątownik na płycie dachowej (ramię pionowe na obrysie, poziome do środka), zespawany ze słupami | LOW |
 | 9 | obróbki | półtorówka 15 mm (goły PIR), na kwadraty 25 mm (deska/dekor), płaska techniczna (pod kaseton); cokół 140 mm, odsunięcie 15 mm, skos 16°, kołnierz 16 mm (owija narożnik), narożniki L 124 mm | HIGH / płaska LOW / skos cokołu MEDIUM |
-| 10 | elewacja | kasetony na odsunięciu 75 mm (UNKNOWN). Konstrukcja jest identyczna dla każdej elewacji | MEDIUM |
+| 10 | elewacja | kasetony przykręcane przez obrzeże do płyty (fuga 20 mm, produkcja); lico = głębokość tacy 25 mm (UNKNOWN). Konstrukcja jest identyczna dla każdej elewacji | MEDIUM |
 
 ## Wymiary wyliczone (rama 6030 × 2960 mm, PIR 100, preset 722/08/26)
 
@@ -68,6 +68,13 @@ Na razie tylko System 1. `ConstructionSystemId` przewiduje `system_2` i `system_
   - wewnątrz zawsze RAL 9010 gładka (styropian: linia);
   - płyty czarne: RAL 9005 mat, gładkie.
 
+## BOM
+
+Dla Systemu 1 zestawienie (`buildComponentModel` → BOM/CSV, tryb techniczny) liczone jest z tego samego modelu co render:
+stal (dolna rama, słupy, górna rama), płyty podłogowe wzdłuż długości, MFP 12 mm, płyty ścienne w module 1000 (szerokość zamawiana = moduł,
+ostatnia docinana), płyty dachowe po skosie, obróbki obwodowe z rozwinięciem z przekroju. Brak poprzeczek (niepotwierdzone przez produkcję).
+Spójność sprawdza `npm run check:system1`.
+
 ## Niewiadome
 
 Lista `topFramePosition`, `cornerAngleHeight`, `roofSupportDetail`, `flashingOffset`, „na kwadraty”, poprzeczki podłogi i rozstawy mocowań jest w [`../VALIDATION.md`](../VALIDATION.md).
@@ -77,5 +84,5 @@ Lista `topFramePosition`, `cornerAngleHeight`, `roofSupportDetail`, `flashingOff
 - `schemat-stal-krok2.jpg` — konstrukcja stalowa (dolna rama + słupy)
 - `exploded-montaz.jpg` — exploded w kolejności montażu 1–10
 - `exploded-krok3-mocowania.jpg` — rama, słupy i podłoga z mocowaniami
-- `przekroj-A.jpg` … `przekroj-F.jpg` — przekroje (kamera ortogonalna)
+- `przekroj-A.jpg` … `przekroj-F.jpg`, `przekroj-G-na-kwadraty.jpg` — przekroje (kamera ortogonalna)
 - `model-bez-elewacji.jpg`, `model-z-kasetonami.jpg`

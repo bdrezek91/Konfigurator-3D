@@ -422,7 +422,10 @@ export function DecorLocal({
       const isSquare = segment.kind === 'cassette-black' || segment.kind === 'cassette-square-graphite'
       const cellW = isSquare ? 0.66 : segment.kind === 'cassette-winchester' ? 0.72 : 0.70
       const cellH = isSquare ? 0.66 : Math.min(0.40, effectiveHeight - 0.02)
-      const gap = 0.009
+      // kasetony (produkcja Dampol): fuga 20 mm, przykręcane przez obrzeże do płyty — lico = głębokość tacy
+      const gap = m(PHYS.cassette.gap)
+      const tray = m(PHYS.cassette.thickness)
+      const zc = wallDepth / 2 + tray / 2
       const color =
         segment.kind === 'cassette-black' ? '#232629' :
         segment.kind === 'cassette-white' ? '#e7e6df' :
@@ -441,8 +444,8 @@ export function DecorLocal({
             out.push(
               <RoundedPiece
                 key={segment.id + '-c-' + x.toFixed(2) + '-' + y.toFixed(2)}
-                size={[Math.max(0.02, cw - gap), Math.max(0.02, ch - gap), 0.050]}
-                position={[x, y, z]}
+                size={[Math.max(0.02, cw - gap), Math.max(0.02, ch - gap), tray]}
+                position={[x, y, zc]}
                 color={color}
                 map={cassetteMap}
                 metalness={metalness}
