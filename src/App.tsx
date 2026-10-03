@@ -2,8 +2,9 @@ import { lazy, Suspense, useMemo, useState } from 'react'
 import { buildComponentModel, componentModelToCsv, geometryOf } from './components'
 import { buildBom, validateConfig } from './logic'
 import { PRESETS } from './presets'
+import { envelope } from './scene/geometry'
 import type { LightingMode, PavilionView } from './scene/Pavilion3D'
-import { CONSTRUCTION_LABELS, DEFAULT_CONFIG, PANEL_THICKNESS_M, type PavilionConfig } from './types'
+import { CONSTRUCTION_LABELS, DEFAULT_CONFIG, type PavilionConfig } from './types'
 import { ConfigPanel } from './ui/ConfigPanel'
 import { TABS, type TabId } from './ui/tabs'
 import { applyUpdate, CUSTOM_PROJECT, type Setter } from './ui/configState'
@@ -110,8 +111,8 @@ export default function App() {
     link.click()
   }
 
-  const floorT = PANEL_THICKNESS_M[config.floorPanel]
-  const roofT = PANEL_THICKNESS_M[config.roofPanel]
+  // wysokość zewnętrzna z konstrukcji (System 1: kątownik + podłoga + ściana + dach + górna rama) — ta sama co w panelu Wymiary
+  const outerH = envelope(config).outerFront
   const errors = validation.filter((v) => v.level === 'error').length
   const warnings = validation.filter((v) => v.level === 'warning').length
 
@@ -171,7 +172,7 @@ export default function App() {
             <div className="stage-caption">
               <strong>{preset ? preset.label.split('·')[0].trim() : config.project}</strong>
               <span>{config.length.toFixed(2)} × {config.width.toFixed(2)} m</span>
-              <span>H {(floorT + config.frontHeight + roofT).toFixed(2)} m</span>
+              <span>H {outerH.toFixed(3)} m</span>
             </div>
           )}
         </section>
