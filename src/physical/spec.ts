@@ -263,9 +263,9 @@ export const PHYS = {
       source: 'Produkcja Dampol (2026-10-02)', confidence: 'VERIFIED', status: 'OK',
     }),
     crownFlashingFace: P({
-      element: 'Obróbka korony A (goły PIR) — wysokość lica', value: 215, rank: 2,
-      source: 'Film WA0017 (gotowy): pas 200–220 mm; WA0019 (w produkcji): obróbka 180 mm + kątownik 55 mm',
-      confidence: 'MEDIUM', status: 'OK',
+      element: 'Pas korony (od góry kątownika do dołu obróbki) = widoczny kątownik 50 + obróbka ≈ 165', value: 215, rank: 2,
+      source: 'Film WA0017 (gotowy): pas 200–220 mm; WA0019: obróbka 180 mm + kątownik 55 mm. Produkcja (2026-10-03): kątownik ogólnie widoczny nad obróbką',
+      confidence: 'MEDIUM', status: 'CHANGED',
     }),
     flashingOffsetPoltorowka: P({
       element: 'Obróbka korony „półtorówka” (goły PIR) — odsunięcie lica od ściany', value: 15, rank: 5,

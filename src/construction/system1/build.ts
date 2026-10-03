@@ -114,7 +114,18 @@ type WallDef = {
   toU: (center: number) => number
 }
 
-export function buildSystem1(config: PavilionConfig, finish: FinishVariant): ConstructionModel {
+/** Wykończenie dla każdej ściany: ten sam pawilon może mieć np. kasetony na froncie i goły PIR na bokach. */
+export type FinishBySide = Record<WallSide, FinishVariant>
+
+export function buildSystem1(
+  config: PavilionConfig,
+  finishIn: FinishVariant | FinishBySide,
+  opts: { decor?: boolean } = {},
+): ConstructionModel {
+  const finishBySide: FinishBySide = typeof finishIn === 'string'
+    ? { front: finishIn, back: finishIn, left: finishIn, right: finishIn }
+    : finishIn
+  const finish: FinishVariant = finishBySide.front
   const ctx: Ctx = { parts: [] }
   const L = config.length
   const W = config.width
@@ -295,11 +306,11 @@ export function buildSystem1(config: PavilionConfig, finish: FinishVariant): Con
   angle(ctx, 'frame-top-right', 'Górna rama — kątownik prawy', 8, 'topFrame', [L / 2, yTopB, -W / 2], sideAxis, sideUp, [-1, 0, 0], sideLen, [0.3, 2.2, 0])
 
   // ---- 9. obróbki
-  addFlashings(ctx, { L, W, y0, yTopF, yTopB, a, t, tw, sideAxis, sideLen, sideUp, color: config.flashingColor || outer }, finish)
+  addFlashings(ctx, { L, W, y0, yTopF, yTopB, a, t, tw, sideAxis, sideLen, sideUp, color: config.flashingColor || outer }, finishBySide)
 
   // ---- 10. elewacja (tylko wariant pod kasetony) — osobna warstwa, nie zmienia konstrukcji
-  if (finish === 'cassette') addCassettes(ctx, { L, W, y0, yFloorTop, yTopF, yTopB, t, walls, openings: geo.openings, color: outer })
-  if (finish === 'squares') addBoards(ctx, { L, W, y0, yFloorTop, yTopF, yTopB, t, walls, openings: geo.openings, color: outer })
+  if (opts.decor !== false && finish === 'cassette') addCassettes(ctx, { L, W, y0, yFloorTop, yTopF, yTopB, t, walls, openings: geo.openings, color: outer })
+  if (opts.decor !== false && finish === 'squares') addBoards(ctx, { L, W, y0, yFloorTop, yTopF, yTopB, t, walls, openings: geo.openings, color: outer })
 
   // ---- wymiary wyliczone
   const derived: DerivedDimension[] = [
@@ -414,13 +425,15 @@ function thicken(path: Array<[number, number]>, th: number): Array<[number, numb
   return [...left, ...right.reverse()]
 }
 
-function addFlashings(ctx: Ctx, f: FlashCtx, finish: FinishVariant) {
+function flashingProfiles(f: FlashCtx, finish: FinishVariant) {
   const face = m(PHYS.system1.crownFlashingFace)
   const baseFace = m(PHYS.system1.baseFlashingFace)
   const o = 0.0012 // odsunięcie blachy od lica kątownika
   const uWall = -f.t + 0.0008 // lico ściany (4 mm za płaszczyzną kątownika)
   // układ przekroju: u — na zewnątrz od płaszczyzny kątownika, v — od góry górnej ramy; wierzch dachu przy krawędzi: v = −a
-  const cap: Array<[number, number]> = [[-0.09, -f.a + 0.003], [-0.065, 0.003]]
+  // górny kątownik zostaje widoczny nad obróbką (produkcja 2026-10-03, WA0019): obróbka zaczyna się pod nim, na wierzchu dachu,
+  // górna krawędź dosunięta do lica kątownika; lico liczone od góry kątownika: face − a pod kątownikiem
+  const cap: Array<[number, number]> = [[-0.0005, -f.a - 0.001]]
   let crown: Array<[number, number]>
   let label: string
   let conf: Confidence
@@ -428,31 +441,36 @@ function addFlashings(ctx: Ctx, f: FlashCtx, finish: FinishVariant) {
     // „półtorówka”: lico 15 mm od ściany, na dole załamanie do ściany i kołnierz przykręcany (szkic produkcji)
     const uF = uWall + m(PHYS.system1.flashingOffsetPoltorowka)
     const step = uF - uWall
-    crown = [...cap, [uF, 0.003], [uF, -face + step], [uWall, -face], [uWall, -face - 0.04]]
+    crown = [...cap, [uF, -f.a - 0.001], [uF, -face + step], [uWall, -face], [uWall, -face - 0.04]]
     label = 'Obróbka „półtorówka” 15 mm'
     conf = 'HIGH'
   } else if (finish === 'squares') {
     // „na kwadraty”: lico 25 mm od ściany, powrót poziomy do ściany, kapinos (szkic produkcji)
     const uF = uWall + m(PHYS.system1.flashingOffsetSquares)
-    crown = [...cap, [uF, 0.003], [uF, -face], [uWall + 0.006, -face], [uWall + 0.012, -face - 0.02]]
+    crown = [...cap, [uF, -f.a - 0.001], [uF, -face], [uWall + 0.006, -face], [uWall + 0.012, -face - 0.02]]
     label = 'Obróbka „na kwadraty” 25 mm'
     conf = 'HIGH'
   } else {
-    crown = [...cap, [o, 0.003], [o, -(f.a + 0.10)]]
+    crown = [...cap, [o, -f.a - 0.001], [o, -(f.a + 0.10)]]
     label = 'Obróbka płaska techniczna (pod kaseton)'
     conf = 'LOW'
   }
   const base: Array<[number, number]> = finish === 'cassette'
     ? [[o, 0], [o, baseFace], [-f.t - 0.002, baseFace + 0.004]]
     : [[o + 0.01, -0.012], [o, 0], [o, baseFace], [-f.t - 0.002, baseFace + 0.004]]
-  const crownSec = thicken(crown, FLASH_T)
-  const baseSec = thicken(base, FLASH_T)
-  const runs: Array<[string, Vec3, Vec3, Vec3, number, Vec3, number]> = [
+  return { crownSec: thicken(crown, FLASH_T), baseSec: thicken(base, FLASH_T), label, conf }
+}
+
+function addFlashings(ctx: Ctx, f: FlashCtx, finishBySide: FinishBySide) {
+  const o = 0.0012
+  const prof = (side: WallSide) => flashingProfiles(f, finishBySide[side])
+  const runs: Array<[WallSide, Vec3, Vec3, Vec3, number, Vec3, number]> = [
     // tag, start (na krawędzi zewn., poziom odniesienia), oś biegu, kierunek „na zewnątrz”, długość, w górę, y odniesienia
     ['front', [-f.L / 2, 0, f.W / 2], [1, 0, 0], [0, 0, 1], f.L, [0, 1, 0], f.yTopF],
     ['back', [f.L / 2, 0, -f.W / 2], [-1, 0, 0], [0, 0, -1], f.L, [0, 1, 0], f.yTopB],
   ]
   for (const [tag, st, axis, out, len, up, yTop] of runs) {
+    const { crownSec, baseSec, label, conf } = prof(tag)
     push(ctx, {
       id: 'flash-crown-' + tag, name: label + ' — korona ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
       explode: mul(out, 1.0), confidence: conf, geometry: { start: [st[0], yTop + f.a, st[2]], axis, u: out, v: up, length: len, section: crownSec },
@@ -468,6 +486,7 @@ function addFlashings(ctx: Ctx, f: FlashCtx, finish: FinishVariant) {
   const cornerSec = thicken([[-legF, o], [o, o], [o, -legS]], FLASH_T)
   for (const [tag, x, z] of [['FL', -1, 1], ['FR', 1, 1], ['BL', -1, -1], ['BR', 1, -1]] as const) {
     const top = (z > 0 ? f.yTopF : f.yTopB) + f.a
+    const { label } = prof(z > 0 ? 'front' : 'back')
     push(ctx, {
       id: 'flash-corner-' + tag, name: label + ' — narożnik ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
       explode: [x * 0.8, 0, z * 0.8], confidence: 'MEDIUM',
@@ -476,6 +495,7 @@ function addFlashings(ctx: Ctx, f: FlashCtx, finish: FinishVariant) {
   }
   // boki: korona po skosie dachu, cokół poziomo
   for (const [tag, x, out] of [['left', -f.L / 2, [-1, 0, 0]], ['right', f.L / 2, [1, 0, 0]]] as const) {
+    const { crownSec, baseSec, label, conf } = prof(tag)
     push(ctx, {
       id: 'flash-crown-' + tag, name: label + ' — korona ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
       explode: mul(out as Vec3, 1.0), confidence: conf,

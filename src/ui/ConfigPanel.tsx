@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
+import { envelope } from '../scene/geometry'
 import { DEFAULT_BAND_HEIGHT, DEFAULT_FACADE_GAP, DEFAULT_GRID_HEIGHT } from '../components'
 import {
   CONSTRUCTION_LABELS,
   PANEL_LABELS,
   PANEL_MANUFACTURER_LABELS,
-  PANEL_THICKNESS_M,
   RAL_COLORS,
   SURFACE_PROFILE_LABELS,
   type FacadeStyle,
@@ -44,10 +44,8 @@ export function ConfigPanel({
   setConfig: (next: PavilionConfig) => void
   techContent: ReactNode
 }) {
-  const floorT = PANEL_THICKNESS_M[config.floorPanel]
-  const roofT = PANEL_THICKNESS_M[config.roofPanel]
-  const outerFront = floorT + config.frontHeight + roofT
-  const outerBack = floorT + config.backHeight + roofT
+  // wysokość zewnętrzna z konstrukcji (System 1: kątownik + podłoga + ściana + dach + górna rama) — ta sama co w renderze
+  const { outerFront, outerBack } = envelope(config)
 
   const wallProfileOptions =
     config.panelManufacturer === 'paneltech'
@@ -86,7 +84,7 @@ export function ConfigPanel({
               <NumberField label="Tył" value={config.backHeight} min={2.3} max={3.3} step={0.01} unit="m" onChange={(v) => update('backHeight', v)} />
             </div>
             <dl className="spec-list">
-              <div><dt>Wysokość zewnętrzna</dt><dd>{outerFront.toFixed(2)} → {outerBack.toFixed(2)} m</dd></div>
+              <div><dt>Wysokość zewnętrzna (bez prześwitu)</dt><dd>{outerFront.toFixed(3)} → {outerBack.toFixed(3)} m</dd></div>
               <div><dt>Powierzchnia zabudowy</dt><dd>{(config.length * config.width).toFixed(2)} m²</dd></div>
               <div><dt>Spadek wewnętrzny</dt><dd>{Math.round(Math.abs(config.frontHeight - config.backHeight) * 1000)} mm</dd></div>
             </dl>

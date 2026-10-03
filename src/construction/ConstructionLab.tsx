@@ -2,15 +2,15 @@ import { Environment, Html, OrbitControls, OrthographicCamera, PerspectiveCamera
 import { Canvas, useThree } from '@react-three/fiber'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import {
-  ACESFilmicToneMapping, DoubleSide, ExtrudeGeometry, Material, Matrix4, MeshPhysicalMaterial, MeshStandardMaterial, Path, Plane, Shape,
-  SRGBColorSpace, Vector3,
+  ACESFilmicToneMapping, DoubleSide, Material, MeshPhysicalMaterial, MeshStandardMaterial, Plane, SRGBColorSpace, Vector3,
 } from 'three'
 import { geometryOf } from '../components'
 import { RENDER } from '../physical/spec'
 import { PRESETS } from '../presets'
 import { DEFAULT_CONFIG, type PavilionConfig } from '../types'
+import { buildRunGeometry, finishForConfig } from './geometry'
 import { buildSystem1 } from './system1/build'
-import { STAGES, type FinishVariant, type Layer, type Part, type RunGeometry, type Vec3 } from './types'
+import { STAGES, type FinishVariant, type Layer, type Part, type Vec3 } from './types'
 
 /**
  * Stanowisko konstrukcji SYSTEMU 1 (kątownik 50×50×4).
@@ -22,22 +22,6 @@ type ViewId = 'assembled' | 'exploded' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G'
 const LAYER_LABELS: Record<Layer, string> = {
   steel: 'Konstrukcja stalowa', floor: 'Podłoga', walls: 'Ściany + stolarka', roof: 'Dach', topFrame: 'Górna rama',
   flashings: 'Obróbki', decor: 'Elewacja', fasteners: 'Mocowania',
-}
-
-function buildGeometry(g: RunGeometry) {
-  const u = new Vector3(...g.u)
-  let v = new Vector3(...g.v)
-  const w = new Vector3(...g.axis)
-  // prawoskrętna baza: jeśli u × v ma zwrot przeciwny do osi, odbijamy v (i współrzędną v przekroju)
-  const flip = new Vector3().crossVectors(u, v).dot(w) < 0
-  if (flip) v = v.clone().negate()
-  const sv = (p: [number, number]) => (flip ? -p[1] : p[1])
-  const shape = new Shape(g.section.map((p) => ({ x: p[0], y: sv(p) }) as never))
-  for (const hole of g.holes ?? []) shape.holes.push(new Path(hole.map((p) => ({ x: p[0], y: sv(p) }) as never)))
-  const geo = new ExtrudeGeometry(shape, { depth: g.length, bevelEnabled: false, steps: 1 })
-  const m = new Matrix4().makeBasis(u, v, w).setPosition(...g.start)
-  geo.applyMatrix4(m)
-  return geo
 }
 
 const materialCache = new Map<string, Material>()
@@ -59,7 +43,7 @@ function materialFor(p: Part) {
 }
 
 function PartMesh({ part, explode }: { part: Part; explode: number }) {
-  const geo = useMemo(() => buildGeometry(part.geometry), [part.geometry])
+  const geo = useMemo(() => buildRunGeometry(part.geometry), [part.geometry])
   useEffect(() => () => geo.dispose(), [geo])
   const off = part.explode.map((x) => x * explode) as Vec3
   return <mesh geometry={geo} material={materialFor(part)} position={off} castShadow receiveShadow />
@@ -140,7 +124,7 @@ function sections(config: PavilionConfig, lv: Record<string, number>): Record<'A
       title: 'E — obróbka „półtorówka” 15 mm (goły PIR)', finish: 'bare', plane: cutX,
       camera: { position: [xs - 1.4, lv.yTopF - 0.08, zf - 0.08], target: [xs, lv.yTopF - 0.08, zf - 0.08], fov: 18, viewHeight: 0.45 },
       labels: [
-        { at: [xs, lv.yTopF + 0.055, zf + 0.012], text: 'Półtorówka: kapa na górnej ramie i dachu, lico 15 mm od ściany' },
+        { at: [xs, lv.yTopF + 0.055, zf + 0.012], text: 'Górny kątownik widoczny; pod nim półtorówka — lico 15 mm od ściany' },
         { at: [xs, lv.yTopF + 0.05 - 0.215, zf - 0.002], text: 'Załamanie do ściany + kołnierz przykręcany' },
       ],
     },
@@ -148,7 +132,7 @@ function sections(config: PavilionConfig, lv: Record<string, number>): Record<'A
       title: 'G — obróbka „na kwadraty” 25 mm + deska', finish: 'squares', plane: cutX,
       camera: { position: [xs - 1.4, lv.yTopF - 0.08, zf - 0.06], target: [xs, lv.yTopF - 0.08, zf - 0.06], fov: 18, viewHeight: 0.45 },
       labels: [
-        { at: [xs, lv.yTopF + 0.055, zf + 0.022], text: 'Na kwadraty: lico 25 mm od ściany' },
+        { at: [xs, lv.yTopF + 0.055, zf + 0.022], text: 'Górny kątownik widoczny; pod nim „na kwadraty” — lico 25 mm od ściany' },
         { at: [xs, lv.yTopF + 0.05 - 0.215, zf + 0.006], text: 'Powrót poziomy do ściany + kapinos' },
         { at: [xs, lv.yTopF - 0.25, zf + 0.012], text: 'Deska — lico w płaszczyźnie obróbki (grubość LOW)' },
       ],
@@ -190,11 +174,19 @@ function CameraSet({ cam }: { cam: SectionDef['camera'] | null }) {
 export default function ConstructionLab() {
   const q = new URLSearchParams(window.location.search)
   const [config] = useState<PavilionConfig>(() => {
+    if (q.get('from') === 'app') {
+      try {
+        const raw = window.sessionStorage.getItem('dampol3d.construction.config')
+        if (raw) return JSON.parse(raw) as PavilionConfig
+      } catch {
+        // brak dostępu — preset z adresu
+      }
+    }
     const preset = PRESETS.find((p) => p.id === (q.get('preset') ?? '722-08-26'))
     return preset ? { ...preset.config } : { ...DEFAULT_CONFIG }
   })
   const [view, setView] = useState<ViewId>((q.get('view') as ViewId) ?? 'assembled')
-  const [finish, setFinish] = useState<FinishVariant>((['bare', 'squares', 'cassette'] as const).find((f) => f === q.get('finish')) ?? 'bare')
+  const [finish, setFinish] = useState<FinishVariant>(() => (['bare', 'squares', 'cassette'] as const).find((f) => f === q.get('finish')) ?? finishForConfig(config).front)
   const [step, setStep] = useState(Number(q.get('step') ?? 10))
   const [hidden, setHidden] = useState<Set<Layer>>(new Set(q.get('hide')?.split(',') as Layer[] | undefined))
 

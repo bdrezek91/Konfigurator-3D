@@ -8,6 +8,7 @@ import type {
 } from './types'
 import { CONSTRUCTION_LABELS, PANEL_LABELS, PANEL_THICKNESS_M } from './types'
 import { m, PHYS, RAL_7016_HEX } from './physical/spec'
+import { frameDims } from './construction/frame'
 
 export type ComponentCategory =
   | 'floor-frame'
@@ -217,10 +218,11 @@ function round(n: number, digits = 4) {
 }
 
 function envelope(c: PavilionConfig) {
-  const floorT = PANEL_THICKNESS_M[c.floorPanel]
+  const fr = frameDims(c)
+  const floorT = fr.t + PANEL_THICKNESS_M[c.floorPanel]
   const roofT = PANEL_THICKNESS_M[c.roofPanel]
-  const outerFront = floorT + c.frontHeight + roofT
-  const outerBack = floorT + c.backHeight + roofT
+  const outerFront = floorT + c.frontHeight + roofT + fr.topFrame
+  const outerBack = floorT + c.backHeight + roofT + fr.topFrame
   const roofDepth = Math.hypot(c.width, outerFront - outerBack)
   const roofSlope = Math.atan2(outerFront - outerBack, c.width)
   return { floorT, roofT, outerFront, outerBack, roofDepth, roofSlope }
@@ -389,11 +391,12 @@ function wallRotation(side: WallSide): Vec3 {
 }
 
 function wallPosition(side: WallSide, localCenter: number, y: number, c: PavilionConfig): Vec3 {
-  if (side === 'front') return [localCenter, y, c.width / 2]
-  if (side === 'back') return [-localCenter, y, -c.width / 2]
+  const i = frameDims(c).wallCenterInset
+  if (side === 'front') return [localCenter, y, c.width / 2 - i]
+  if (side === 'back') return [-localCenter, y, -c.width / 2 + i]
   // zgodnie z wallTransform renderu (scene/geometry.ts): lewa — lokalne +x → świat +z, prawa — lokalne +x → świat −z
-  if (side === 'left') return [-c.length / 2, y, localCenter]
-  return [c.length / 2, y, -localCenter]
+  if (side === 'left') return [-c.length / 2 + i, y, localCenter]
+  return [c.length / 2 - i, y, -localCenter]
 }
 
 function openingSill(o: OpeningPlacement) {
@@ -543,7 +546,7 @@ function addFloorPanels(list: ModelComponent[], c: PavilionConfig) {
       primitive: 'panel',
       material: PANEL_LABELS[c.floorPanel],
       color: '#596168',
-      dimensions: { lengthMm: Math.round(c.width * 1000), widthMm: Math.round(w * 1000), thicknessMm: Math.round(floorT * 1000), netAreaM2: round(area) },
+      dimensions: { lengthMm: Math.round(c.width * 1000), widthMm: Math.round(w * 1000), thicknessMm: Math.round(PANEL_THICKNESS_M[c.floorPanel] * 1000), netAreaM2: round(area) },
       quantity: 1,
       massKg: round(area * PANEL_MASS_KG_M2[c.floorPanel], 2),
       position: [(x0 + x1) / 2, floorT / 2, 0],
@@ -940,6 +943,10 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
 
   if (c.project === 'GALERIA/03') return
 
+  // narożnik kasetonu L leży na licach ścian (tył tacy na płycie)
+  const faceInset = frameDims(c).wallFaceInset
+  const cx = c.length / 2 - faceInset
+  const cz = c.width / 2 - faceInset
   const corners: Array<{
     id: string
     x: number
@@ -947,10 +954,10 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
     sides: [WallSide, WallSide]
     direction: Vec3
   }> = [
-    { id: 'fl', x: -c.length / 2, z: c.width / 2, sides: ['front', 'left'], direction: [-1, 0, 1] },
-    { id: 'fr', x: c.length / 2, z: c.width / 2, sides: ['front', 'right'], direction: [1, 0, 1] },
-    { id: 'bl', x: -c.length / 2, z: -c.width / 2, sides: ['back', 'left'], direction: [-1, 0, -1] },
-    { id: 'br', x: c.length / 2, z: -c.width / 2, sides: ['back', 'right'], direction: [1, 0, -1] },
+    { id: 'fl', x: -cx, z: cz, sides: ['front', 'left'], direction: [-1, 0, 1] },
+    { id: 'fr', x: cx, z: cz, sides: ['front', 'right'], direction: [1, 0, 1] },
+    { id: 'bl', x: -cx, z: -cz, sides: ['back', 'left'], direction: [-1, 0, -1] },
+    { id: 'br', x: cx, z: -cz, sides: ['back', 'right'], direction: [1, 0, -1] },
   ]
 
   for (const corner of corners) {

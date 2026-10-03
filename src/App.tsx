@@ -83,6 +83,17 @@ export default function App() {
     setView('perspective')
   }
 
+  // widok konstrukcji Systemu 1 dla bieżącej konfiguracji (przekazanej przez sessionStorage)
+  const openConstruction = () => {
+    try {
+      window.sessionStorage.setItem('dampol3d.construction.config', JSON.stringify(config))
+    } catch {
+      // brak sessionStorage — widok konstrukcji użyje presetu z adresu
+    }
+    const presetId = PRESETS.find((p) => p.config.project === config.project)?.id
+    window.open('?lab=construction&from=app' + (presetId ? '&preset=' + presetId : ''), '_blank')
+  }
+
   const slug = config.project.replaceAll('/', '-')
   const exportJson = () => download(
     new Blob([JSON.stringify({ version: 8, generatedAt: new Date().toISOString(), config, validation, bom, componentModel: model }, null, 2)], { type: 'application/json' }),
@@ -136,6 +147,11 @@ export default function App() {
         </div>
 
         <div className="topbar-actions">
+          {config.construction === 'angle50' && (
+            <button type="button" className="btn ghost" onClick={openConstruction} title="Konstrukcja z kątownika 50×50×4: przekroje A–G, montaż krok po kroku, wymiary wyliczone">
+              <Icon.layers /> Konstrukcja
+            </button>
+          )}
           <button type="button" className="btn ghost" onClick={exportPng} title="Zrzut widoku"><Icon.camera /> PNG</button>
           <button type="button" className="btn ghost" onClick={exportCsv} title="Zestawienie materiałów"><Icon.download /> BOM</button>
           <button type="button" className="btn" onClick={exportJson}><Icon.download /> Zapisz konfigurację</button>

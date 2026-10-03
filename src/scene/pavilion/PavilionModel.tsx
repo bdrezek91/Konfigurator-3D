@@ -10,6 +10,9 @@ import { flatNormalMap, profileNormalMap, ROOF_TRAPEZOIDS, surfaceProfileDef, ty
 import { OpeningFrame } from '../openings/OpeningFrame'
 import { useLighting } from '../environment/lighting'
 import { type ReactNode } from 'react'
+import { frameDims } from '../../construction/frame'
+import { System1Body } from '../../construction/render'
+import { m, PHYS } from '../../physical/spec'
 import { Shape } from 'three'
 
 export type Props = { config: PavilionConfig; view?: PavilionView; hq?: boolean }
@@ -36,12 +39,14 @@ export function Wall({
   const depth = PANEL_THICKNESS_M[config.wallPanel]
   const shape = makeWallShape(side, config, transform.span, openings)
   const hasCladding = facadeKind !== 'none'
+  // System 1: płyty, rama i obróbki rysuje model produkcyjny (System1Body); tu tylko stolarka, elewacja i oświetlenie
+  const system1 = frameDims(config).system1
   // przetłoczenie okładziny płyty: normal mapa z fizycznego profilu [mm] (pitch/głębokość producenta)
   const profileDef = hasCladding ? null : surfaceProfileDef(config.panelManufacturer, config.wallProfile)
 
   return (
     <group position={transform.position} rotation={transform.rotation}>
-      <mesh position={[0, 0, -depth / 2]} castShadow receiveShadow>
+      {!system1 && <mesh position={[0, 0, -depth / 2]} castShadow receiveShadow>
         <extrudeGeometry args={[shape, { depth, bevelEnabled: false, steps: 1 }]} />
         <meshStandardMaterial
           color={hasCladding ? (config.project === 'GALERIA/03' ? '#070a0d' : '#202528') : renderMetalColor(config.exteriorColor)}
@@ -52,9 +57,9 @@ export function Wall({
           transparent={opacity < 1}
           opacity={opacity}
         />
-      </mesh>
+      </mesh>}
 
-      {!hasCladding && (
+      {!hasCladding && !system1 && (
         <PanelProfileLocal
           side={side}
           span={transform.span}
@@ -64,7 +69,7 @@ export function Wall({
         />
       )}
 
-      {!hasCladding && <DampolFrameLocal side={side} span={transform.span} config={config} wallDepth={depth} />}
+      {!hasCladding && !system1 && <DampolFrameLocal side={side} span={transform.span} config={config} wallDepth={depth} />}
 
       <DecorLocal
         decor={decor}
@@ -389,19 +394,22 @@ export function ProjectPavilion({ config }: Props) {
   const geometry = config.geometry ?? fallbackGeometry(config)
   const transparent = config.showInterior || config.showStructure
   const opacity = transparent ? 0.20 : 1
-  const foundationGap = geometry.foundationGap ?? 0.12
+  const foundationGap = geometry.foundationGap ?? m(PHYS.base.groundGap)
+  const system1 = frameDims(config).system1
 
   return (
     <group>
       <FoundationSupports config={config} geometry={geometry} />
+      {/* System 1 (kątownik 50×50×4): bryła z modelu produkcyjnego — współrzędne zawierają już prześwit */}
+      {system1 && <System1Body config={config} opacity={opacity} />}
       <group position={[0, foundationGap, 0]}>
-        <FloorSystem config={config} />
+        {!system1 && <FloorSystem config={config} />}
         <Wall side="front" config={config} geometry={geometry} opacity={opacity} />
         <Wall side="back" config={config} geometry={geometry} opacity={opacity} />
         <Wall side="left" config={config} geometry={geometry} opacity={opacity} />
         <Wall side="right" config={config} geometry={geometry} opacity={opacity} />
         <FacadeCladdingFromModel config={config} />
-        {config.project !== 'GALERIA/03' && <RoofSystem config={config} />}
+        {!system1 && config.project !== 'GALERIA/03' && <RoofSystem config={config} />}
         {config.showStructure && <Structure config={config} />}
         <Interior config={config} />
         <ExteriorHVAC config={config} />

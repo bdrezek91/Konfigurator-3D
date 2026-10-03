@@ -1,12 +1,15 @@
 import { fallbackGeometry as componentFallbackGeometry } from '../components'
 import { PANEL_THICKNESS_M, type OpeningPlacement, type PavilionConfig, type ProjectGeometry, type WallSide } from '../types'
 import { Path, Shape } from 'three'
+import { frameDims } from '../construction/frame'
 
 export function envelope(config: PavilionConfig) {
-  const floorT = PANEL_THICKNESS_M[config.floorPanel]
+  const fr = frameDims(config)
+  // floorT = poziom wierzchu podłogi nad spodem ramy (System 1: kątownik + płyta), roofT = grubość płyty dachowej
+  const floorT = fr.t + PANEL_THICKNESS_M[config.floorPanel]
   const roofT = PANEL_THICKNESS_M[config.roofPanel]
-  const outerFront = floorT + config.frontHeight + roofT
-  const outerBack = floorT + config.backHeight + roofT
+  const outerFront = floorT + config.frontHeight + roofT + fr.topFrame
+  const outerBack = floorT + config.backHeight + roofT + fr.topFrame
   const slope = Math.atan2(outerFront - outerBack, config.width)
   const roofDepth = Math.hypot(config.width, outerFront - outerBack)
   return { floorT, roofT, outerFront, outerBack, slope, roofDepth }
@@ -17,10 +20,12 @@ export function wallTransform(side: WallSide, config: PavilionConfig): {
   position: [number, number, number]
   rotation: [number, number, number]
 } {
-  if (side === 'front') return { span: config.length, position: [0, 0, config.width / 2], rotation: [0, 0, 0] }
-  if (side === 'back') return { span: config.length, position: [0, 0, -config.width / 2], rotation: [0, Math.PI, 0] }
-  if (side === 'left') return { span: config.width, position: [-config.length / 2, 0, 0], rotation: [0, -Math.PI / 2, 0] }
-  return { span: config.width, position: [config.length / 2, 0, 0], rotation: [0, Math.PI / 2, 0] }
+  // oś ściany: System 1 — za obrysem ramy o grubość kątownika + pół grubości płyty (frameDims)
+  const i = frameDims(config).wallCenterInset
+  if (side === 'front') return { span: config.length, position: [0, 0, config.width / 2 - i], rotation: [0, 0, 0] }
+  if (side === 'back') return { span: config.length, position: [0, 0, -config.width / 2 + i], rotation: [0, Math.PI, 0] }
+  if (side === 'left') return { span: config.width, position: [-config.length / 2 + i, 0, 0], rotation: [0, -Math.PI / 2, 0] }
+  return { span: config.width, position: [config.length / 2 - i, 0, 0], rotation: [0, Math.PI / 2, 0] }
 }
 
 export function wallTopHeights(side: WallSide, config: PavilionConfig): [number, number] {
