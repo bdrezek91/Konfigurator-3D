@@ -64,9 +64,10 @@ export const PHYS = {
   },
   cassette: {
     gap: P({
-      element: 'Fuga między kasetonami', value: 15, rank: 3,
-      source: 'Zdjęcie 11 (rektyfikacja, 5 mm/px): 15 mm; zdjęcie 03: 12–18 mm',
-      confidence: 'VERIFIED', status: 'OK',
+      element: 'Fuga między kasetonami (w fudze widać wygiętą blachę obrzeża z wkrętami)', value: 20, rank: 5,
+      source: 'Produkcja Dampol (2026-10-03): szczeliny 20 mm między kasetonami. Zdjęcia 11/03: ciemny pas 12–18 mm',
+      confidence: 'VERIFIED', status: 'CHANGED', previous: 15,
+      conflict: 'Zdjęcie mierzy cień, nie prześwit — jasne obrzeże w fudze zwęża ciemny pas; 20 mm mieści się w błędzie pomiaru (±5 mm/px). Przyjęto 20 mm.',
     }),
     bodyBandHeight: P({
       element: 'Wysokość pasa kasetonu poziomego (korpus)', value: 240, rank: 3,
@@ -90,17 +91,17 @@ export const PHYS = {
       element: 'Kaseton — blacha stalowa powlekana 0,5 mm, RAL 7016 mat', value: 0.5, rank: 5,
       source: 'Produkcja Dampol (2026-10-03)', confidence: 'VERIFIED', status: 'OK',
     }),
-    substructureGap: P({
-      element: 'Kaseton — odsunięcie od lica płyty (podkonstrukcja, szczelina za kasetonem)', value: 20, rank: 5,
-      source: 'Produkcja Dampol (2026-10-03): „odsunięcie od lica 20 mm”', confidence: 'VERIFIED', status: 'CHANGED',
+    mounting: P({
+      element: 'Kaseton — mocowanie: wkręty przez obrzeże bezpośrednio do płyty warstwowej (bez podkonstrukcji)', value: 0, unit: '-', rank: 5,
+      source: 'Produkcja Dampol (2026-10-03)', confidence: 'VERIFIED', status: 'CHANGED',
     }),
     thickness: P({
       element: 'Kaseton — głębokość tacy (zagięcie krawędzi)', value: 25, rank: 8, source: 'Założenie — nie podana przez produkcję, niewidoczna na zdjęciach frontalnych',
       confidence: 'UNKNOWN', status: 'OPEN', previous: 30, todo: 'Wymiar zagięcia kasetonu (mm).',
     }),
     offsetFromPanel: P({
-      element: 'Kaseton — lico od lica płyty (wyliczone: podkonstrukcja 20 + taca 25)', value: 45, rank: 5,
-      source: 'Wyliczone: substructureGap (produkcja) + thickness (założenie)', confidence: 'MEDIUM', status: 'CHANGED', previous: 75,
+      element: 'Kaseton — lico od lica płyty (= głębokość tacy; kaseton leży na płycie)', value: 25, rank: 5,
+      source: 'Wyliczone: mocowanie bezpośrednio do płyty (produkcja) + głębokość tacy (założenie)', confidence: 'LOW', status: 'CHANGED', previous: 75,
     }),
     cornerWrap: P({
       element: 'Zawinięcie kasetonu narożnego L (na każdą ścianę)', value: 150, rank: 8, source: 'Założenie; zdjęcia 19–21 pokazują zawinięcie bez listwy',
@@ -120,9 +121,8 @@ export const PHYS = {
       confidence: 'MEDIUM', status: 'CHANGED', previous: 40,
     }),
     depth: P({
-      element: 'Lamela — blacha 0,4 mm winchester gięta w U, 30 mm; profile U wsadzane jeden w drugi na zakładkę', value: 30, rank: 5,
-      source: 'Produkcja Dampol (2026-10-03): „jeden lamel ma 30 mm”, wyginane w U, wsadzane na zakładkę', confidence: 'HIGH', status: 'CHANGED', previous: 52,
-      todo: 'Czy 30 mm to głębokość U, czy szerokość czoła? Rozstaw 82 mm i czoło ≈ 45 mm z pomiaru zdjęć.',
+      element: 'Lamela — od czoła do ściany 30 mm; na przemian profil „kapelusz” _|‾|_ (czoło) i U (dno na ścianie = rowek), na zakładkę', value: 30, rank: 5,
+      source: 'Produkcja Dampol (2026-10-03)', confidence: 'VERIFIED', status: 'CHANGED', previous: 52,
     }),
     sheet: P({
       element: 'Lamela — blacha 0,4 mm z nadrukiem winchester', value: 0.4, rank: 5, source: 'Produkcja Dampol (2026-10-03)', confidence: 'VERIFIED', status: 'OK',
@@ -351,6 +351,7 @@ export const RENDER = {
   metalMetalness: { value: 0.38, note: 'Powłoka organiczna na stali — strojenie wizualne' },
   glassMetalness: { value: 0.82, note: 'Przybliżenie szkła niskoemisyjnego (odbicie) zgodne w rasteryzacji i path tracerze' },
   cassetteBevelMm: { value: 3, note: 'Zaokrąglenie krawędzi kasetonu w renderze' },
+  lamellaGrooveShade: { value: 0.35, note: 'Dno rowka lameli (U, 30 mm w głąb, ≈ 37 mm szer.): przyciemnienie koloru zamiast niedostępnego w czasie rzeczywistym zacienienia (zdjęcie 03: rowek ≈ 0,2 jasności czoła)' },
   panelSemiMattRoughness: { value: 0.4, note: 'Płyta 7016 półmat (lekki połysk) — strojenie wizualne powłoki 25 µm' },
   flashingMattRoughness: { value: 0.72, note: 'Obróbki 7016M faktura mat — wyższa chropowatość' },
   flashingMattMetalness: { value: 0.22, note: 'Obróbki 7016M — mniej metaliczny połysk niż płyta' },

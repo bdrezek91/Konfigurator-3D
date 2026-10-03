@@ -180,7 +180,7 @@ export type PavilionConfig = {
   attic: boolean
   /** Wysokość pasa kasetonu poziomego / wysokość modułu siatki [m]. Domyślnie 0,30 (poziome) / 0,65 (siatka). */
   facadeBandHeight?: number
-  /** Szerokość fugi między kasetonami [m]. Domyślnie 0,015. */
+  /** Szerokość fugi między kasetonami [m]. Domyślnie 0,020 (produkcja Dampol). */
   facadeGap?: number
   showStructure: boolean
   showInterior: boolean

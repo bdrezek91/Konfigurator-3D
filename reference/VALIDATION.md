@@ -5,7 +5,7 @@
 Hierarchia źródeł: 1 zdjęcie gotowego pawilonu · 2 film · 3 pomiar zdjęcia ze skalą · 4 katalog · 5 produkcja · 6 rysunek · 7 szkic · 8 założenie.
 Przy sprzeczności wygrywa źródło wyżej; sprzeczność opisana w kolumnie „problem”.
 
-Pewność: VERIFIED 21 · HIGH 17 · MEDIUM 15 · LOW 5 · UNKNOWN 4
+Pewność: VERIFIED 22 · HIGH 16 · MEDIUM 14 · LOW 6 · UNKNOWN 4
 
 ## Wartości fizyczne
 
@@ -15,18 +15,18 @@ Pewność: VERIFIED 21 · HIGH 17 · MEDIUM 15 · LOW 5 · UNKNOWN 4
 | `panel.wallModule` Moduł płyty ściennej (rozstaw styków) | 1000 mm | produkcja: Produkcja Dampol (2026-10-02): płyty w module metrowym, ściana przednia 6 × 3 = 6 płyt; filmy WA0017/18/19: styki ≈ 1,0 m | **VERIFIED** | Katalog Paneltech PW PIR-S: standard 1130 mm (opcjonalnie 1000 / 1050) — Dampol zamawia 1000. | — | OK |
 | `panel.roofModule` Moduł płyty dachowej | 1050 mm | produkcja: Standard zakupowy konfiguratora (dotychczasowe zakupy) | **MEDIUM** | Niewidoczny na zdjęciach (attyka) — potwierdzić zamówieniem. | — | OK |
 | `panel.jointWidth` Widoczny styk płyt (zamek) | 10 mm | film: Film WA0017/WA0019: cienka ciemna linia | **LOW** | Zmierzyć szczelinę zamka z bliska. | — | OK |
-| `cassette.gap` Fuga między kasetonami | 15 mm | pomiar zdjęcia: Zdjęcie 11 (rektyfikacja, 5 mm/px): 15 mm; zdjęcie 03: 12–18 mm | **VERIFIED** | — | — | OK |
+| `cassette.gap` Fuga między kasetonami (w fudze widać wygiętą blachę obrzeża z wkrętami) | 20 mm | produkcja: Produkcja Dampol (2026-10-03): szczeliny 20 mm między kasetonami. Zdjęcia 11/03: ciemny pas 12–18 mm | **VERIFIED** | Zdjęcie mierzy cień, nie prześwit — jasne obrzeże w fudze zwęża ciemny pas; 20 mm mieści się w błędzie pomiaru (±5 mm/px). Przyjęto 20 mm. | było 15 → 20 mm | CHANGED |
 | `cassette.bodyBandHeight` Wysokość pasa kasetonu poziomego (korpus) | 240 mm | pomiar zdjęcia: Zdjęcie 11: 9 pasów, średnio 242 mm (234–254); zdjęcie 03: 232 mm | **HIGH** | Zdjęcie 09 (inna realizacja): kasetony korpusu ≈ 550 mm — inny wariant elewacji, nie domyślny. | było 300 → 240 mm | CHANGED |
 | `cassette.atticRowHeight` Wysokość rzędu kasetonu attyki (2 rzędy) | 330 mm | pomiar zdjęcia: Zdjęcie 11: 2 × 320 mm; zdjęcie 03: 2 × 335 mm | **HIGH** | Zdjęcie 09: attyka 1 rząd ≈ 650 mm — inny wariant. | było 315 → 330 mm | CHANGED |
 | `cassette.atticModuleTarget` Docelowa szerokość kasetonu attyki (długość dzielona na równe moduły) | 1100 mm | pomiar zdjęcia: Zdjęcie 03: 6 równych modułów ≈ 1,10 m; zdjęcie 11: 9 modułów ≈ 0,77 m. Łączenia obu rzędów w jednej linii (bez mijanki) | **HIGH** | Model miał mijankę co 600 mm — żadne zdjęcie jej nie pokazuje. | było 1200 → 1100 mm | CHANGED |
 | `cassette.sheet` Kaseton — blacha stalowa powlekana 0,5 mm, RAL 7016 mat | 0.5 mm | produkcja: Produkcja Dampol (2026-10-03) | **VERIFIED** | — | — | OK |
-| `cassette.substructureGap` Kaseton — odsunięcie od lica płyty (podkonstrukcja, szczelina za kasetonem) | 20 mm | produkcja: Produkcja Dampol (2026-10-03): „odsunięcie od lica 20 mm” | **VERIFIED** | — | — | CHANGED |
+| `cassette.mounting` Kaseton — mocowanie: wkręty przez obrzeże bezpośrednio do płyty warstwowej (bez podkonstrukcji) | 0 | produkcja: Produkcja Dampol (2026-10-03) | **VERIFIED** | — | — | CHANGED |
 | `cassette.thickness` Kaseton — głębokość tacy (zagięcie krawędzi) | 25 mm | założenie: Założenie — nie podana przez produkcję, niewidoczna na zdjęciach frontalnych | **UNKNOWN** | Wymiar zagięcia kasetonu (mm). | było 30 → 25 mm | OPEN |
-| `cassette.offsetFromPanel` Kaseton — lico od lica płyty (wyliczone: podkonstrukcja 20 + taca 25) | 45 mm | produkcja: Wyliczone: substructureGap (produkcja) + thickness (założenie) | **MEDIUM** | — | było 75 → 45 mm | CHANGED |
+| `cassette.offsetFromPanel` Kaseton — lico od lica płyty (= głębokość tacy; kaseton leży na płycie) | 25 mm | produkcja: Wyliczone: mocowanie bezpośrednio do płyty (produkcja) + głębokość tacy (założenie) | **LOW** | — | było 75 → 25 mm | CHANGED |
 | `cassette.cornerWrap` Zawinięcie kasetonu narożnego L (na każdą ścianę) | 150 mm | założenie: Założenie; zdjęcia 19–21 pokazują zawinięcie bez listwy | **LOW** | Zmierzyć na zdjęciu narożnika ze skalą. | zmierzyć | OPEN |
 | `lamella.pitch` Rozstaw lameli pionowych | 82 mm | pomiar zdjęcia: Zdjęcie 03 (drewnopodobne): 28 lameli, 82 ± 2 mm; zdjęcie 11 (aluminiowe): 80,6 mm | **VERIFIED** | Model galerii-03 miał 58 mm (39 lameli zamiast 28). Zdjęcie 09 (inny produkt): ≈ 150 mm — wariant szeroki. | było 72 → 82 mm | CHANGED |
 | `lamella.face` Szerokość czoła lameli | 45 mm | pomiar zdjęcia: Zdjęcie 03: jasne czoło 45–50 mm; zdjęcie 11 (alu): 40 mm | **MEDIUM** | — | było 40 → 45 mm | CHANGED |
-| `lamella.depth` Lamela — blacha 0,4 mm winchester gięta w U, 30 mm; profile U wsadzane jeden w drugi na zakładkę | 30 mm | produkcja: Produkcja Dampol (2026-10-03): „jeden lamel ma 30 mm”, wyginane w U, wsadzane na zakładkę | **HIGH** | Czy 30 mm to głębokość U, czy szerokość czoła? Rozstaw 82 mm i czoło ≈ 45 mm z pomiaru zdjęć. | było 52 → 30 mm | CHANGED |
+| `lamella.depth` Lamela — od czoła do ściany 30 mm; na przemian profil „kapelusz” _\|‾\|_ (czoło) i U (dno na ścianie = rowek), na zakładkę | 30 mm | produkcja: Produkcja Dampol (2026-10-03) | **VERIFIED** | — | było 52 → 30 mm | CHANGED |
 | `lamella.sheet` Lamela — blacha 0,4 mm z nadrukiem winchester | 0.4 mm | produkcja: Produkcja Dampol (2026-10-03) | **VERIFIED** | — | — | OK |
 | `lamella.widePitch` Rozstaw lameli — wariant szeroki | 150 mm | pomiar zdjęcia: Zdjęcie 09: 0,053 H ≈ 150 mm (19 szczelin) | **MEDIUM** | — | — | OK |
 | `board.height` Deska elewacyjna pozioma — wysokość | 140 mm | film: Film WA0016: 0,13–0,15 m | **MEDIUM** | — | — | OK |
@@ -118,6 +118,7 @@ Pewność: VERIFIED 21 · HIGH 17 · MEDIUM 15 · LOW 5 · UNKNOWN 4
 | `metalMetalness` | 0.38 | Powłoka organiczna na stali — strojenie wizualne |
 | `glassMetalness` | 0.82 | Przybliżenie szkła niskoemisyjnego (odbicie) zgodne w rasteryzacji i path tracerze |
 | `cassetteBevelMm` | 3 | Zaokrąglenie krawędzi kasetonu w renderze |
+| `lamellaGrooveShade` | 0.35 | Dno rowka lameli (U, 30 mm w głąb, ≈ 37 mm szer.): przyciemnienie koloru zamiast niedostępnego w czasie rzeczywistym zacienienia (zdjęcie 03: rowek ≈ 0,2 jasności czoła) |
 | `panelSemiMattRoughness` | 0.4 | Płyta 7016 półmat (lekki połysk) — strojenie wizualne powłoki 25 µm |
 | `flashingMattRoughness` | 0.72 | Obróbki 7016M faktura mat — wyższa chropowatość |
 | `flashingMattMetalness` | 0.22 | Obróbki 7016M — mniej metaliczny połysk niż płyta |

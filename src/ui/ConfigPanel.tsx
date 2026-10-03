@@ -137,7 +137,7 @@ export function ConfigPanel({
                 <NumberField label="Fuga" value={(config.facadeGap ?? DEFAULT_FACADE_GAP) * 1000} min={5} max={30} step={1} unit="mm"
                   onChange={(v) => setConfig({ ...config, facadeGap: v / 1000 })} />
               </div>
-              <Switch label="Attyka" note="2 rzędy kasetonów 315 mm, mijanka 600 mm" checked={config.attic} onChange={(v) => update('attic', v)} />
+              <Switch label="Attyka" note="2 rzędy kasetonów po 330 mm, moduły ≈ 1,1 m bez mijanki (zdjęcia 03, 11)" checked={config.attic} onChange={(v) => update('attic', v)} />
             </Group>
           )}
           <Group title="Kolory">

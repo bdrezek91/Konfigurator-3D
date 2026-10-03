@@ -1,11 +1,18 @@
 import { buildComponentModel } from '../../components'
 import { type DecorPlacement, type OpeningPlacement, type PavilionConfig, type ProjectGeometry, type WallSide } from '../../types'
 import { envelope, openingSill, overlapsOpening, wallTopAt, wallTopHeights } from '../geometry'
-import { Path, Shape } from 'three'
+import { Path, Shape, type Texture } from 'three'
 import { Box, RoundedPiece } from '../materials/primitives'
 import { renderMetalColor, woodTexture } from '../materials/textures'
 import { type ReactNode, useMemo } from 'react'
 import { m, PHYS, RENDER } from '../../physical/spec'
+
+/** Przyciemnienie koloru (mnożnik jasności) — parametr renderingu, nie fizyczny kolor. */
+function shade(hex: string, k: number) {
+  const n = parseInt(hex.slice(1), 16)
+  const ch = (v: number) => Math.round(v * k).toString(16).padStart(2, '0')
+  return '#' + ch((n >> 16) & 255) + ch((n >> 8) & 255) + ch(n & 255)
+}
 
 export function PanelProfileLocal({
   side,
@@ -152,10 +159,10 @@ export function FoundationSupports({ config, geometry }: { config: PavilionConfi
  * stolarka osadzona w otworze musi być widoczna przez okładzinę, tak jak na budowie.
  */
 function BaseBoard({
-  id, center, yCenter, width, height, z, depth, color, openings, floorOffset,
+  id, center, yCenter, width, height, z, depth, color, openings, floorOffset, map,
 }: {
   id: string; center: number; yCenter: number; width: number; height: number; z: number; depth: number; color: string
-  openings: OpeningPlacement[]; floorOffset: number
+  openings: OpeningPlacement[]; floorOffset: number; map?: Texture
 }) {
   const shape = useMemo(() => {
     const x0 = center - width / 2
@@ -189,7 +196,7 @@ function BaseBoard({
   return (
     <mesh key={id} position={[0, 0, z - depth / 2]} castShadow receiveShadow>
       <extrudeGeometry args={[shape, { depth, bevelEnabled: false, steps: 1 }]} />
-      <meshStandardMaterial color={color} roughness={0.62} metalness={0.08} />
+      <meshStandardMaterial color={color} map={map} roughness={0.62} metalness={0.08} />
     </mesh>
   )
 }
@@ -212,7 +219,9 @@ export function DecorLocal({
     const effectiveHeight = fullWallCassette ? 2.76 : segment.height
     const effectiveY = fullWallCassette ? 1.39 : Math.min(segment.yCenter, 2.82 - effectiveHeight / 2)
     const gallery03Lamella = segment.id === 'gallery03-lamella'
-    const z = gallery03Lamella ? wallDepth / 2 + 0.025 : wallDepth / 2 + 0.070
+    // lamele (produkcja Dampol): blacha 0,4 mm, profil „kapelusz” _|‾|_ (czoło 30 mm od ściany) na przemian z U (dno na ścianie)
+    const isLamella = segment.kind.startsWith('lamella-')
+    const z = isLamella ? wallDepth / 2 : wallDepth / 2 + 0.070
     const x0 = segment.center - segment.width / 2
     const y0 = effectiveY - effectiveHeight / 2
 
@@ -244,32 +253,50 @@ export function DecorLocal({
             yCenter={effectiveY}
             width={segment.width}
             height={effectiveHeight}
-            z={z - (gallery03Lamella ? 0.013 : 0.015)}
-            depth={gallery03Lamella ? 0.012 : 0.040}
-            color="#111315"
+            z={z + 0.001}
+            depth={0.002}
+            color={shade(gallery03Lamella ? '#826f66' : (slatMap ? '#ffffff' : color), RENDER.lamellaGrooveShade.value)}
+            map={gallery03Lamella ? undefined : slatMap}
             openings={openings}
             floorOffset={floorOffset}
           />,
         )
       }
 
-      for (let x = x0 + slatWidth / 2; x <= x0 + segment.width; x += step) {
+      const slatCount = Math.floor((segment.width - slatWidth / 2) / step) + 1
+      for (let i = 0; i < slatCount; i++) {
+        const x = x0 + slatWidth / 2 + i * step
         const t = Math.max(0, Math.min(1, (x - x0) / Math.max(segment.width, 0.001)))
         const fraction =
           segment.shape === 'wedge-left' ? Math.max(0.04, 1 - t) :
           segment.shape === 'wedge-right' ? Math.max(0.04, t) : 1
         const localH = effectiveHeight * fraction
-        const localY = y0 + localH / 2
-        if (!overlapsOpening(x, localY, slatWidth, localH, openings, floorOffset)) {
-          const slatColor =
-            segment.kind === 'lamella-black' || segment.kind === 'lamella-graphite'
-              ? color
-              : woodPalette[slatIndex % woodPalette.length]
+        // lamela docinana wokół otworów (pionowe odcinki poza otworem), a nie pomijana w całości
+        const spans: Array<[number, number]> = []
+        if (diagonal) {
+          if (!overlapsOpening(x, y0 + localH / 2, slatWidth, localH, openings, floorOffset)) spans.push([y0, y0 + localH])
+        } else {
+          const cuts = openings
+            .filter((o) => Math.abs(x - o.center) < (slatWidth + o.width) / 2)
+            .map((o) => [floorOffset + openingSill(o), floorOffset + openingSill(o) + o.height] as [number, number])
+            .sort((p, q) => p[0] - q[0])
+          let cursor = y0
+          for (const [c0, c1] of cuts) {
+            if (c0 - cursor > 0.02) spans.push([cursor, Math.min(c0, y0 + localH)])
+            cursor = Math.max(cursor, c1)
+          }
+          if (y0 + localH - cursor > 0.02) spans.push([cursor, y0 + localH])
+        }
+        const slatColor =
+          segment.kind === 'lamella-black' || segment.kind === 'lamella-graphite'
+            ? color
+            : woodPalette[slatIndex % woodPalette.length]
+        for (const [sa, sb] of spans) {
           out.push(
             <RoundedPiece
-              key={segment.id + '-l-' + x.toFixed(2)}
-              size={[slatWidth, localH, gallery03Lamella ? 0.015 : slatDepth]}
-              position={[x, localY, gallery03Lamella ? z : z + 0.010]}
+              key={segment.id + '-l-' + x.toFixed(3) + '-' + sa.toFixed(2)}
+              size={[slatWidth, sb - sa, slatDepth]}
+              position={[x, (sa + sb) / 2, z + slatDepth / 2]}
               rotation={[0, 0, diagonal ? -0.35 : 0]}
               color={gallery03Lamella ? '#826f66' : (slatMap ? '#ffffff' : slatColor)}
               map={gallery03Lamella ? undefined : slatMap}
@@ -277,8 +304,8 @@ export function DecorLocal({
               radius={0.005}
             />,
           )
-          slatIndex++
         }
+        if (spans.length) slatIndex++
       }
       return
     }

@@ -44,7 +44,7 @@ export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
       front: {
         kind: 'cassette-horizontal',
         color: '#383E42',
-        gap: 0.015,
+        gap: 0.020, // fuga 20 mm (produkcja Dampol); zdjęcie 03 pokazuje cień 12–18 mm
         bandHeight: 0.23,
         atticRowHeight: 0.35,
         moduleWidth: 1.20,
