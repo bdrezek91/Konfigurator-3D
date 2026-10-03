@@ -425,6 +425,11 @@ function thicken(path: Array<[number, number]>, th: number): Array<[number, numb
   return [...left, ...right.reverse()]
 }
 
+/** u lica obróbki cokołowej (od płaszczyzny kątownika na zewnątrz). */
+function baseFlashingFaceU(f: FlashCtx) {
+  return -f.t + 0.0008 + m(PHYS.system1.baseFlashingOffset)
+}
+
 function flashingProfiles(f: FlashCtx, finish: FinishVariant) {
   const face = m(PHYS.system1.crownFlashingFace)
   const baseFace = m(PHYS.system1.baseFlashingFace)
@@ -455,9 +460,12 @@ function flashingProfiles(f: FlashCtx, finish: FinishVariant) {
     label = 'Obróbka płaska techniczna (pod kaseton)'
     conf = 'LOW'
   }
+  // cokół (zdjęcie narożnika): lico odsunięte od ściany, u góry skośny powrót do ściany i kołnierz przykręcony do płyty
+  const uB = baseFlashingFaceU(f)
+  const uFl = uWall + FLASH_T / 2
   const base: Array<[number, number]> = finish === 'cassette'
     ? [[o, 0], [o, baseFace], [-f.t - 0.002, baseFace + 0.004]]
-    : [[o + 0.01, -0.012], [o, 0], [o, baseFace], [-f.t - 0.002, baseFace + 0.004]]
+    : [[uB, -0.01], [uB, baseFace - (uB - uFl)], [uFl, baseFace], [uFl, baseFace + 0.03]]
   return { crownSec: thicken(crown, FLASH_T), baseSec: thicken(base, FLASH_T), label, conf }
 }
 
@@ -469,15 +477,18 @@ function addFlashings(ctx: Ctx, f: FlashCtx, finishBySide: FinishBySide) {
     ['front', [-f.L / 2, 0, f.W / 2], [1, 0, 0], [0, 0, 1], f.L, [0, 1, 0], f.yTopF],
     ['back', [f.L / 2, 0, -f.W / 2], [-1, 0, 0], [0, 0, -1], f.L, [0, 1, 0], f.yTopB],
   ]
+  // cokół odsunięty owija narożnik: przebiegi wydłużone o odsunięcie lica z obu stron (bez kasetonów)
+  const wrap = (side: WallSide) => (finishBySide[side] === 'cassette' ? 0 : Math.max(0, baseFlashingFaceU(f)))
   for (const [tag, st, axis, out, len, up, yTop] of runs) {
     const { crownSec, baseSec, label, conf } = prof(tag)
+    const w = wrap(tag)
     push(ctx, {
       id: 'flash-crown-' + tag, name: label + ' — korona ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
       explode: mul(out, 1.0), confidence: conf, geometry: { start: [st[0], yTop + f.a, st[2]], axis, u: out, v: up, length: len, section: crownSec },
     })
     push(ctx, {
       id: 'flash-base-' + tag, name: label + ' — cokół ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
-      explode: mul(out, 1.0), confidence: conf, geometry: { start: [st[0], f.y0, st[2]], axis, u: out, v: up, length: len, section: baseSec },
+      explode: mul(out, 1.0), confidence: conf, geometry: { start: [st[0] - axis[0] * w, f.y0, st[2]], axis, u: out, v: up, length: len + 2 * w, section: baseSec },
     })
   }
   // narożniki: L zakrywające słup i czoło ściany przedniej/tylnej (ramię boczne wyliczone z grubości ściany)
@@ -504,7 +515,7 @@ function addFlashings(ctx: Ctx, f: FlashCtx, finishBySide: FinishBySide) {
     push(ctx, {
       id: 'flash-base-' + tag, name: label + ' — cokół ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
       explode: mul(out as Vec3, 1.0), confidence: conf,
-      geometry: { start: [x, f.y0, -f.W / 2], axis: [0, 0, 1], u: out as Vec3, v: [0, 1, 0], length: f.W, section: baseSec },
+      geometry: { start: [x, f.y0, -f.W / 2 - wrap(tag)], axis: [0, 0, 1], u: out as Vec3, v: [0, 1, 0], length: f.W + 2 * wrap(tag), section: baseSec },
     })
   }
 }

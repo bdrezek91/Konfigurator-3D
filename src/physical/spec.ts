@@ -243,6 +243,8 @@ export const PHYS = {
     postAboveRoof: P({
       element: 'Wysunięcie słupa ponad płytę dachową', value: 50, rank: 5,
       source: 'Produkcja Dampol (2026-10-02): „jakieś 5 cm”; film WA0019: ≈ 55 mm', confidence: 'HIGH', status: 'OK',
+      conflict: 'Zdjęcie z produkcji (zdjecie-produkcja-naroznik-slup-nad-dachem.jpg): słup ≈ 120–150 mm nad dachem — możliwe, że przed przycięciem / dospawaniem górnej ramy. Model zostaje przy 50 mm do potwierdzenia.',
+      todo: 'Potwierdzić: wysunięcie docelowe (po dospawaniu ramy) vs stan na zdjęciu.',
     }),
     wallLockTolerance: P({
       element: 'Ściana przednia/tylna: nadwyżka ponad 6 × 1000 (tolerancja, przejmowana przez ostatnią płytę)', value: 22, rank: 5,
@@ -295,6 +297,12 @@ export const PHYS = {
     baseFlashingFace: P({
       element: 'Obróbka cokołowa — wysokość lica', value: 140, rank: 2, source: 'Film WA0017: 135–140 mm (kątownik 50 + krawędź podłogi + zakład)',
       confidence: 'MEDIUM', status: 'OK',
+    }),
+    baseFlashingOffset: P({
+      element: 'Obróbka cokołowa — odsunięcie lica od ściany (skośny powrót do ściany, kołnierz przykręcony, owija narożnik)', value: 25, rank: 3,
+      source: 'Zdjęcie cokołu w narożniku (zdjecie-cokol-naroznik.jpg) — szacunek z perspektywy, bez wymiaru odniesienia',
+      confidence: 'LOW', status: 'CHANGED', previous: 1.2,
+      todo: 'Wymiar odsunięcia i kąt skosu z rysunku gięcia (mm).',
     }),
     intermediateFloorSupports: P({
       element: 'Podpory pośrednie podłogi (poprzeczki)', value: 0, unit: '-', rank: 8,
