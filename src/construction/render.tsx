@@ -42,7 +42,7 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
         normalMap: profile ? profileNormalMap(profile) : flatNormalMap(),
       }),
       roofOuter: new MeshStandardMaterial({ ...common, color: config.flashingColor, metalness: 0.34, roughness: 0.48, envMapIntensity: 1.05 }),
-      // okładzina wewnętrzna 9010 gładka; jasność wnętrza daje światło wypełniające InteriorDaylight (PavilionModel)
+      // okładzina wewnętrzna 9010 gładka
       inner: new MeshStandardMaterial({ ...common, color: '#f1ece1', metalness: 0.05, roughness: 0.4 }),
       // rdzeń odsunięty w buforze głębokości: lico rdzenia leży 0,6 mm za blachą — bez offsetu przy 16-bitowej głębi
       // (render programowy, część telefonów) rdzeń przebijał na krawędziach trójkątów jako żółte kreski

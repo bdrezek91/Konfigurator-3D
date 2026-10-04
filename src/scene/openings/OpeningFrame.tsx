@@ -36,8 +36,10 @@ function GlassPane({ width, height }: { width: number; height: number }) {
           ior={1.52}
           specularIntensity={1}
           envMapIntensity={1.6}
-          attenuationColor="#dcefe6"
-          attenuationDistance={1.2}
+          // przepuszczalność światła pakietu 4/16/4 low-E: LT ≈ 0,78 (ASSUMPTION, typowo 0,70–0,80; trzyszybowy ~0,70);
+          // tłumienie = attenuationColor^(grubość / dystans) → kolor ≈ 0,78 (liniowo), lekko zielonkawy jak szkło float
+          attenuationColor="#e2ebe6"
+          attenuationDistance={0.024}
         />
       </mesh>
       {/* ramka dystansowa pakietu (ciemna, widoczna na obwodzie szyby) */}
