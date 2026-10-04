@@ -41,7 +41,7 @@ export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
     foundationGap: 0.05,
     roofEdgeFlashing: false,
     facadeCladding: {
-      front: { kind: 'cassette-horizontal', cassetteSystem: 'B', color: '#0e0e10', gap: 0.020, staggered: false },
+      front: { kind: 'cassette-horizontal', cassetteSystem: 'B', canopy: true, color: '#0e0e10', gap: 0.020, staggered: false },
     },
     openings: [
       o('G13-FIX-1','front',-2.515,0.70,2.18,'fixed-glass',{sill:0,frameColor:'#0e0e10',profile:'alu-standard'}),

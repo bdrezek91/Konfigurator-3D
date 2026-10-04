@@ -62,7 +62,7 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
   const model = useMemo(() => buildComponentModel(config), [config])
   const pieces = model.components.filter((item) =>
     item.category === 'decor' &&
-    (item.id.startsWith('facade-cassette-') || item.id.startsWith('corner-cassette-') || item.id.startsWith('facade-ribbed-'))
+    (item.id.startsWith('facade-cassette-') || item.id.startsWith('corner-cassette-') || item.id.startsWith('facade-ribbed-') || item.id.startsWith('facade-canopy-'))
   )
 
   // narożnik z kasetonami poziomymi po obu stronach: ciemna wnęka za fugami na rogu (pasy przodu wydłużone przez narożnik)
@@ -80,8 +80,9 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
         // blacha wnęki narożnika (w kolorze fugi): zakrywa czoło płyty ściany przód/tył i słup za fugami kasetonów
         const tw = PANEL_THICKNESS_M[config.wallPanel]
         const cav = new Color(config.exteriorColor).multiplyScalar(0.3).getStyle()
-        const xPlane = sx * (config.length / 2 - fi + 0.0008)
-        const zPlane = sz * (config.width / 2 - fi + 0.0008)
+        // przed licem słupa narożnego (obrys ramy) — słup nie prześwituje w fugach na rogu
+        const xPlane = sx * (config.length / 2 + 0.0008)
+        const zPlane = sz * (config.width / 2 + 0.0008)
         // obie blachy kończą się 3 mm za licem kasetonów (wystająca krawędź dawała podwójną linię na narożniku)
         const reach = th - fi - 0.003
         const sideLen = fi + tw + 0.02 + reach

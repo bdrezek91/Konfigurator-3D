@@ -37,6 +37,8 @@ export type FacadeCladdingSpec = {
   atticRowHeight?: number
   /** System kasetonów: A — poziome pasy + attyka 2 rzędy (zdjęcia 207/110/11/12), B — duże bloki + attyka 1 rząd (zdjęcie 13). */
   cassetteSystem?: 'A' | 'B'
+  /** Daszki nad grupami przeszkleń stałych (System B — zdjęcie 13). */
+  canopy?: boolean
 }
 export type OpeningKind = 'door-glazed' | 'door-full' | 'door-double' | 'fixed-glass' | 'alu-window' | 'pvc-window'
 export type DecorKind =

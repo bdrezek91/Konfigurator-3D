@@ -5,7 +5,7 @@
 Hierarchia źródeł: 1 zdjęcie gotowego pawilonu · 2 film · 3 pomiar zdjęcia ze skalą · 4 katalog · 5 produkcja · 6 rysunek · 7 szkic · 8 założenie.
 Przy sprzeczności wygrywa źródło wyżej; sprzeczność opisana w kolumnie „problem”.
 
-Pewność: VERIFIED 26 · HIGH 17 · MEDIUM 23 · LOW 6 · UNKNOWN 5
+Pewność: VERIFIED 26 · HIGH 17 · MEDIUM 24 · LOW 7 · UNKNOWN 5
 
 ## Wartości fizyczne
 
@@ -29,6 +29,8 @@ Pewność: VERIFIED 26 · HIGH 17 · MEDIUM 23 · LOW 6 · UNKNOWN 5
 | `cassette.systemBAtticBlock` Kaseton System B — szerokość bloku attyki (równe bloki) | 600 mm | pomiar zdjęcia: Zdjęcie 13: ~10 bloków na froncie 6 m | **MEDIUM** | — | — | CHANGED |
 | `cassette.systemBBodyRow` Kaseton System B — wysokość bloku korpusu | 550 mm | pomiar zdjęcia: Zdjęcie 13: fugi poziome co ~108 px ≈ 0,54 m | **MEDIUM** | — | — | CHANGED |
 | `cassette.systemBBodyColumns` Kaseton System B — szerokość bloku korpusu = 2 bloki attyki (łączenia w liniach attyki) | 1200 mm | założenie: ASSUMPTION — zdjęcie 13 pokazuje tylko kolumnę przy narożniku (~0,5 m); dłuższych ścian brak | **LOW** | — | zmierzyć | OPEN |
+| `cassette.canopyHeight` Daszek nad witryną (System B) — wysokość lica | 270 mm | pomiar zdjęcia: Pomiar zdjęcia 13: lico ≈ 0,43 wysokości rzędu attyki (0,63 m) → ~0,27 m | **MEDIUM** | — | — | CHANGED |
+| `cassette.canopyProjection` Daszek nad witryną (System B) — wysięg przed lico kasetonów | 250 mm | założenie: ASSUMPTION — zdjęcie 13: widoczny bok daszka przy narożniku, wysięg oceniony 0,2–0,3 m | **LOW** | — | zmierzyć | OPEN |
 | `cassette.cornerWrap` Zawinięcie kasetonu narożnego L (na każdą ścianę) — przy pełnej elewacji kasetonowej na obu ścianach | 150 mm | założenie: Założenie; galeria: zawinięcie widoczne przy pełnej elewacji kasetonowej (028, 110, 111; dawne 19–21) | **LOW** | Goła płyta z pasami kaseton-deska (zdjęcie 163 = zdjęcie od produkcji 2026-10-04): róg przykryty obróbką narożną, nie kasetonem L — model rozróżnia oba przypadki. · Zmierzyć szerokość zawinięcia na zdjęciu narożnika ze skalą. | zmierzyć | OPEN |
 | `lamella.pitch` Rozstaw lameli pionowych | 82 mm | pomiar zdjęcia: Zdjęcie 03 (drewnopodobne): 28 lameli, 82 ± 2 mm; zdjęcie 11 (aluminiowe): 80,6 mm | **VERIFIED** | Model galerii-03 miał 58 mm (39 lameli zamiast 28). Zdjęcie 09 (inny produkt): ≈ 150 mm — wariant szeroki. | było 72 → 82 mm | CHANGED |
 | `lamella.face` Szerokość czoła lameli | 45 mm | pomiar zdjęcia: Zdjęcie 03: jasne czoło 45–50 mm; zdjęcie 11 (alu): 40 mm | **MEDIUM** | — | było 40 → 45 mm | CHANGED |

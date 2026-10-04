@@ -904,7 +904,7 @@ function facadeSpecForSide(c: PavilionConfig, g: ProjectGeometry, side: WallSide
   }
   if (c.facade === 'cassette-blocks') {
     // System B (zdjęcie 13): duże bloki, attyka 1 rząd
-    return { kind: 'cassette-horizontal', cassetteSystem: 'B', gap: c.facadeGap ?? DEFAULT_FACADE_GAP, staggered: false, color: c.exteriorColor }
+    return { kind: 'cassette-horizontal', cassetteSystem: 'B', canopy: true, gap: c.facadeGap ?? DEFAULT_FACADE_GAP, staggered: false, color: c.exteriorColor }
   }
   // Kasetony poziome wg pomiarów ze zdjęć (POMIARY.md): długie pasy na całe pole między
   // narożnikiem a otworem, bez pionowych podziałów na pełnej ścianie i bez mijanki.
@@ -1149,7 +1149,8 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
       const th = m(PHYS.cassette.thickness)
       const [nMinus, nPlus] = ADJACENT[side]
       const wrap = (n: WallSide) => facadeSpecForSide(c, g, n)?.kind === 'cassette-horizontal'
-      const ext = side === 'front' || side === 'back' ? th - fi : -fi
+      // boki zachodzą 4 mm w pas przodu/tyłu (szczelina na styku pokazywała oświetlone czoło pasa boku = „druga krawędź”)
+      const ext = side === 'front' || side === 'back' ? th - fi : -fi + 0.004
       const extMinus = wrap(nMinus) ? ext : 0
       const extPlus = wrap(nPlus) ? ext : 0
       for (const row of rows) {
@@ -1184,6 +1185,33 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
             spec.kind, a2, b2, y0, y1, board?.wood ?? spec.color ?? c.exteriorColor,
           )
         }
+      }
+      // daszki (System B, zdjęcie 13): nad każdą grupą sąsiadujących przeszkleń stałych (bez drzwi), spód na górze ramy,
+      // szerokość = szerokość grupy, boki zamknięte, kolor kasetonów
+      if (spec.canopy) {
+        const fixes = g.openings.filter((o) => o.wall === side && o.kind === 'fixed-glass').sort((p, q) => p.center - q.center)
+        const groups: Array<{ a: number; b: number; top: number }> = []
+        for (const o of fixes) {
+          const a = o.center - o.width / 2
+          const b = o.center + o.width / 2
+          const top = floorT + openingSill(o) + o.height
+          const last = groups[groups.length - 1]
+          if (last && a - last.b < 0.05) { last.b = b; last.top = Math.max(last.top, top) } else groups.push({ a, b, top })
+        }
+        const ch = m(PHYS.cassette.canopyHeight)
+        const proj = m(PHYS.cassette.canopyProjection)
+        const normal = wallNormal(side)
+        const off = PANEL_THICKNESS_M[c.wallPanel] / 2 + m(PHYS.cassette.thickness) + proj / 2
+        groups.forEach((gr, k) => {
+          const p = wallPosition(side, (gr.a + gr.b) / 2, gr.top + ch / 2, c)
+          list.push({
+            id: 'facade-canopy-' + side + '-' + k, positionNo: 0, namePL: 'Daszek nad witryną', category: 'decor', primitive: 'decor',
+            material: 'Blacha stalowa powlekana — daszek', color: spec.color ?? c.exteriorColor, ral: spec.color ?? c.exteriorColor,
+            dimensions: { lengthMm: Math.round(ch * 1000), widthMm: Math.round((gr.b - gr.a) * 1000), thicknessMm: Math.round(proj * 1000), netAreaM2: round((gr.b - gr.a) * proj) },
+            quantity: 1, position: [p[0] + normal[0] * off, p[1], p[2] + normal[2] * off], rotation: wallRotation(side),
+            explodeDirection: [normal[0] * 1.6, 0.2, normal[2] * 1.6], assemblyStage: 9, wall: side, sourceAccuracy: 'project-estimate',
+          })
+        })
       }
       continue
     }
