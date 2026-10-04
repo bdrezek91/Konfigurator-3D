@@ -19,6 +19,7 @@ import type { TabId } from './tabs'
 const WOOD = 'repeating-linear-gradient(90deg,#b88a63 0 5px,#3b2a1e 5px 7px)'
 const FACADE_OPTIONS: Array<CardOption<FacadeStyle>> = [
   { value: 'cassette-horizontal', label: 'Kasetony poziome', hint: 'fuga cieniowa', preview: 'repeating-linear-gradient(180deg,#3d4246 0 9px,#121416 9px 10px)' },
+  { value: 'cassette-blocks', label: 'Kasetony — duże bloki', hint: 'attyka 1 rząd', preview: 'repeating-linear-gradient(90deg,#2b2f32 0 15px,#0e1012 15px 16px),repeating-linear-gradient(180deg,transparent 0 13px,#0e1012 13px 14px)' },
   { value: 'cassette-grid', label: 'Kasetony siatka', hint: 'moduł prostokątny', preview: 'repeating-linear-gradient(180deg,transparent 0 13px,#121416 13px 14px),repeating-linear-gradient(90deg,#3d4246 0 17px,#121416 17px 18px)' },
   { value: 'vertical-ribbed', label: 'Blacha pionowa', hint: 'wysoki profil', preview: 'repeating-linear-gradient(90deg,#2a2e31 0 4px,#4a5054 4px 6px,#2a2e31 6px 9px)' },
   { value: 'cassette-lamella', label: 'Kaseton + lamele', hint: 'pola drewniane', preview: 'linear-gradient(90deg,#3d4246 0 35%,transparent 35% 65%,#3d4246 65%),' + WOOD },

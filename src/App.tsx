@@ -29,6 +29,7 @@ const FACADE_NAMES: Record<PavilionConfig['facade'], string> = {
   'cassette-lamella': 'Kaseton + lamele',
   'silver-rectangle': 'Srebrny prostokąt',
   'cassette-horizontal': 'Kasetony poziome',
+  'cassette-blocks': 'Kasetony — duże bloki',
   'cassette-grid': 'Kasetony siatka',
   'vertical-ribbed': 'Blacha pionowa',
   'wood-horizontal': 'Deska pozioma',

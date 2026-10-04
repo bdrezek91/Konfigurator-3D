@@ -109,6 +109,27 @@ export const PHYS = {
       source: 'Zdjęcia 11, 12, 110, 207: bloki attyki 1,0–1,3 m, łączenia w liniach krawędzi otworów i pól okładzin, kolumny korpusu tej samej szerokości',
       confidence: 'MEDIUM', status: 'CHANGED', previous: 3000,
     }),
+    maxCassetteLength: P({
+      element: 'Kaseton System A — maks. długość pasa korpusu (arkusza); podział tylko powyżej tej długości', value: 3000, rank: 8,
+      source: 'ASSUMPTION — brak danych produkcji. Zdjęcie 207: pas 2,7 m bez łączenia (dolna granica)', confidence: 'UNKNOWN', status: 'OPEN',
+      todo: 'Maks. długość kasetonu z produkcji (gięciarka / arkusz).',
+    }),
+    systemBAtticRow: P({
+      element: 'Kaseton System B (duże bloki) — wysokość jedynego rzędu attyki', value: 630, rank: 3,
+      source: 'Pomiar zdjęcia 13 (skala z wysokości naroża 2,92 m): 125 px ≈ 0,63 m', confidence: 'MEDIUM', status: 'CHANGED',
+    }),
+    systemBAtticBlock: P({
+      element: 'Kaseton System B — szerokość bloku attyki (równe bloki)', value: 600, rank: 3,
+      source: 'Zdjęcie 13: ~10 bloków na froncie 6 m', confidence: 'MEDIUM', status: 'CHANGED',
+    }),
+    systemBBodyRow: P({
+      element: 'Kaseton System B — wysokość bloku korpusu', value: 550, rank: 3,
+      source: 'Zdjęcie 13: fugi poziome co ~108 px ≈ 0,54 m', confidence: 'MEDIUM', status: 'CHANGED',
+    }),
+    systemBBodyColumns: P({
+      element: 'Kaseton System B — szerokość bloku korpusu = 2 bloki attyki (łączenia w liniach attyki)', value: 1200, rank: 8,
+      source: 'ASSUMPTION — zdjęcie 13 pokazuje tylko kolumnę przy narożniku (~0,5 m); dłuższych ścian brak', confidence: 'LOW', status: 'OPEN',
+    }),
     cornerWrap: P({
       element: 'Zawinięcie kasetonu narożnego L (na każdą ścianę) — przy pełnej elewacji kasetonowej na obu ścianach', value: 150, rank: 8,
       source: 'Założenie; galeria: zawinięcie widoczne przy pełnej elewacji kasetonowej (028, 110, 111; dawne 19–21)',

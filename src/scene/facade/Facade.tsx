@@ -82,11 +82,13 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
         const cav = new Color(config.exteriorColor).multiplyScalar(0.3).getStyle()
         const xPlane = sx * (config.length / 2 - fi + 0.0008)
         const zPlane = sz * (config.width / 2 - fi + 0.0008)
-        const sideLen = fi + tw + 0.02 + th
-        const frontLen = 0.06 + th
+        // obie blachy kończą się 3 mm za licem kasetonów (wystająca krawędź dawała podwójną linię na narożniku)
+        const reach = th - fi - 0.003
+        const sideLen = fi + tw + 0.02 + reach
+        const frontLen = 0.06 + reach
         return [
-          <Box key={'cavity-s-' + a + b} size={[0.0015, hCorner, sideLen]} position={[xPlane, hCorner / 2, sz * (config.width / 2 + th - sideLen / 2)]} color={cav} metalness={0} roughness={0.9} />,
-          <Box key={'cavity-f-' + a + b} size={[frontLen, hCorner, 0.0015]} position={[sx * (config.length / 2 + th - frontLen / 2), hCorner / 2, zPlane]} color={cav} metalness={0} roughness={0.9} />,
+          <Box key={'cavity-s-' + a + b} size={[0.0015, hCorner, sideLen]} position={[xPlane, hCorner / 2, sz * (config.width / 2 + reach - sideLen / 2)]} color={cav} metalness={0} roughness={0.9} />,
+          <Box key={'cavity-f-' + a + b} size={[frontLen, hCorner, 0.0015]} position={[sx * (config.length / 2 + reach - frontLen / 2), hCorner / 2, zPlane]} color={cav} metalness={0} roughness={0.9} />,
         ]
       })}
       {pieces.map((item) => {

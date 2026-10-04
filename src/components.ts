@@ -363,6 +363,8 @@ export function fallbackGeometry(c: PavilionConfig): ProjectGeometry {
 }
 
 const geometryCache = new WeakMap<PavilionConfig, ProjectGeometry>()
+/** Geometria projektu bez uzgadniania okładzin (otwory) — dla rytmu kasetonów (bez rekurencji z geometryOf). */
+const geometryOfRaw = (c: PavilionConfig) => c.geometry ?? fallbackGeometry(c)
 
 /**
  * Geometria projektu po uzgodnieniu okładzin z elewacją i obróbkami (jedno źródło dla renderu, BOM i konstrukcji):
@@ -394,8 +396,8 @@ function reconcileDecor(c: PavilionConfig, g: ProjectGeometry, d: DecorPlacement
   if (spec && spec.kind === 'cassette-horizontal' && hasAtticBand(c)) {
     const span = wallSpan(d.wall, c)
     const maxH = Math.max(wallHeightAt(d.wall, -span / 2, c), wallHeightAt(d.wall, span / 2, c))
-    const rowH = spec.atticRowHeight ?? ATTIC_ROW_H
-    const atticStart = maxH - 2 * rowH
+    const { rows: cRows, atticStart } = cassetteRows(c, spec, maxH)
+    const rowH = cRows.find((r) => r.attic) ? (maxH - atticStart) / cRows.filter((r) => r.attic).length : maxH
     const top = yCenter + height / 2
     const bottom = yCenter - height / 2
     if (top > atticStart + 0.001 && bottom < atticStart) {
@@ -872,8 +874,6 @@ export const DEFAULT_FACADE_GAP = m(PHYS.cassette.gap)
 const ATTIC_ROW_H = m(PHYS.cassette.atticRowHeight)
 /** maks. szerokość kolumny / bloku kasetonu — zdjęcia 11, 110, 207: bloki attyki 1,0–1,3 m */
 const CASSETTE_COLUMN_MAX = m(PHYS.cassette.columnMax)
-/** maks. długość pasa korpusu (arkusz) — zdjęcie 207: 2,7 m bez łączenia; ASSUMPTION 3,0 m */
-const CASSETTE_STRIP_MAX = 3.0
 
 function facadeSpecForSide(c: PavilionConfig, g: ProjectGeometry, side: WallSide): FacadeCladdingSpec | null {
   const explicit = g.facadeCladding?.[side]
@@ -902,6 +902,10 @@ function facadeSpecForSide(c: PavilionConfig, g: ProjectGeometry, side: WallSide
     // blacha na rąbek: panel ≈ 310 mm (galeria 044); styk = rąbek, bez szerokiej fugi
     return { kind: 'vertical-ribbed', gap: 0.008, moduleWidth: m(PHYS.standingSeam.module), color: c.exteriorColor }
   }
+  if (c.facade === 'cassette-blocks') {
+    // System B (zdjęcie 13): duże bloki, attyka 1 rząd
+    return { kind: 'cassette-horizontal', cassetteSystem: 'B', gap: c.facadeGap ?? DEFAULT_FACADE_GAP, staggered: false, color: c.exteriorColor }
+  }
   // Kasetony poziome wg pomiarów ze zdjęć (POMIARY.md): długie pasy na całe pole między
   // narożnikiem a otworem, bez pionowych podziałów na pełnej ścianie i bez mijanki.
   return {
@@ -928,6 +932,66 @@ function cassetteColumnLines(x0: number, x1: number, edges: number[], maxLen: nu
     const len = merged[i + 1] - merged[i]
     const n = Math.max(1, Math.ceil(len / maxLen - 1e-6))
     for (let k = 1; k <= n; k++) out.push(merged[i] + (len * k) / n)
+  }
+  return out
+}
+
+/**
+ * Rzędy kasetonów jednego systemu dla ściany — WSPÓLNY rytm dla całego pawilonu: wysokość pasa korpusu liczona z najniższej
+ * ściany i taka sama na wszystkich ścianach (poziome fugi spotykają się na narożnikach L i po obu stronach otworów);
+ * różnica wysokości ściany trafia do rzędów attyki (równo na każdy rząd).
+ * System A: pasy ~240 mm + attyka 2 rzędy; System B: bloki ~550 mm + attyka 1 rząd (~630 mm).
+ */
+function cassetteRows(c: PavilionConfig, spec: FacadeCladdingSpec, wallMaxH: number) {
+  const env = envelope(c)
+  const B = spec.cassetteSystem === 'B'
+  const atticRows = B ? 1 : hasAtticBand(c) ? 2 : 0
+  const atticH = B ? m(PHYS.cassette.systemBAtticRow) : (spec.atticRowHeight ?? ATTIC_ROW_H)
+  const band = B ? m(PHYS.cassette.systemBBodyRow) : (spec.bandHeight ?? DEFAULT_BAND_HEIGHT)
+  const lowWall = Math.min(env.outerFront, env.outerBack)
+  const refStart = lowWall - atticRows * atticH
+  const pitch = refStart / Math.max(1, Math.round(refStart / band))
+  // attyka nad najwyższym otworem całego pawilonu (zdjęcia: stolarka kończy się pod attyką), na linii rytmu pasów —
+  // ten sam początek attyki na wszystkich ścianach (fugi attyki spotykają się na narożnikach); rząd attyki ≥ 0,2 m
+  const g = geometryOfRaw(c)
+  const topOpening = Math.max(0, ...g.openings.map((o) => env.floorT + openingSill(o) + o.height))
+  const kMin = Math.ceil((topOpening + 0.01) / pitch - 1e-6)
+  const nDefault = Math.max(1, Math.floor(refStart / pitch + 1e-6))
+  const nFit = atticRows && (lowWall - kMin * pitch) / atticRows >= 0.2 ? Math.max(nDefault, kMin) : nDefault
+  const nBody = Math.min(nFit, Math.max(1, Math.floor((wallMaxH - atticRows * 0.2) / pitch + 1e-6)))
+  const atticStart = nBody * pitch
+  const atticRowH = atticRows ? (wallMaxH - atticStart) / atticRows : 0
+  const rows: Array<{ y0: number; y1: number; attic: boolean; index: number }> = []
+  for (let r = 0; r < nBody; r++) rows.push({ y0: r * pitch, y1: (r + 1) * pitch, attic: false, index: r })
+  for (let r = 0; r < atticRows; r++) rows.push({ y0: atticStart + r * atticRowH, y1: atticStart + (r + 1) * atticRowH, attic: true, index: r })
+  return { rows, atticStart }
+}
+
+function mergeLines(xs: number[]) {
+  const sorted = [...xs].sort((p, q) => p - q)
+  const out: number[] = []
+  for (const x of sorted) if (!out.length || x - out[out.length - 1] > 0.06) out.push(x)
+  return out
+}
+
+/**
+ * Podział pasów korpusu dłuższych niż maxLen (System A). Miejsca podziału: równe części, przyciągnięte do najbliższego
+ * łączenia attyki (±0,4 m — wspólny rytm elewacji), nie bliżej niż 0,3 m od krawędzi otworu / pola.
+ */
+function splitLongSegments(lines: number[], maxLen: number, atticLines: number[], fields: Array<{ a: number; b: number }>) {
+  const out: number[] = [lines[0]]
+  const fieldEdges = fields.flatMap((f) => [f.a, f.b])
+  for (let i = 0; i < lines.length - 1; i++) {
+    const a = lines[i]
+    const b = lines[i + 1]
+    const len = b - a
+    const n = Math.ceil(len / maxLen - 1e-6)
+    for (let k = 1; k < n; k++) {
+      const ideal = a + (len * k) / n
+      const near = atticLines.filter((x) => Math.abs(x - ideal) < 0.4 && x - a > 0.3 && b - x > 0.3 && fieldEdges.every((e) => Math.abs(e - x) > 0.3))
+      out.push(near.length ? near.reduce((p, q) => (Math.abs(q - ideal) < Math.abs(p - ideal) ? q : p)) : ideal)
+    }
+    out.push(b)
   }
   return out
 }
@@ -1053,10 +1117,12 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
     const maxHeight = Math.max(wallHeightAt(side, -span / 2, c), wallHeightAt(side, span / 2, c))
 
     if (spec.kind === 'cassette-horizontal' && spec.staggered === false) {
-      // System kasetonów Dampol (zdjęcia 11, 12, 110, 207), bez mijanki: łączenia pionowe w liniach narożników, krawędzi
-      // otworów i pól okładzin. Attyka: 2 rzędy bloków ≤ 1,3 m (łączenia obu rzędów w jednej linii). Korpus: pasy ~240 mm
-      // ciągłe między krawędziami pól (kolumny); deska na ścianie kasetonowej = kasetony z dekorem drewna w tych samych pasach.
-      const rows = horizontalBandRows(maxHeight, spec.bandHeight ?? DEFAULT_BAND_HEIGHT, hasAtticBand(c), spec.atticRowHeight)
+      // System A (zdjęcia 207, 110, 11, 12): attyka 2 rzędy równych bloków ≤ 1,3 m (łączenia obu rzędów w jednej linii,
+      // niezależne od stolarki), korpus — pasy ~240 mm ciągłe między krawędziami otworów i pól; bez mijanki.
+      // System B (zdjęcie 13): attyka 1 rząd bloków ~0,6 m, korpus — bloki ~0,55 m w siatce (łączenia w liniach attyki).
+      // Wspólny rytm poziomy dla całego pawilonu (cassetteRows); deska = kasetony z dekorem drewna w tych samych pasach.
+      const B = spec.cassetteSystem === 'B'
+      const { rows, atticStart } = cassetteRows(c, spec, maxHeight)
       const fields = [
         ...g.openings.filter((o) => o.wall === side).map((o) => {
           const y0 = floorT + openingSill(o)
@@ -1065,20 +1131,20 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
         ...g.decor.filter((d) => d.wall === side && d.kind !== 'led-strip' && !LEGACY_FACADE_CASSETTE.has(d.kind) && !BOARD_KINDS.has(d.kind))
           .map((d) => ({ a: d.center - d.width / 2, b: d.center + d.width / 2, y0: d.yCenter - d.height / 2, y1: d.yCenter + d.height / 2 })),
       ]
-      // kaseton-deska w systemie kasetonów (zdjęcia 207, 110): te same pasy i fugi co kasetony, tylko dekor drewna
       const boards = g.decor.filter((d) => d.wall === side && BOARD_KINDS.has(d.kind))
         .map((d) => ({ a: d.center - d.width / 2, b: d.center + d.width / 2, y0: d.yCenter - d.height / 2, y1: d.yCenter + d.height / 2, wood: d.kind === 'board-horizontal-winchester' ? 'wood-winchester' : 'wood-pine' }))
       const edges = [...fields, ...boards].flatMap((f) => [f.a, f.b])
-      // attyka: bloki ≤ 1,3 m (łączenia także nad krawędziami pól); korpus: pasy ciągłe między krawędziami pól,
-      // dzielone dopiero powyżej maks. długości kasetonu (zdjęcie 207: pasy deski 2,7 m bez łączenia)
-      // attyka: równe bloki na całej długości (zdjęcie 207: 5 × ~1,2 m na 6 m, łączenia niezależne od skrzydeł okien);
-      // łączenie w linii krawędzi tylko dla pól sięgających attyki (np. tablica, okładzina do góry — zdjęcie 11)
-      const atticRow0 = rows.find((r) => r.attic)?.y0 ?? maxHeight
-      const atticEdges = [...fields, ...boards].filter((f) => f.y1 > atticRow0 + 0.01).flatMap((f) => [f.a, f.b])
-      const atticLines = cassetteColumnLines(-span / 2, span / 2, atticEdges, CASSETTE_COLUMN_MAX)
-      const bodyLines = cassetteColumnLines(-span / 2, span / 2, edges, CASSETTE_STRIP_MAX)
-      // narożnik z kasetonami po obu stronach: pasy przechodzą przez narożnik jak kaseton L (zdjęcie 12) — przód/tył
-      // wydłużone do lica kasetonów ściany bocznej, boki kończą się na tylnej stronie kasetonu przodu/tyłu
+      // attyka: równe bloki na całej długości (bez skrawka na końcu); łączenie przy krawędzi tylko dla pól sięgających attyki
+      // (pole zahaczające o attykę mniej niż do połowy rzędu — np. drzwi przy spadku dachu — tylko docina blok, bez łączeń)
+      const atticRowH0 = rows.find((r) => r.attic) ? rows.find((r) => r.attic)!.y1 - atticStart : 0
+      const atticEdges = [...fields, ...boards].filter((f) => f.y1 > atticStart + atticRowH0 / 2).flatMap((f) => [f.a, f.b])
+      const atticLines = cassetteColumnLines(-span / 2, span / 2, atticEdges, B ? m(PHYS.cassette.systemBAtticBlock) * 1.08 : CASSETTE_COLUMN_MAX)
+      // korpus: linie = krawędzie pól; A — podział długiego pasa tylko powyżej maxCassetteLength (ASSUMPTION), w linii attyki;
+      // B — siatka: co drugie łączenie attyki (≈ 1,2 m, ASSUMPTION)
+      const featureLines = cassetteColumnLines(-span / 2, span / 2, edges, Infinity)
+      const bodyLines = B
+        ? mergeLines([...featureLines, ...atticLines.filter((_, i) => i % 2 === 0)])
+        : splitLongSegments(featureLines, m(PHYS.cassette.maxCassetteLength), atticLines, fields)
       const fi = frameDims(c).wallFaceInset
       const th = m(PHYS.cassette.thickness)
       const [nMinus, nPlus] = ADJACENT[side]
@@ -1092,15 +1158,22 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
           const a = lines[i]
           const b = lines[i + 1]
           const mid = (a + b) / 2
-          // kolumna zajęta w tym rzędzie przez otwór / pole okładziny → kaseton docięty (brak elementu)
-          if (fields.some((f) => f.a < mid && f.b > mid && Math.min(row.y1, f.y1) - Math.max(row.y0, f.y0) > 0.01)) continue
-          const atStart = i === 0
-          const atEnd = i === lines.length - 2
-          let a2 = atStart ? a - extMinus : a + gap / 2
-          let b2 = atEnd ? b + extPlus : b - gap / 2
-          // krawędź pola przesunięta przy łączeniu bliskich linii (< 6 cm): kaseton kończy się fugą przy ramie, nie na niej
+          // pole w tej kolumnie: kaseton docięty w pionie do ramy (fuga przy ramie), a nie wycięty cały rząd
+          let y0 = row.y0 + gap / 2
+          let y1 = row.y1 - gap / 2
+          let skip = false
           for (const f of fields) {
-            if (Math.min(row.y1, f.y1) - Math.max(row.y0, f.y0) <= 0.01) continue
+            const overlapX = row.attic ? Math.min(b, f.b) - Math.max(a, f.a) > 0.01 : f.a < mid && f.b > mid
+            if (!overlapX || Math.min(row.y1, f.y1) - Math.max(row.y0, f.y0) <= 0.01) continue
+            if (f.y0 <= row.y0 + 0.01 && f.y1 >= row.y1 - 0.01) { skip = true; break }
+            if (f.y1 < row.y1 && f.y1 - row.y0 < row.y1 - f.y0) y0 = Math.max(y0, f.y1 + gap / 2)
+            else y1 = Math.min(y1, f.y0 - gap / 2)
+          }
+          if (skip || y1 - y0 < 0.04) continue
+          let a2 = i === 0 ? a - extMinus : a + gap / 2
+          let b2 = i === lines.length - 2 ? b + extPlus : b - gap / 2
+          for (const f of fields) {
+            if (Math.min(y1, f.y1) - Math.max(y0, f.y0) <= 0.01) continue
             if (f.b > a2 && f.b <= mid) a2 = Math.max(a2, f.b + gap / 2)
             if (f.a < b2 && f.a >= mid) b2 = Math.min(b2, f.a - gap / 2)
           }
@@ -1108,7 +1181,7 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
           const board = boards.find((f) => f.a < mid && f.b > mid && rowMid > f.y0 && rowMid < f.y1)
           pushFacadePiece(
             list, c, side, 'facade-cassette-' + side + (row.attic ? '-attic-' : '-body-') + row.index + '-' + i,
-            spec.kind, a2, b2, row.y0 + gap / 2, row.y1 - gap / 2, board?.wood ?? spec.color ?? c.exteriorColor,
+            spec.kind, a2, b2, y0, y1, board?.wood ?? spec.color ?? c.exteriorColor,
           )
         }
       }

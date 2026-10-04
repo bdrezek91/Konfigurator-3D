@@ -34,6 +34,26 @@ const g = (
 ): ProjectGeometry => ({ externalHeight: 2.86, openings, decor, exteriorLights, notes })
 
 export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
+  'GALERIA/13': {
+    // Wzorzec Systemu B (duże bloki) — zdjęcie 13: czarne kasetony 9005 tylko na froncie, attyka 1 rząd bloków ~0,6 m,
+    // korpus — bloki ~0,55 m (kolumna przy narożniku), duże przeszklenia do attyki; bok — goła płyta. Rozkład ±5 cm.
+    externalHeight: 2.92,
+    foundationGap: 0.05,
+    roofEdgeFlashing: false,
+    facadeCladding: {
+      front: { kind: 'cassette-horizontal', cassetteSystem: 'B', color: '#0e0e10', gap: 0.020, staggered: false },
+    },
+    openings: [
+      o('G13-FIX-1','front',-2.515,0.70,2.18,'fixed-glass',{sill:0,frameColor:'#0e0e10',profile:'alu-standard'}),
+      o('G13-FIX-2','front',-1.815,0.70,2.18,'fixed-glass',{sill:0,frameColor:'#0e0e10',profile:'alu-standard'}),
+      o('G13-DOOR','front',-0.99,0.95,2.18,'door-glazed',{sill:0,frameColor:'#0e0e10',profile:'alu-standard',hinge:'left',handle:'bar'}),
+      o('G13-FIX-3','front',0.185,1.40,2.18,'fixed-glass',{sill:0,frameColor:'#0e0e10',profile:'alu-standard'}),
+      o('G13-FIX-4','front',1.585,1.40,2.18,'fixed-glass',{sill:0,frameColor:'#0e0e10',profile:'alu-standard'}),
+    ],
+    decor: [],
+    exteriorLights: [],
+    notes: ['Wzorzec Systemu B kasetonów: zdjęcie 13 (reference/gallery/13-rzad-pawilonow-czarne-kasetony.jpg).'],
+  },
   'GALERIA/207': {
     // Wzorzec kasetonów 1:1 — zdjęcie galerii 207 (= 110: ten sam system). Elewacja kasetonowa na wszystkich ścianach:
     // attyka 2 × duże bloki, korpus — pasy ~240 mm w kolumnach, łączenia pionowe ciągłe, narożnik L.

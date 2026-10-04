@@ -5,7 +5,7 @@
 Hierarchia źródeł: 1 zdjęcie gotowego pawilonu · 2 film · 3 pomiar zdjęcia ze skalą · 4 katalog · 5 produkcja · 6 rysunek · 7 szkic · 8 założenie.
 Przy sprzeczności wygrywa źródło wyżej; sprzeczność opisana w kolumnie „problem”.
 
-Pewność: VERIFIED 26 · HIGH 17 · MEDIUM 20 · LOW 5 · UNKNOWN 4
+Pewność: VERIFIED 26 · HIGH 17 · MEDIUM 23 · LOW 6 · UNKNOWN 5
 
 ## Wartości fizyczne
 
@@ -24,6 +24,11 @@ Pewność: VERIFIED 26 · HIGH 17 · MEDIUM 20 · LOW 5 · UNKNOWN 4
 | `cassette.thickness` Kaseton — głębokość tacy (zagięcie krawędzi) | 25 mm | założenie: Założenie — nie podana przez produkcję, niewidoczna na zdjęciach frontalnych | **UNKNOWN** | Wymiar zagięcia kasetonu (mm). | było 30 → 25 mm | OPEN |
 | `cassette.offsetFromPanel` Kaseton — lico od lica płyty (= głębokość tacy; kaseton leży na płycie) | 25 mm | produkcja: Wyliczone: mocowanie bezpośrednio do płyty (produkcja) + głębokość tacy (założenie) | **LOW** | — | było 75 → 25 mm | CHANGED |
 | `cassette.columnMax` Kasetony poziome — maks. szerokość kolumny/bloku (łączenia pionowe ciągłe przez całą wysokość, bez mijanki) | 1300 mm | pomiar zdjęcia: Zdjęcia 11, 12, 110, 207: bloki attyki 1,0–1,3 m, łączenia w liniach krawędzi otworów i pól okładzin, kolumny korpusu tej samej szerokości | **MEDIUM** | — | było 3000 → 1300 mm | CHANGED |
+| `cassette.maxCassetteLength` Kaseton System A — maks. długość pasa korpusu (arkusza); podział tylko powyżej tej długości | 3000 mm | założenie: ASSUMPTION — brak danych produkcji. Zdjęcie 207: pas 2,7 m bez łączenia (dolna granica) | **UNKNOWN** | Maks. długość kasetonu z produkcji (gięciarka / arkusz). | zmierzyć | OPEN |
+| `cassette.systemBAtticRow` Kaseton System B (duże bloki) — wysokość jedynego rzędu attyki | 630 mm | pomiar zdjęcia: Pomiar zdjęcia 13 (skala z wysokości naroża 2,92 m): 125 px ≈ 0,63 m | **MEDIUM** | — | — | CHANGED |
+| `cassette.systemBAtticBlock` Kaseton System B — szerokość bloku attyki (równe bloki) | 600 mm | pomiar zdjęcia: Zdjęcie 13: ~10 bloków na froncie 6 m | **MEDIUM** | — | — | CHANGED |
+| `cassette.systemBBodyRow` Kaseton System B — wysokość bloku korpusu | 550 mm | pomiar zdjęcia: Zdjęcie 13: fugi poziome co ~108 px ≈ 0,54 m | **MEDIUM** | — | — | CHANGED |
+| `cassette.systemBBodyColumns` Kaseton System B — szerokość bloku korpusu = 2 bloki attyki (łączenia w liniach attyki) | 1200 mm | założenie: ASSUMPTION — zdjęcie 13 pokazuje tylko kolumnę przy narożniku (~0,5 m); dłuższych ścian brak | **LOW** | — | zmierzyć | OPEN |
 | `cassette.cornerWrap` Zawinięcie kasetonu narożnego L (na każdą ścianę) — przy pełnej elewacji kasetonowej na obu ścianach | 150 mm | założenie: Założenie; galeria: zawinięcie widoczne przy pełnej elewacji kasetonowej (028, 110, 111; dawne 19–21) | **LOW** | Goła płyta z pasami kaseton-deska (zdjęcie 163 = zdjęcie od produkcji 2026-10-04): róg przykryty obróbką narożną, nie kasetonem L — model rozróżnia oba przypadki. · Zmierzyć szerokość zawinięcia na zdjęciu narożnika ze skalą. | zmierzyć | OPEN |
 | `lamella.pitch` Rozstaw lameli pionowych | 82 mm | pomiar zdjęcia: Zdjęcie 03 (drewnopodobne): 28 lameli, 82 ± 2 mm; zdjęcie 11 (aluminiowe): 80,6 mm | **VERIFIED** | Model galerii-03 miał 58 mm (39 lameli zamiast 28). Zdjęcie 09 (inny produkt): ≈ 150 mm — wariant szeroki. | było 72 → 82 mm | CHANGED |
 | `lamella.face` Szerokość czoła lameli | 45 mm | pomiar zdjęcia: Zdjęcie 03: jasne czoło 45–50 mm; zdjęcie 11 (alu): 40 mm | **MEDIUM** | — | było 40 → 45 mm | CHANGED |

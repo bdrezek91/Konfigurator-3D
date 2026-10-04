@@ -66,7 +66,7 @@ const steelNodes = new Set<string>()
 
 // konfiguracje z UI (bez geometrii projektu): długości 6/8/9/10 m × wszystkie elewacje × różna stolarka
 const FACADES: FacadeStyle[] = ['plain', 'cassette-graphite', 'cassette-black', 'lamella-winchester', 'lamella-black', 'lamella-diagonal-winchester',
-  'cassette-lamella', 'silver-rectangle', 'cassette-horizontal', 'cassette-grid', 'vertical-ribbed', 'wood-horizontal', 'ornament-panel']
+  'cassette-lamella', 'silver-rectangle', 'cassette-horizontal', 'cassette-blocks', 'cassette-grid', 'vertical-ribbed', 'wood-horizontal', 'ornament-panel']
 const GENERATED: Array<{ id: string; config: PavilionConfig }> = []
 for (const L of [6.03, 8.03, 9.03, 10.03]) {
   for (const [k, facade] of FACADES.entries()) {
@@ -233,6 +233,19 @@ for (const preset of [...PRESETS, ...GENERATED]) {
           if (ox > 0.005 && oy > 0.005) err(`kaseton ${cpt.id} nachodzi na otwór ${o.id} (${Math.round(ox * 1000)}×${Math.round(oy * 1000)} mm)`)
         }
       }
+    }
+
+    // 11. kasetony: wspólny rytm poziomy (fugi korpusu na tej samej wysokości na wszystkich ścianach i po obu stronach otworów)
+    if (fname === 'auto') {
+      const comps3 = buildComponentModel(cfg).components.filter((x) => x.id.includes('-body-') && x.id.startsWith('facade-cassette-'))
+      const byRow = new Map<string, Set<number>>()
+      const fullH = Math.max(...comps3.map((x) => x.dimensions.lengthMm))
+      for (const cpt of comps3.filter((x) => x.dimensions.lengthMm > fullH - 3)) { // pełne pasy (docięte przy otworach pomijane)
+        const row = cpt.id.split('-body-')[1].split('-')[0]
+        const bottom = Math.round((cpt.position[1] - cpt.dimensions.lengthMm / 2000) * 1000)
+        byRow.set(row, (byRow.get(row) ?? new Set()).add(bottom))
+      }
+      for (const [row, set] of byRow) if (set.size > 1) err(`rząd kasetonów ${row}: różne wysokości fugi ${[...set].join('/')} mm`)
     }
 
     // 9. BOM (komponenty) liczony z tego samego modelu: liczby płyt i długości stali muszą się zgadzać

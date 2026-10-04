@@ -13,6 +13,7 @@ export type FacadeStyle =
   | 'cassette-lamella'
   | 'silver-rectangle'
   | 'cassette-horizontal'
+  | 'cassette-blocks'
   | 'cassette-grid'
   | 'vertical-ribbed'
   | 'wood-horizontal'
@@ -34,6 +35,8 @@ export type FacadeCladdingSpec = {
   staggered?: boolean
   /** Wysokość rzędu attyki [m] (2 rzędy). Domyślnie 0,315. */
   atticRowHeight?: number
+  /** System kasetonów: A — poziome pasy + attyka 2 rzędy (zdjęcia 207/110/11/12), B — duże bloki + attyka 1 rząd (zdjęcie 13). */
+  cassetteSystem?: 'A' | 'B'
 }
 export type OpeningKind = 'door-glazed' | 'door-full' | 'door-double' | 'fixed-glass' | 'alu-window' | 'pvc-window'
 export type DecorKind =
