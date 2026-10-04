@@ -51,7 +51,7 @@ ${derived.join('\n')}
 
 | klucz | stan | co rozstrzygnie |
 |---|---|---|
-| topFramePosition | HIGH — leży na dachu, dospawana do słupów wystających ~5 cm (produkcja 2026-10-02, WA0019) | — |
+| topFramePosition | HIGH — leży na dachu/obróbce (na żebrach trapezu), dospawana do słupów; nieprzykryta; ucha φ16 w narożach (produkcja 2026-10-02/04, WA0019, zdjęcie) | położenie uch (LOW) |
 | topFrameCornerRaise | HIGH — 3–8 mm (silikon + wasserstop, „zależy jak ktoś położy”, produkcja 2026-10-03); w geometrii 0 (poniżej skali) | — |
 | cornerAngleHeight | HIGH — słup = rama + podłoga + ściana + dach + ~50 mm (produkcja: „jakieś 5 cm” nad dach; zdjęcie 12–15 cm = przed przycięciem, potwierdzone 2026-10-03) | — |
 | roofSupportDetail | MEDIUM — dach leży na ścianach, luz 6 mm/stronę z danych 2,94 m | przekrój/rysunek oparcia dachu |

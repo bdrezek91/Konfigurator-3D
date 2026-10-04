@@ -104,8 +104,9 @@ export const PHYS = {
       source: 'Wyliczone: mocowanie bezpośrednio do płyty (produkcja) + głębokość tacy (założenie)', confidence: 'LOW', status: 'CHANGED', previous: 75,
     }),
     cornerWrap: P({
-      element: 'Zawinięcie kasetonu narożnego L (na każdą ścianę)', value: 150, rank: 8, source: 'Założenie; zdjęcia 19–21 pokazują zawinięcie bez listwy',
-      confidence: 'LOW', status: 'OPEN', todo: 'Zmierzyć na zdjęciu narożnika ze skalą.',
+      element: 'Zawinięcie kasetonu narożnego L (na każdą ścianę) — tylko konstrukcje inne niż System 1', value: 150, rank: 8, source: 'Założenie; zdjęcia 19–21 pokazują zawinięcie bez listwy',
+      confidence: 'LOW', status: 'CHANGED',
+      conflict: 'Produkcja (2026-10-04, zdjęcie gotowego pawilonu z kasetonami-deską): róg pawilonu przykryty obróbką narożną, nie kasetonem L. System 1: obróbka narożna na licu kasetonów.',
     }),
   },
   lamella: {
@@ -313,6 +314,25 @@ export const PHYS = {
       element: 'Obróbka cokołowa — kołnierz pionowy na ścianie (przykręcany)', value: 16, rank: 3,
       source: 'Zdjęcie cokołu (2026-10-03): ciemny pas z wkrętami nad skosem, ≈ 15,6 mm w obu kolumnach pomiarowych',
       confidence: 'MEDIUM', status: 'OK',
+    }),
+    liftingEyeRod: P({
+      element: 'Ucho transportowe w narożu górnej ramy — pręt gładki φ16', value: 16, rank: 5,
+      source: 'Produkcja Dampol (2026-10-04): „pręty gładkie fi 16, 25 cm, wygięte w U”, dospawane do górnej ramy; zdjęcie gotowego pawilonu (ucha w 4 narożach)',
+      confidence: 'VERIFIED', status: 'CHANGED',
+    }),
+    liftingEyeLength: P({
+      element: 'Ucho transportowe — długość pręta przed gięciem (U)', value: 250, rank: 5,
+      source: 'Produkcja Dampol (2026-10-04)', confidence: 'VERIFIED', status: 'CHANGED',
+    }),
+    liftingEyeSpan: P({
+      element: 'Ucho transportowe — rozstaw osi ramion U (położenie: przy słupie, ramiona przy wewnętrznym licu ramy)', value: 76, rank: 8,
+      source: 'Założenie z proporcji zdjęcia gotowego pawilonu; ramiona = (250 − π·76/2)/2 ≈ 65 mm', confidence: 'LOW', status: 'OPEN',
+      todo: 'Rozstaw ramion i miejsce spawania (na słupie / na ramie, w której płaszczyźnie).',
+    }),
+    crownUnderFrame: P({
+      element: 'Obróbka korony zachodzi pod górny kątownik (kątownik leży na dachu/obróbce) — kołnierz poziomy na wierzchu dachu', value: 45, rank: 1,
+      source: 'Zdjęcie gotowego pawilonu (2026-10-04) + produkcja: „kątownik jest na dachu/obróbce”, płyta nigdzie niewidoczna — zakryta obróbkami',
+      confidence: 'MEDIUM', status: 'CHANGED', todo: 'Szerokość kołnierza pod kątownikiem (przyjęto 45 mm ≈ ramię kątownika).',
     }),
     intermediateFloorSupports: P({
       element: 'Podpory pośrednie podłogi (poprzeczki)', value: 0, unit: '-', rank: 8,

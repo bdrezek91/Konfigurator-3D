@@ -185,11 +185,12 @@ for (const preset of PRESETS) {
         ['wall-panels', count('wall-panels'), wallPanels],
         ['floor-panels', count('floor-panels'), model.parts.filter((p) => p.layer === 'floor' && p.material === 'pirCore').length],
         ['roof-panels', count('roof-panels'), model.parts.filter((p) => p.layer === 'roof' && p.material === 'pirCore').length],
-        ['stal', count('floor-frame') + count('corner-posts') + count('roof-beams'), model.parts.filter((p) => p.material === 'steel').length],
+        ['stal', count('floor-frame') + count('corner-posts') + count('roof-beams'), model.parts.filter((p) => p.material === 'steel' && !p.id.startsWith('lift-eye-')).length],
+        ['ucha', comps.filter((x) => x.id.startsWith('lift-eye-')).length, model.parts.filter((p) => p.id.startsWith('lift-eye-')).length],
       ]
       for (const [name, bom, mod] of pairs) if (bom !== mod) err(`BOM ${name}: ${bom} ≠ model ${mod}`)
       const steelBom = comps.filter((x) => ['floor-frame', 'corner-posts', 'roof-beams'].includes(x.category)).reduce((s, x) => s + x.dimensions.lengthMm, 0)
-      const steelModel = model.parts.filter((p) => p.material === 'steel').reduce((s, p) => s + p.geometry.length * 1000, 0)
+      const steelModel = model.parts.filter((p) => p.material === 'steel' && !p.id.startsWith('lift-eye-')).reduce((s, p) => s + p.geometry.length * 1000, 0)
       if (Math.abs(steelBom - steelModel) > 10) err(`BOM stal ${Math.round(steelBom)} mm ≠ model ${Math.round(steelModel)} mm`)
     }
   }

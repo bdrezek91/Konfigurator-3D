@@ -5,7 +5,7 @@
 Hierarchia źródeł: 1 zdjęcie gotowego pawilonu · 2 film · 3 pomiar zdjęcia ze skalą · 4 katalog · 5 produkcja · 6 rysunek · 7 szkic · 8 założenie.
 Przy sprzeczności wygrywa źródło wyżej; sprzeczność opisana w kolumnie „problem”.
 
-Pewność: VERIFIED 22 · HIGH 17 · MEDIUM 16 · LOW 6 · UNKNOWN 4
+Pewność: VERIFIED 24 · HIGH 17 · MEDIUM 17 · LOW 7 · UNKNOWN 4
 
 ## Wartości fizyczne
 
@@ -23,7 +23,7 @@ Pewność: VERIFIED 22 · HIGH 17 · MEDIUM 16 · LOW 6 · UNKNOWN 4
 | `cassette.mounting` Kaseton — mocowanie: wkręty przez obrzeże bezpośrednio do płyty warstwowej (bez podkonstrukcji) | 0 | produkcja: Produkcja Dampol (2026-10-03) | **VERIFIED** | — | — | CHANGED |
 | `cassette.thickness` Kaseton — głębokość tacy (zagięcie krawędzi) | 25 mm | założenie: Założenie — nie podana przez produkcję, niewidoczna na zdjęciach frontalnych | **UNKNOWN** | Wymiar zagięcia kasetonu (mm). | było 30 → 25 mm | OPEN |
 | `cassette.offsetFromPanel` Kaseton — lico od lica płyty (= głębokość tacy; kaseton leży na płycie) | 25 mm | produkcja: Wyliczone: mocowanie bezpośrednio do płyty (produkcja) + głębokość tacy (założenie) | **LOW** | — | było 75 → 25 mm | CHANGED |
-| `cassette.cornerWrap` Zawinięcie kasetonu narożnego L (na każdą ścianę) | 150 mm | założenie: Założenie; zdjęcia 19–21 pokazują zawinięcie bez listwy | **LOW** | Zmierzyć na zdjęciu narożnika ze skalą. | zmierzyć | OPEN |
+| `cassette.cornerWrap` Zawinięcie kasetonu narożnego L (na każdą ścianę) — tylko konstrukcje inne niż System 1 | 150 mm | założenie: Założenie; zdjęcia 19–21 pokazują zawinięcie bez listwy | **LOW** | Produkcja (2026-10-04, zdjęcie gotowego pawilonu z kasetonami-deską): róg pawilonu przykryty obróbką narożną, nie kasetonem L. System 1: obróbka narożna na licu kasetonów. | — | CHANGED |
 | `lamella.pitch` Rozstaw lameli pionowych | 82 mm | pomiar zdjęcia: Zdjęcie 03 (drewnopodobne): 28 lameli, 82 ± 2 mm; zdjęcie 11 (aluminiowe): 80,6 mm | **VERIFIED** | Model galerii-03 miał 58 mm (39 lameli zamiast 28). Zdjęcie 09 (inny produkt): ≈ 150 mm — wariant szeroki. | było 72 → 82 mm | CHANGED |
 | `lamella.face` Szerokość czoła lameli | 45 mm | pomiar zdjęcia: Zdjęcie 03: jasne czoło 45–50 mm; zdjęcie 11 (alu): 40 mm | **MEDIUM** | — | było 40 → 45 mm | CHANGED |
 | `lamella.depth` Lamela — od czoła do ściany 30 mm; na przemian profil „kapelusz” _\|‾\|_ (czoło) i U (dno na ścianie = rowek), na zakładkę | 30 mm | produkcja: Produkcja Dampol (2026-10-03) | **VERIFIED** | — | było 52 → 30 mm | CHANGED |
@@ -67,6 +67,10 @@ Pewność: VERIFIED 22 · HIGH 17 · MEDIUM 16 · LOW 6 · UNKNOWN 4
 | `system1.baseFlashingOffset` Obróbka cokołowa — odsunięcie lica od ściany (skośny powrót do ściany, kołnierz przykręcony, owija narożnik) | 15 mm | produkcja: Produkcja Dampol (2026-10-03): „półtora cm ma obróbki kawałek”; kształt ze zdjęcia cokołu w narożniku (zdjecie-cokol-naroznik.jpg) | **HIGH** | — | było 25 → 15 mm | CHANGED |
 | `system1.baseFlashingSlope` Obróbka cokołowa — kąt skosu powrotu do ściany (od poziomu) | 16 deg | pomiar zdjęcia: Wyliczony ze zdjęcia cokołu (2026-10-03): model afiniczny kamery z trzech kierunków naroża (orto-normalność), skala z lica 140 mm; pas skosu 82,9 mm w kolumnie obrazu = 15 mm odsunięcia + wzniesienie ≈ 4,3 mm → atan(4,3 / 15) ≈ 16°. Dwie kolumny pomiarowe dają ten sam wynik (±1 mm) | **MEDIUM** | Wynik zależy od lica 140 mm (film, MEDIUM) — potwierdzić z rysunkiem gięcia. | — | OK |
 | `system1.baseFlashingFlange` Obróbka cokołowa — kołnierz pionowy na ścianie (przykręcany) | 16 mm | pomiar zdjęcia: Zdjęcie cokołu (2026-10-03): ciemny pas z wkrętami nad skosem, ≈ 15,6 mm w obu kolumnach pomiarowych | **MEDIUM** | — | — | OK |
+| `system1.liftingEyeRod` Ucho transportowe w narożu górnej ramy — pręt gładki φ16 | 16 mm | produkcja: Produkcja Dampol (2026-10-04): „pręty gładkie fi 16, 25 cm, wygięte w U”, dospawane do górnej ramy; zdjęcie gotowego pawilonu (ucha w 4 narożach) | **VERIFIED** | — | — | CHANGED |
+| `system1.liftingEyeLength` Ucho transportowe — długość pręta przed gięciem (U) | 250 mm | produkcja: Produkcja Dampol (2026-10-04) | **VERIFIED** | — | — | CHANGED |
+| `system1.liftingEyeSpan` Ucho transportowe — rozstaw osi ramion U (położenie: przy słupie, ramiona przy wewnętrznym licu ramy) | 76 mm | założenie: Założenie z proporcji zdjęcia gotowego pawilonu; ramiona = (250 − π·76/2)/2 ≈ 65 mm | **LOW** | Rozstaw ramion i miejsce spawania (na słupie / na ramie, w której płaszczyźnie). | zmierzyć | OPEN |
+| `system1.crownUnderFrame` Obróbka korony zachodzi pod górny kątownik (kątownik leży na dachu/obróbce) — kołnierz poziomy na wierzchu dachu | 45 mm | zdjęcie: Zdjęcie gotowego pawilonu (2026-10-04) + produkcja: „kątownik jest na dachu/obróbce”, płyta nigdzie niewidoczna — zakryta obróbkami | **MEDIUM** | Szerokość kołnierza pod kątownikiem (przyjęto 45 mm ≈ ramię kątownika). | — | CHANGED |
 | `system1.intermediateFloorSupports` Podpory pośrednie podłogi (poprzeczki) | 0 | założenie: Opis produkcji wymienia tylko obwód; brak danych o poprzeczkach | **UNKNOWN** | — | zmierzyć | OPEN |
 | `system1.squareFlashing` Obróbka „na kwadraty” — geometria: przez ostatnie żebro dachu, lico pionowe, powrót poziomy do ściany, kapinos | 1 | produkcja: Szkic produkcji (2026-10-02). Stosowana, gdy deska/lamele/dekor wymagają większego odsunięcia | **HIGH** | Długość powrotu i kapinosu (mm). | — | CHANGED |
 | `floor.board` Płyta podłogowa na PIR — MFP 12 mm (nie OSB) | 12 mm | produkcja: Produkcja Dampol (2026-10-02/03): płyta MFP, grubość 12 mm | **VERIFIED** | — | — | OK |
@@ -90,16 +94,16 @@ Pewność: VERIFIED 22 · HIGH 17 · MEDIUM 16 · LOW 6 · UNKNOWN 4
 | Płyty ściany bocznej | 3 | 2 × 1000 + docięta 752 mm | **VERIFIED** | ✓ produkcja: 3 płyty, jedna docięta na 752 mm |
 | Element dachowy — długość (w poprzek) | 2942 | W − 2·t − 2·luz (luz z danych produkcji) — po skosie | **MEDIUM** | ✓ produkcja: ≈ 2940 mm |
 | Liczba płyt dachowych | 6 | ⌈6010 / 1050⌉ | **MEDIUM** | — |
-| Słup narożny przedni — długość | 2874 | t + podłoga + ściana przednia + dach + 50 (ponad dach) | **MEDIUM** | — |
-| Słup narożny tylny — długość | 2774 | t + podłoga + ściana tylna + dach + 50 | **MEDIUM** | — |
-| Wysunięcie słupa ponad dach | 50 | produkcja „~5 cm” pod dospawanie górnej ramy; WA0019 ≈ 55 mm | **HIGH** | — |
-| Wysokość zewn. front (spód ramy → góra górnej ramy) | 2874 | konstrukcja; + prześwit 60 mm do gruntu | **MEDIUM** | — |
+| Słup narożny przedni — długość | 2916 | t + podłoga + ściana przednia + dach + żebro trapezu + 50 (górna rama) | **MEDIUM** | — |
+| Słup narożny tylny — długość | 2816 | t + podłoga + ściana tylna + dach + żebro trapezu + 50 (górna rama) | **MEDIUM** | — |
+| Wysunięcie słupa ponad dach | 92 | żebro trapezu 42 + górna rama 50 (rama leży na żebrach; nad żebrami 50 mm — produkcja „~5 cm”) | **HIGH** | — |
+| Wysokość zewn. front (spód ramy → góra górnej ramy) | 2916 | konstrukcja; + prześwit 60 mm do gruntu | **MEDIUM** | — |
 
 ## Niewiadome Systemu 1 (do potwierdzenia na produkcji)
 
 | klucz | stan | co rozstrzygnie |
 |---|---|---|
-| topFramePosition | HIGH — leży na dachu, dospawana do słupów wystających ~5 cm (produkcja 2026-10-02, WA0019) | — |
+| topFramePosition | HIGH — leży na dachu/obróbce (na żebrach trapezu), dospawana do słupów; nieprzykryta; ucha φ16 w narożach (produkcja 2026-10-02/04, WA0019, zdjęcie) | położenie uch (LOW) |
 | topFrameCornerRaise | HIGH — 3–8 mm (silikon + wasserstop, „zależy jak ktoś położy”, produkcja 2026-10-03); w geometrii 0 (poniżej skali) | — |
 | cornerAngleHeight | HIGH — słup = rama + podłoga + ściana + dach + ~50 mm (produkcja: „jakieś 5 cm” nad dach; zdjęcie 12–15 cm = przed przycięciem, potwierdzone 2026-10-03) | — |
 | roofSupportDetail | MEDIUM — dach leży na ścianach, luz 6 mm/stronę z danych 2,94 m | przekrój/rysunek oparcia dachu |

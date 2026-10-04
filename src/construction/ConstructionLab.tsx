@@ -202,7 +202,12 @@ export default function ConstructionLab() {
   const defaultCam: SectionDef['camera'] = view === 'exploded'
     ? { position: [9.5, 6.5, 9.5], target: [0, 1.6, 0], fov: 38 }
     : { position: [6.8, 3.6, 7.6], target: [0, 1.3, 0], fov: 36 }
-  const cam = sec?.camera ?? defaultCam
+  // ?cam=px,py,pz,tx,ty,tz,fov — kadr z adresu (zbliżenia detali, testy wizualne)
+  const camQ = q.get('cam')?.split(',').map(Number)
+  const urlCam: SectionDef['camera'] | null = camQ && camQ.length === 7 && camQ.every(Number.isFinite)
+    ? { position: [camQ[0], camQ[1], camQ[2]], target: [camQ[3], camQ[4], camQ[5]], fov: camQ[6] }
+    : null
+  const cam = urlCam ?? sec?.camera ?? defaultCam
 
   const btn = (on: boolean) => ({
     padding: '5px 9px', borderRadius: 6, border: '1px solid #c9ccce', background: on ? '#1d2124' : '#fff', color: on ? '#fff' : '#1d2124',

@@ -224,8 +224,8 @@ function envelope(c: PavilionConfig) {
   const fr = frameDims(c)
   const floorT = fr.t + PANEL_THICKNESS_M[c.floorPanel]
   const roofT = PANEL_THICKNESS_M[c.roofPanel]
-  const outerFront = floorT + c.frontHeight + roofT + fr.topFrame
-  const outerBack = floorT + c.backHeight + roofT + fr.topFrame
+  const outerFront = floorT + c.frontHeight + roofT + fr.roofRib + fr.topFrame
+  const outerBack = floorT + c.backHeight + roofT + fr.roofRib + fr.topFrame
   const roofDepth = Math.hypot(c.width, outerFront - outerBack)
   const roofSlope = Math.atan2(outerFront - outerBack, c.width)
   return { floorT, roofT, outerFront, outerBack, roofDepth, roofSlope }
@@ -694,7 +694,10 @@ function addSystem1Structure(list: ModelComponent[], c: PavilionConfig) {
   const { roofSlope } = envelope(c)
 
   // stal: dolna rama, słupy, górna rama — długości z modelu
-  for (const p of parts.filter((x) => x.material === 'steel')) {
+  for (const p of parts.filter((x) => x.id.startsWith('lift-eye-'))) {
+    pushBeam(list, c, p.id, p.name, 'structure', m(PHYS.system1.liftingEyeLength), boxCenter(partBox([p])), [0, 0, Math.PI / 2], p.explode, 8, 'exact')
+  }
+  for (const p of parts.filter((x) => x.material === 'steel' && !x.id.startsWith('lift-eye-'))) {
     const category: ComponentCategory = p.id.startsWith('post-') ? 'corner-posts' : p.layer === 'topFrame' ? 'roof-beams' : 'floor-frame'
     const stage = p.id.startsWith('post-') ? 2 : p.layer === 'topFrame' ? 8 : 1
     pushBeam(list, c, p.id, p.name.replace(' — kątownik 50×50×4', ''), category, p.geometry.length, boxCenter(partBox([p])),
@@ -1017,12 +1020,16 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
           const cell0 = -span / 2 + col * atticModule
           const cell1 = cell0 + atticModule
           if (cell1 - cell0 <= 0.025) continue
-          const leftShrink = Math.abs(cell0 + span / 2) < 0.001 ? 0 : gap / 2
-          const rightShrink = Math.abs(cell1 - span / 2) < 0.001 ? 0 : gap / 2
-          pushFacadePiece(
-            list, c, side, 'facade-cassette-' + side + '-attic-' + row.index + '-' + col,
-            spec.kind, cell0 + leftShrink, cell1 - rightShrink, y0 + gap / 2, y1 - gap / 2, spec.color ?? c.exteriorColor,
-          )
+          // lamele/okładziny sięgające attyki zastępują kaseton w swoim polu (jak w pasie korpusu) — kaseton nie wchodzi na lamele
+          const visible = visibleIntervalsForCassetteBand(side, cell0, cell1, y0, y1, floorT, g)
+          visible.forEach(([v0, v1], part) => {
+            const leftShrink = Math.abs(v0 + span / 2) < 0.001 ? 0 : gap / 2
+            const rightShrink = Math.abs(v1 - span / 2) < 0.001 ? 0 : gap / 2
+            pushFacadePiece(
+              list, c, side, 'facade-cassette-' + side + '-attic-' + row.index + '-' + col + (part ? '-' + part : ''),
+              spec.kind, v0 + leftShrink, v1 - rightShrink, y0 + gap / 2, y1 - gap / 2, spec.color ?? c.exteriorColor,
+            )
+          })
         }
       }
       continue
@@ -1083,6 +1090,8 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
   }
 
   if (c.project === 'GALERIA/03') return
+  // System 1: róg pawilonu zakrywa obróbka narożna (produkcja 2026-10-04), kasetony kończą się pod nią — bez kasetonu narożnego L
+  if (frameDims(c).system1) return
 
   // narożnik kasetonu L leży na licach ścian (tył tacy na płycie)
   const faceInset = frameDims(c).wallFaceInset

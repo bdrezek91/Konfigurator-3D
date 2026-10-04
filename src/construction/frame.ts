@@ -1,4 +1,5 @@
 import { m, PHYS } from '../physical/spec'
+import { ROOF_TRAPEZOIDS } from '../scene/materials/profiles'
 import { PANEL_THICKNESS_M, type PavilionConfig } from '../types'
 
 /**
@@ -18,6 +19,8 @@ export function frameDims(c: PavilionConfig) {
     t,
     /** wysokość górnej ramy nad dachem */
     topFrame: a,
+    /** górna rama leży na wierzchu żeber trapezu (dach trapezowy) — o tyle wyżej niż płaska blacha płyty */
+    roofRib: system1 && c.roofProfile === 'trapezoid' ? ROOF_TRAPEZOIDS[c.panelManufacturer].heightMm / 1000 : 0,
     /** odległość osi ściany od obrysu (do środka) */
     wallCenterInset: system1 ? t + tw / 2 : 0,
     /** odległość lica zewnętrznego ściany od obrysu: dodatnia = do środka */

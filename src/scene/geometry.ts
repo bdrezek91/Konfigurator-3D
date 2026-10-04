@@ -8,8 +8,8 @@ export function envelope(config: PavilionConfig) {
   // floorT = poziom wierzchu podłogi nad spodem ramy (System 1: kątownik + płyta), roofT = grubość płyty dachowej
   const floorT = fr.t + PANEL_THICKNESS_M[config.floorPanel]
   const roofT = PANEL_THICKNESS_M[config.roofPanel]
-  const outerFront = floorT + config.frontHeight + roofT + fr.topFrame
-  const outerBack = floorT + config.backHeight + roofT + fr.topFrame
+  const outerFront = floorT + config.frontHeight + roofT + fr.roofRib + fr.topFrame
+  const outerBack = floorT + config.backHeight + roofT + fr.roofRib + fr.topFrame
   const slope = Math.atan2(outerFront - outerBack, config.width)
   const roofDepth = Math.hypot(config.width, outerFront - outerBack)
   return { floorT, roofT, outerFront, outerBack, slope, roofDepth }

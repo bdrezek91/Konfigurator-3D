@@ -17,6 +17,7 @@ Na razie tylko System 1. `ConstructionSystemId` przewiduje `system_2` i `system_
 | Nad jasną obróbką korony jest ciemny pas ~55 mm, a słup kończy się na jego górze | `dowod-wa0019-naroznik-gorny.jpg` (WA0019, w produkcji) | górna rama z kątownika leży ponad dachem i jest spięta ze słupami, które wystają ponad dach |
 | Pas korony na gotowym pawilonie ma ~200–220 mm, dolny pas ~135–140 mm | WA0017 | obróbka A korony 215 mm, obróbka cokołowa 140 mm (kątownik 50 + krawędź podłogi + zakład) |
 | Cokół w narożniku: lico odsunięte od ściany, u góry skośny powrót do płyty, kołnierz przykręcony; obróbka owija narożnik | `zdjecie-cokol-naroznik.jpg` | cokół: odsunięcie 15 mm (produkcja), skos ≈ 16° (wzniesienie ≈ 4 mm, wyliczony ze zdjęcia), kołnierz ≈ 16 mm z wkrętami; przebiegi wydłużone o odsunięcie w narożach |
+| Gotowy pawilon (kasetony-deska): kątownik górnej ramy na dachu/obróbce, w narożach ucha z pręta φ16 (U), róg zakryty pionową obróbką narożną | zdjęcie od produkcji 2026-10-04 | rama na żebrach dachu, korona z kołnierzem pod kątownikiem, ucha w 4 narożach, obróbka narożna na licu kasetonów (bez kasetonu narożnego L) |
 | Słup narożny w produkcji wystaje wyraźnie ponad dach | `zdjecie-produkcja-naroznik-slup-nad-dachem.jpg` | ≈ 120–150 mm na zdjęciu — stan przed przycięciem i dospawaniem górnej ramy (potwierdzone); docelowo ~50 mm |
 
 ## Budowa (warstwy i etapy)
@@ -30,7 +31,7 @@ Na razie tylko System 1. `ConstructionSystemId` przewiduje `system_2` i `system_
 | 5 | ściany boczne | **między** ścianą przednią a tylną: długość = W − 2·4 − 2·grubość ściany | HIGH |
 | 6 | ściana przednia | jak tylna; otwory wycięte w płytach, stolarka w otworach | HIGH |
 | 7 | dach | płyty w poprzek, oparte na ścianach. Długość = W − 2·4 − 2·luz (luz 6 mm wyliczony z danych produkcji 2,94 m), trapez wg katalogu | MEDIUM |
-| 8 | górna rama | kątownik na płycie dachowej (ramię pionowe na obrysie, poziome do środka), zespawany ze słupami | LOW |
+| 8 | górna rama | kątownik leży na dachu/obróbce korony: na wierzchu żeber trapezu (dach trapezowy) albo na blasze, ramię poziome w płaszczyźnie spadku — nie wcina się w dach; zespawany ze słupami, nieprzykryty. W narożach ucha transportowe: pręt gładki φ16, 250 mm, gięty w U | HIGH / ucha: położenie LOW |
 | 9 | obróbki | półtorówka 15 mm (goły PIR), na kwadraty 25 mm (deska/dekor), płaska techniczna (pod kaseton); cokół 140 mm, odsunięcie 15 mm, skos 16°, kołnierz 16 mm (owija narożnik), narożniki L 124 mm | HIGH / płaska LOW / skos cokołu MEDIUM |
 | 10 | elewacja | kasetony przykręcane przez obrzeże do płyty (fuga 20 mm, produkcja); lico = głębokość tacy 25 mm (UNKNOWN). Konstrukcja jest identyczna dla każdej elewacji | MEDIUM |
 
