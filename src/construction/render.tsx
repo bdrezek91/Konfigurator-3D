@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { FrontSide, Material, MeshPhysicalMaterial, MeshStandardMaterial } from 'three'
+import { Color, FrontSide, Material, MeshPhysicalMaterial, MeshStandardMaterial } from 'three'
 import { isRal9005, RENDER } from '../physical/spec'
 import { flatNormalMap, profileNormalMap, surfaceProfileDef } from '../scene/materials/profiles'
 import { woodMaps } from '../scene/materials/textures'
@@ -55,7 +55,8 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
         // UV wieczka wyciągnięcia = metry przekroju; deski Activia Latur 3 (dąb brązowy) wzdłuż długości (x)
         : new MeshStandardMaterial({ side: FrontSide, color: '#ffffff', roughness: 0.55, envMapIntensity: 2.2, ...woodMaps('floor', 2, 1) }),
       // styk płyt (zamek): ciemna linia — cień w zamku
-      joint: new MeshStandardMaterial({ ...common, color: '#15181a', roughness: 0.85, metalness: 0.1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }),
+      // kolor z koloru płyty, przyciemniony: zdjęcie 163 — styk ~12% ciemniejszy od lica (90–97 przy 103), nie czarna kreska
+      joint: new MeshStandardMaterial({ ...common, color: new Color(config.exteriorColor).multiplyScalar(0.6), roughness: 0.7, metalness: 0.04, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }),
       glass: new MeshPhysicalMaterial({ color: '#5d6b74', metalness: 0.4, roughness: 0.05, transparent: true, opacity: 0.45 }),
     }
   }, [config.panelManufacturer, config.wallProfile, config.exteriorColor, config.flashingColor, config.floorFinish, transparent, opacity])

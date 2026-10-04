@@ -1,1 +1,1 @@
-export type PavilionView = 'perspective' | 'front' | 'front-left' | 'front-right' | 'left' | 'right' | 'back'
+export type PavilionView = 'perspective' | 'rear' | 'front' | 'front-left' | 'front-right' | 'left' | 'right' | 'back' | 'top'

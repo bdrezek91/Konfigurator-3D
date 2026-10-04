@@ -70,7 +70,7 @@ export default function App() {
   const [lighting, setLighting] = useState<LightingMode>(() => (query.get('light') === 'evening' ? 'evening' : 'day'))
   const [view, setView] = useState<PavilionView>(() => {
     const v = query.get('rview') as PavilionView | null
-    return v && ['perspective', 'front', 'back', 'left', 'right', 'front-left', 'front-right'].includes(v) ? v : 'perspective'
+    return v && ['perspective', 'rear', 'front', 'back', 'left', 'right', 'front-left', 'front-right', 'top'].includes(v) ? v : 'perspective'
   })
 
   const model = useMemo(() => buildComponentModel(config), [config])

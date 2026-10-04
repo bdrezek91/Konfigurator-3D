@@ -9,10 +9,12 @@ const HQPanel = lazy(() => import('./HQPanel').then((m) => ({ default: m.HQPanel
 
 const VIEWS: Array<[PavilionView, string]> = [
   ['perspective', 'Perspektywa'],
+  ['rear', 'Tył 3/4'],
   ['front', 'Front'],
   ['back', 'Tył'],
   ['left', 'Lewy'],
   ['right', 'Prawy'],
+  ['top', 'Góra'],
 ]
 
 const viewKey = (config: PavilionConfig) => 'dampol3d.view.' + config.project
