@@ -41,6 +41,10 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
         roughness: black ? RENDER.blackMattRoughness.value : RENDER.panelSemiMattRoughness.value,
         normalMap: profile ? profileNormalMap(profile) : flatNormalMap(),
       }),
+      // lico płyty pod kasetonami — widoczne tylko w fugach 20 mm między kasetonami o głębokości 25 mm, w głębokim cieniu
+      // (zdjęcia 110, 155: fuga = ciemna linia). Cień słońca nie wchodzi w tak wąską szczelinę (normalBias cienia ~ fuga),
+      // więc zacienienie wnęki jest w materiale: kolor płyty × 0,3
+      wallCavity: new MeshStandardMaterial({ ...common, color: new Color(config.exteriorColor).multiplyScalar(0.3), metalness: 0, roughness: 0.9 }),
       roofOuter: new MeshStandardMaterial({ ...common, color: config.flashingColor, metalness: 0.34, roughness: 0.48, envMapIntensity: 1.05 }),
       // okładzina wewnętrzna 9010 gładka
       inner: new MeshStandardMaterial({ ...common, color: '#f1ece1', metalness: 0.05, roughness: 0.4 }),
@@ -71,6 +75,10 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
     if (p.layer === 'floor') return p.material === 'sheetInner' ? materials.floorTop : materials.floor
     if (p.layer === 'roof') return p.material === 'sheetInner' ? materials.roofOuter : p.material === 'sheetOuter' && p.color === '#f1ece1' ? materials.inner : materials.roofOuter
     if (p.material === 'sheetInner') return materials.inner
+    if (p.layer === 'walls' && p.material === 'sheetOuter') {
+      const side = p.id.split('-')[1] as keyof typeof finish
+      if (finish[side] === 'cassette') return materials.wallCavity
+    }
     if (p.material === 'glass') return materials.glass
     return materials.wallOuter
   }
