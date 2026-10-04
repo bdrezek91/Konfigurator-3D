@@ -205,7 +205,7 @@ const ASSUMPTIONS: ComponentAssumption[] = [
   },
   {
     code: 'A-RIBBED-FACADE',
-    description: 'Alternatywna blacha elewacyjna wysokoprofilowana: moduł modelowy 600 mm i pionowe żebra; dokładny profil i szerokość krycia wymagają wskazania produktu.',
+    description: 'Blacha na rąbek (pionowa): panel ≈ 310 mm między rąbkami — pomiar zdjęcia galerii 044; producent i profil nieznane.',
     source: 'assumption',
   },
   {
@@ -823,10 +823,11 @@ function facadeSpecForSide(c: PavilionConfig, g: ProjectGeometry, side: WallSide
     c.facade === 'ornament-panel'
   ) return null
   if (c.facade === 'cassette-grid') {
-    return { kind: 'cassette-grid', gap: c.facadeGap ?? 0.012, moduleWidth: 0.80, moduleHeight: c.facadeBandHeight ?? DEFAULT_GRID_HEIGHT, color: c.exteriorColor }
+    return { kind: 'cassette-grid', gap: c.facadeGap ?? DEFAULT_FACADE_GAP, moduleWidth: 0.80, moduleHeight: c.facadeBandHeight ?? DEFAULT_GRID_HEIGHT, color: c.exteriorColor }
   }
   if (c.facade === 'vertical-ribbed') {
-    return { kind: 'vertical-ribbed', gap: 0.008, moduleWidth: 0.60, color: c.exteriorColor }
+    // blacha na rąbek: panel ≈ 310 mm (galeria 044); styk = rąbek, bez szerokiej fugi
+    return { kind: 'vertical-ribbed', gap: 0.008, moduleWidth: m(PHYS.standingSeam.module), color: c.exteriorColor }
   }
   // Kasetony poziome wg pomiarów ze zdjęć (POMIARY.md): długie pasy na całe pole między
   // narożnikiem a otworem, bez pionowych podziałów na pełnej ścianie i bez mijanki.
@@ -1036,7 +1037,7 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
     }
 
     if (spec.kind === 'vertical-ribbed') {
-      const moduleW = spec.moduleWidth ?? 0.60
+      const moduleW = spec.moduleWidth ?? m(PHYS.standingSeam.module)
       const yBreaks = new Set<number>([0, maxHeight])
       for (const o of g.openings.filter((x) => x.wall === side)) {
         const oy0 = floorT + openingSill(o)

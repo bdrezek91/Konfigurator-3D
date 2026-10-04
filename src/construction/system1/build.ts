@@ -542,7 +542,8 @@ function addFlashings(ctx: Ctx, f: FlashCtx, finishBySide: FinishBySide) {
     })
   }
   // narożniki: L zakrywające słup i czoło ściany przedniej/tylnej (ramię boczne wyliczone z grubości ściany)
-  const legS = f.t + f.tw + 0.02
+  // ramiona 25 cm (produkcja 2026-10-04); boczne musi zakryć czoło ściany przedniej/tylnej (t + grubość ściany) — kontrola niżej
+  const legS = Math.max(m(PHYS.system1.cornerFlashingSide), f.t + f.tw + 0.02)
   const legF = m(PHYS.system1.cornerFlashingFront)
   // przy kasetonach obróbka narożna leży na licu kasetonów i przykrywa ich końce (produkcja 2026-10-04: róg zakryty obróbką)
   const cassFace = -f.t + m(PHYS.cassette.thickness) + FLASH_T / 2 + 0.001

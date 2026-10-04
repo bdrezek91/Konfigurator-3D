@@ -29,10 +29,11 @@ Galeria nie dzieli zdjęć na pawilony — kolejne ujęcia tego samego pawilonu 
 | dach trapezowy, żebra (zdjęcie z produkcji) | z poziomu ziemi niewidoczny (attyka/korona) | brak sprzeczności |
 | prześwit 30–100 mm, podkłady | podkłady/bloczki widoczne (054, 102, 103, 117, 196) — czasem wysokie (102, 103: ~200 mm), czasem podest | zmienne — parametr `foundationGap` |
 
-## Pytania do produkcji (z przeglądu)
+## Odpowiedzi produkcji (2026-10-04)
 
-1. Ucha φ16 — czy są także w **dolnych** narożach (zdjęcie 163, dolny róg)?
-2. Typ B — czy ucha zostają pod attyką kasetonową, czy są odcinane po montażu?
-3. Obróbka narożna typu A — szerokość ramion (mm)?
-4. Blacha na rąbek (typ C) — producent/profil i szerokość modułu?
-5. 081 — rama i słupy jasne: czy to inny kolor obróbek (np. 9006/9010) na życzenie klienta?
+1. Ucha φ16 — **tylko w górnych narożach** (model: 4 górne).
+2. Ucha **nie są odcinane** — zostają także przy pełnej elewacji kasetonowej.
+3. Obróbka narożna — **ramiona 25 cm** (`system1.cornerFlashingSide/Front` = 250, VERIFIED).
+4. Blacha na rąbek — produkcja nie zna profilu; **ocena ze zdjęcia 044: panel ≈ 310 mm** (`standingSeam.module`, MEDIUM).
+   Zdjęcia 064–065 to nie blacha, tylko lamele na całej ścianie (rozstaw 78–80 mm ≈ system lameli 82 mm).
+5. 081 — **inny kolor obróbek** na życzenie (rama i słupy w kolorze obróbek; w UI: „Obróbki blacharskie i rama stalowa”, m.in. 9010 / 9006).

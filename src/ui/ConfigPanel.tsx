@@ -140,7 +140,7 @@ export function ConfigPanel({
           )}
           <Group title="Kolory">
             <Swatches label="Elewacja" value={config.exteriorColor} options={RAL_COLORS.map((c) => ({ value: c.value, name: c.name }))} onChange={(v) => update('exteriorColor', v)} />
-            <Swatches label="Obróbki blacharskie" value={config.flashingColor} options={RAL_COLORS.map((c) => ({ value: c.value, name: c.name }))} onChange={(v) => update('flashingColor', v)} />
+            <Swatches label="Obróbki blacharskie i rama stalowa" value={config.flashingColor} options={RAL_COLORS.map((c) => ({ value: c.value, name: c.name }))} onChange={(v) => update('flashingColor', v)} />
           </Group>
           <Group title="Ściany z okładziną">
             <div className="chip-row">

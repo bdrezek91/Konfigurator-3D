@@ -5,7 +5,7 @@
 Hierarchia źródeł: 1 zdjęcie gotowego pawilonu · 2 film · 3 pomiar zdjęcia ze skalą · 4 katalog · 5 produkcja · 6 rysunek · 7 szkic · 8 założenie.
 Przy sprzeczności wygrywa źródło wyżej; sprzeczność opisana w kolumnie „problem”.
 
-Pewność: VERIFIED 24 · HIGH 17 · MEDIUM 17 · LOW 7 · UNKNOWN 4
+Pewność: VERIFIED 26 · HIGH 17 · MEDIUM 18 · LOW 6 · UNKNOWN 4
 
 ## Wartości fizyczne
 
@@ -29,6 +29,8 @@ Pewność: VERIFIED 24 · HIGH 17 · MEDIUM 17 · LOW 7 · UNKNOWN 4
 | `lamella.depth` Lamela — od czoła do ściany 30 mm; na przemian profil „kapelusz” _\|‾\|_ (czoło) i U (dno na ścianie = rowek), na zakładkę | 30 mm | produkcja: Produkcja Dampol (2026-10-03) | **VERIFIED** | — | było 52 → 30 mm | CHANGED |
 | `lamella.sheet` Lamela — blacha 0,4 mm z nadrukiem winchester | 0.4 mm | produkcja: Produkcja Dampol (2026-10-03) | **VERIFIED** | — | — | OK |
 | `lamella.widePitch` Rozstaw lameli — wariant szeroki | 150 mm | pomiar zdjęcia: Zdjęcie 09: 0,053 H ≈ 150 mm (19 szczelin) | **MEDIUM** | — | — | OK |
+| `lamella.fullWallPitch` Lamele na całej ścianie (czarne/białe, galeria 064–065) — rozstaw | 80 mm | pomiar zdjęcia: Pomiar zdjęcia galerii 065 (frontalne): 104 okresy na szerokości, skala z wysokości → 78–80 mm; zgodne z rozstawem lameli 82 mm (zdjęcie 03) — ten sam system lameli | **MEDIUM** | — | — | OK |
+| `standingSeam.module` Blacha na rąbek (elewacja pionowa) — szerokość panelu między rąbkami | 310 mm | pomiar zdjęcia: Pomiar zdjęcia galerii 044 (frontalne): wzór co 97–98 px = 2 panele; skala z wysokości pawilonu i drzwi (6,1–6,5 mm/px) → 300–315 mm. Produkcja: profil nieznany | **MEDIUM** | Producent i profil blachy na rąbek. | było 600 → 310 mm | CHANGED |
 | `board.height` Deska elewacyjna pozioma — wysokość | 140 mm | film: Film WA0016: 0,13–0,15 m | **MEDIUM** | — | — | OK |
 | `board.gap` Deska — szczelina cieniowa | 12 mm | film: Film WA0016 (ocena wizualna) | **LOW** | — | — | OK |
 | `joinery.fixFrameFace` Widoczna szerokość ramy FIX (ALU) | 62 mm | pomiar zdjęcia: Zdjęcie 11: 55–75 mm (bok 70, góra 70, prawa 50 + cień ościeża). Produkcja nie zna wymiaru | **MEDIUM** | Karta przekrojów Ponzio PE52 (widok ościeżnicy/skrzydła). | — | OK |
@@ -61,8 +63,8 @@ Pewność: VERIFIED 24 · HIGH 17 · MEDIUM 17 · LOW 7 · UNKNOWN 4
 | `system1.flashingOffsetPoltorowka` Obróbka korony „półtorówka” (goły PIR) — odsunięcie lica od ściany | 15 mm | produkcja: Produkcja Dampol (2026-10-02): szkic z wymiarem „1,5 cm” (reference/construction/szkic-obrobka-poltorowka-15mm.jpg); zdjęcie 11: daszek ≈ 15–20 mm | **VERIFIED** | Wcześniej jednostka nieznana — rozstrzygnięte: cm. | — | CHANGED |
 | `system1.poltorowkaStep` Półtorówka — załamanie do ściany na dole lica (kąt) i kołnierz przykręcany do ściany | 45 deg | szkic: Szkic produkcji (rysunek poglądowy, oznaczony jako generowany przez AI — kształt, nie wymiar) | **LOW** | Kąt załamania i długość kołnierza na ścianie. | zmierzyć | OPEN |
 | `system1.flashingOffsetSquares` Obróbka korony „na kwadraty” — odsunięcie lica od ściany | 25 mm | produkcja: Produkcja Dampol (2026-10-02): szkic „2,5” + opis „kwadrat ma 2,5 cm” (reference/construction/szkic-obrobka-na-kwadraty-25mm.jpg) | **VERIFIED** | — | — | CHANGED |
-| `system1.cornerFlashingSide` Obróbka narożna — ramię od strony ściany bocznej | 124 mm | film: Wyliczone: musi zakryć czoło ściany przedniej/tylnej (t + grubość ściany = 104 mm) + zakład 20 mm; film WA0017: ciemna listwa narożna | **MEDIUM** | Zmierzyć listwę narożną na gotowym pawilonie. | — | OK |
-| `system1.cornerFlashingFront` Obróbka narożna — ramię od strony ściany przedniej/tylnej | 60 mm | film: Wyliczone: zakrywa ramię słupa 50 mm + zakład 10 mm | **LOW** | — | zmierzyć | OPEN |
+| `system1.cornerFlashingSide` Obróbka narożna — ramię od strony ściany bocznej | 250 mm | produkcja: Produkcja Dampol (2026-10-04): ramiona obróbki narożnej 25 cm; zdjęcie 163 (pionowy pas na narożu) | **VERIFIED** | — | było 124 → 250 mm | CHANGED |
+| `system1.cornerFlashingFront` Obróbka narożna — ramię od strony ściany przedniej/tylnej | 250 mm | produkcja: Produkcja Dampol (2026-10-04): ramiona obróbki narożnej 25 cm | **VERIFIED** | — | było 60 → 250 mm | CHANGED |
 | `system1.baseFlashingFace` Obróbka cokołowa — wysokość lica | 140 mm | film: Film WA0017: 135–140 mm (kątownik 50 + krawędź podłogi + zakład) | **MEDIUM** | — | — | OK |
 | `system1.baseFlashingOffset` Obróbka cokołowa — odsunięcie lica od ściany (skośny powrót do ściany, kołnierz przykręcony, owija narożnik) | 15 mm | produkcja: Produkcja Dampol (2026-10-03): „półtora cm ma obróbki kawałek”; kształt ze zdjęcia cokołu w narożniku (zdjecie-cokol-naroznik.jpg) | **HIGH** | — | było 25 → 15 mm | CHANGED |
 | `system1.baseFlashingSlope` Obróbka cokołowa — kąt skosu powrotu do ściany (od poziomu) | 16 deg | pomiar zdjęcia: Wyliczony ze zdjęcia cokołu (2026-10-03): model afiniczny kamery z trzech kierunków naroża (orto-normalność), skala z lica 140 mm; pas skosu 82,9 mm w kolumnie obrazu = 15 mm odsunięcia + wzniesienie ≈ 4,3 mm → atan(4,3 / 15) ≈ 16°. Dwie kolumny pomiarowe dają ten sam wynik (±1 mm) | **MEDIUM** | Wynik zależy od lica 140 mm (film, MEDIUM) — potwierdzić z rysunkiem gięcia. | — | OK |

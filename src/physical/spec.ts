@@ -133,6 +133,18 @@ export const PHYS = {
       element: 'Rozstaw lameli — wariant szeroki', value: 150, rank: 3, source: 'Zdjęcie 09: 0,053 H ≈ 150 mm (19 szczelin)',
       confidence: 'MEDIUM', status: 'OK',
     }),
+    fullWallPitch: P({
+      element: 'Lamele na całej ścianie (czarne/białe, galeria 064–065) — rozstaw', value: 80, rank: 3,
+      source: 'Pomiar zdjęcia galerii 065 (frontalne): 104 okresy na szerokości, skala z wysokości → 78–80 mm; zgodne z rozstawem lameli 82 mm (zdjęcie 03) — ten sam system lameli',
+      confidence: 'MEDIUM', status: 'OK',
+    }),
+  },
+  standingSeam: {
+    module: P({
+      element: 'Blacha na rąbek (elewacja pionowa) — szerokość panelu między rąbkami', value: 310, rank: 3,
+      source: 'Pomiar zdjęcia galerii 044 (frontalne): wzór co 97–98 px = 2 panele; skala z wysokości pawilonu i drzwi (6,1–6,5 mm/px) → 300–315 mm. Produkcja: profil nieznany',
+      confidence: 'MEDIUM', status: 'CHANGED', previous: 600, todo: 'Producent i profil blachy na rąbek.',
+    }),
   },
   board: {
     height: P({
@@ -287,13 +299,13 @@ export const PHYS = {
       confidence: 'VERIFIED', status: 'CHANGED',
     }),
     cornerFlashingSide: P({
-      element: 'Obróbka narożna — ramię od strony ściany bocznej', value: 124, rank: 2,
-      source: 'Wyliczone: musi zakryć czoło ściany przedniej/tylnej (t + grubość ściany = 104 mm) + zakład 20 mm; film WA0017: ciemna listwa narożna',
-      confidence: 'MEDIUM', status: 'OK', todo: 'Zmierzyć listwę narożną na gotowym pawilonie.',
+      element: 'Obróbka narożna — ramię od strony ściany bocznej', value: 250, rank: 5,
+      source: 'Produkcja Dampol (2026-10-04): ramiona obróbki narożnej 25 cm; zdjęcie 163 (pionowy pas na narożu)',
+      confidence: 'VERIFIED', status: 'CHANGED', previous: 124,
     }),
     cornerFlashingFront: P({
-      element: 'Obróbka narożna — ramię od strony ściany przedniej/tylnej', value: 60, rank: 2,
-      source: 'Wyliczone: zakrywa ramię słupa 50 mm + zakład 10 mm', confidence: 'LOW', status: 'OPEN',
+      element: 'Obróbka narożna — ramię od strony ściany przedniej/tylnej', value: 250, rank: 5,
+      source: 'Produkcja Dampol (2026-10-04): ramiona obróbki narożnej 25 cm', confidence: 'VERIFIED', status: 'CHANGED', previous: 60,
     }),
     baseFlashingFace: P({
       element: 'Obróbka cokołowa — wysokość lica', value: 140, rank: 2, source: 'Film WA0017: 135–140 mm (kątownik 50 + krawędź podłogi + zakład)',
