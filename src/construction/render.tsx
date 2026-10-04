@@ -34,15 +34,16 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
     const common = { side: FrontSide, transparent, opacity }
     return {
       // blacha powlekana poliestrem 25 µm = lakier (dielektryk), półmat: metalness ≈ 0, połysk z chropowatości;
-      // metaliczny materiał dawał czarny bok w cieniu (zdjęcie 163: bok 85/87/91, front 91/97/111 przy RAL 7016)
+      // metaliczny materiał dawał czarny bok w cieniu (zdjęcie 163: bok 85/87/91, front 91/97/111 przy RAL 7016).
+      // envMapIntensity materiału nie działa przy scene.environment (three ≥ r163: używa scene.environmentIntensity)
       wallOuter: new MeshStandardMaterial({
-        ...common, color: config.exteriorColor, metalness: 0.04, envMapIntensity: 1.5,
+        ...common, color: config.exteriorColor, metalness: 0.04,
         roughness: black ? RENDER.blackMattRoughness.value : RENDER.panelSemiMattRoughness.value,
         normalMap: profile ? profileNormalMap(profile) : flatNormalMap(),
       }),
       roofOuter: new MeshStandardMaterial({ ...common, color: config.flashingColor, metalness: 0.34, roughness: 0.48, envMapIntensity: 1.05 }),
-      // wnętrze jaśniejsze (światło odbite od białych ścian i podłogi przez duże przeszklenia — zdjęcia wnętrz z galerii)
-      inner: new MeshStandardMaterial({ ...common, color: '#f1ece1', metalness: 0.05, roughness: 0.4, envMapIntensity: 3.4 }),
+      // okładzina wewnętrzna 9010 gładka; jasność wnętrza daje światło wypełniające InteriorDaylight (PavilionModel)
+      inner: new MeshStandardMaterial({ ...common, color: '#f1ece1', metalness: 0.05, roughness: 0.4 }),
       // rdzeń odsunięty w buforze głębokości: lico rdzenia leży 0,6 mm za blachą — bez offsetu przy 16-bitowej głębi
       // (render programowy, część telefonów) rdzeń przebijał na krawędziach trójkątów jako żółte kreski
       core: new MeshStandardMaterial({ ...common, color: '#e3cf8f', roughness: 0.92, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4 }),
@@ -53,7 +54,7 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
       floorTop: config.floorFinish === 'concrete'
         ? new MeshStandardMaterial({ side: FrontSide, color: '#9f9c95', roughness: 0.7 })
         // UV wieczka wyciągnięcia = metry przekroju; deski Activia Latur 3 (dąb brązowy) wzdłuż długości (x)
-        : new MeshStandardMaterial({ side: FrontSide, color: '#ffffff', roughness: 0.55, envMapIntensity: 2.2, ...woodMaps('floor', 2, 1) }),
+        : new MeshStandardMaterial({ side: FrontSide, color: '#ffffff', roughness: 0.55, ...woodMaps('floor', 2, 1) }),
       // styk płyt (zamek): ciemna linia — cień w zamku
       // kolor z koloru płyty, przyciemniony: zdjęcie 163 — styk ~12% ciemniejszy od lica (90–97 przy 103), nie czarna kreska
       joint: new MeshStandardMaterial({ ...common, color: new Color(config.exteriorColor).multiplyScalar(0.6), roughness: 0.7, metalness: 0.04, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }),

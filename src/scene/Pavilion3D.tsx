@@ -24,7 +24,8 @@ function RealExportBridge() {
   const camera = useThree((state) => state.camera)
 
   useEffect(() => {
-    const root = window as typeof window & { __DAMPOL3D_REAL_CAPTURE__?: () => string; __DAMPOL3D_STATS__?: () => Record<string, number> }
+    const root = window as typeof window & { __DAMPOL3D_REAL_CAPTURE__?: () => string; __DAMPOL3D_STATS__?: () => Record<string, number>; __DAMPOL3D_SCENE__?: typeof scene }
+    root.__DAMPOL3D_SCENE__ = scene // diagnostyka testów wizualnych (np. ukrycie warstwy)
     root.__DAMPOL3D_REAL_CAPTURE__ = () => {
       gl.render(scene, camera)
       return gl.domElement.toDataURL('image/png')
@@ -47,6 +48,7 @@ function RealExportBridge() {
     return () => {
       delete root.__DAMPOL3D_REAL_CAPTURE__
       delete root.__DAMPOL3D_STATS__
+      delete root.__DAMPOL3D_SCENE__
     }
   }, [gl, scene, camera])
 

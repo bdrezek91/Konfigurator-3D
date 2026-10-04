@@ -23,23 +23,23 @@ const STEEL = { color: '#c3c7c8', metalness: 0.88, roughness: 0.2 }
 function GlassPane({ width, height }: { width: number; height: number }) {
   return (
     <>
-      {[-0.006, -0.026].map((z) => (
-        <mesh key={z} position={[0, 0, z]}>
-          <boxGeometry args={[width, height, 0.004]} />
-          <meshPhysicalMaterial
-            color="#eef4f2"
-            metalness={0}
-            roughness={0.02}
-            transmission={1}
-            thickness={0.004}
-            ior={1.52}
-            specularIntensity={1}
-            envMapIntensity={1.1}
-            attenuationColor="#d9ece4"
-            attenuationDistance={0.6}
-          />
-        </mesh>
-      ))}
+      {/* jedna tafla z transmisją (pakiet 4/16/4 jako jedno szkło o grubości 24 mm): dwie tafle z transmisją
+          w rasteryzacji dawały mleczny, rozmyty obraz — na zdjęciach szyba jest przejrzysta z wyraźnym odbiciem */}
+      <mesh position={[0, 0, -0.012]}>
+        <boxGeometry args={[width, height, 0.006]} />
+        <meshPhysicalMaterial
+          color="#f6faf8"
+          metalness={0}
+          roughness={0}
+          transmission={1}
+          thickness={0.024}
+          ior={1.52}
+          specularIntensity={1}
+          envMapIntensity={1.6}
+          attenuationColor="#dcefe6"
+          attenuationDistance={1.2}
+        />
+      </mesh>
       {/* ramka dystansowa pakietu (ciemna, widoczna na obwodzie szyby) */}
       <Box size={[width, 0.012, 0.016]} position={[0, height / 2 - 0.006, -0.016]} color="#1b1d1f" metalness={0.4} roughness={0.5} />
       <Box size={[width, 0.012, 0.016]} position={[0, -height / 2 + 0.006, -0.016]} color="#1b1d1f" metalness={0.4} roughness={0.5} />
@@ -113,7 +113,7 @@ export function OpeningFrame({
   const frameFace = 0.055
   const hingeSide: 1 | -1 = opening.hinge === 'right' ? 1 : -1
   const handle = defaultHandle(opening)
-  const frameMat = { color: frame, metalness: profile === 'pvc' ? 0.05 : 0.3, roughness: profile === 'pvc' ? 0.62 : 0.52 }
+  const frameMat = { color: frame, metalness: profile === 'pvc' ? 0.05 : 0.12, roughness: profile === 'pvc' ? 0.62 : 0.42 }
 
   if (opening.kind === 'door-full') {
     return (
@@ -138,17 +138,19 @@ export function OpeningFrame({
       <Reveal width={opening.width} height={opening.height} depth={revealDepth} z={frameFace} color={revealColor} sill={!isDoor} />
       <GlassPane width={glassW} height={glassH} />
       {/* ościeżnica */}
-      <Box size={[rail, opening.height, frameDepth]} position={[-opening.width / 2 + rail / 2, 0, 0.02]} {...frameMat} />
-      <Box size={[rail, opening.height, frameDepth]} position={[opening.width / 2 - rail / 2, 0, 0.02]} {...frameMat} />
-      <Box size={[innerW, rail, frameDepth]} position={[0, opening.height / 2 - rail / 2, 0.02]} {...frameMat} />
-      <Box size={[innerW, rail, frameDepth]} position={[0, -opening.height / 2 + rail / 2, 0.02]} {...frameMat} />
+      {/* profile aluminiowe: zaokrąglone krawędzie 2 mm (refleks na krawędzi jak na zdjęciach), narożniki na styk */}
+      <RoundedPiece size={[rail, opening.height, frameDepth]} position={[-opening.width / 2 + rail / 2, 0, 0.02]} {...frameMat} radius={0.002} />
+      <RoundedPiece size={[rail, opening.height, frameDepth]} position={[opening.width / 2 - rail / 2, 0, 0.02]} {...frameMat} radius={0.002} />
+      <RoundedPiece size={[innerW, rail, frameDepth]} position={[0, opening.height / 2 - rail / 2, 0.02]} {...frameMat} radius={0.002} />
+      <RoundedPiece size={[innerW, rail, frameDepth]} position={[0, -opening.height / 2 + rail / 2, 0.02]} {...frameMat} radius={0.002} />
       {/* skrzydło (drzwi) */}
       {isDoor && (
         <>
-          <Box size={[sash, innerH, 0.06]} position={[-innerW / 2 + sash / 2, 0, 0.012]} {...frameMat} />
-          <Box size={[sash, innerH, 0.06]} position={[innerW / 2 - sash / 2, 0, 0.012]} {...frameMat} />
-          <Box size={[innerW - sash * 2, sash, 0.06]} position={[0, innerH / 2 - sash / 2, 0.012]} {...frameMat} />
-          <Box size={[innerW - sash * 2, sash * 1.6, 0.06]} position={[0, -innerH / 2 + sash * 0.8, 0.012]} {...frameMat} />
+          {/* skrzydło wysunięte 6 mm przed ościeżnicę (stopień widoczny na zdjęciu 163), cokół skrzydła 1,6 × szerokości */}
+          <RoundedPiece size={[sash, innerH, 0.06]} position={[-innerW / 2 + sash / 2, 0, 0.026]} {...frameMat} radius={0.002} />
+          <RoundedPiece size={[sash, innerH, 0.06]} position={[innerW / 2 - sash / 2, 0, 0.026]} {...frameMat} radius={0.002} />
+          <RoundedPiece size={[innerW - sash * 2, sash, 0.06]} position={[0, innerH / 2 - sash / 2, 0.026]} {...frameMat} radius={0.002} />
+          <RoundedPiece size={[innerW - sash * 2, sash * 1.6, 0.06]} position={[0, -innerH / 2 + sash * 0.8, 0.026]} {...frameMat} radius={0.002} />
         </>
       )}
       {opening.kind === 'door-double' && <Box size={[0.06, innerH, 0.066]} position={[0, 0, 0.024]} {...frameMat} />}

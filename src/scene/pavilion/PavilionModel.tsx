@@ -391,6 +391,21 @@ export function Interior({ config }: Props) {
 }
 
 
+/**
+ * Światło dzienne wewnątrz pawilonu (przez przeszklenia, odbite od białych ścian 9010 i podłogi). Bez cieni: lampa
+ * w środku oświetla tylko powierzchnie zwrócone do wnętrza (normalne elewacji, dachu i podłogi zewn. skierowane na zewnątrz).
+ * Natężenie: strojenie wizualne do zdjęcia 163 (wnętrze ~200 sRGB, ściany zewn. ~90) — nie wielkość fizyczna.
+ */
+function InteriorDaylight({ config }: { config: PavilionConfig }) {
+  const { floorT } = envelope(config)
+  const h = Math.min(config.frontHeight, config.backHeight)
+  const reach = Math.hypot(config.length / 2, config.width / 2) + 0.3
+  return (
+    <pointLight position={[0, floorT + h * 0.62, 0]} intensity={INTERIOR_DAYLIGHT * (config.length * config.width) / 18} distance={reach} decay={1} color="#fff8ee" />
+  )
+}
+const INTERIOR_DAYLIGHT = 2.2
+
 export function ProjectPavilion({ config }: Props) {
   // geometria uzgodniona z elewacją i obróbkami (attyka, obróbka narożna) — ta sama co w BOM
   const geometry = geometryOf(config)
@@ -414,6 +429,7 @@ export function ProjectPavilion({ config }: Props) {
         {!system1 && config.project !== 'GALERIA/03' && <RoofSystem config={config} />}
         {config.showStructure && <Structure config={config} />}
         <Interior config={config} />
+        <InteriorDaylight config={config} />
         <ExteriorHVAC config={config} />
       </group>
     </group>

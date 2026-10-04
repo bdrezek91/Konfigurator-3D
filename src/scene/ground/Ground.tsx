@@ -85,8 +85,7 @@ export function Ground({ config }: { config: PavilionConfig }) {
         <meshStandardMaterial
           map={textures.grassDiffuse}
           normalMap={textures.grassNormal}
-          // trawa matowa: bez mapy chropowatości i ze słabszym odbiciem otoczenia — pod ostrym kątem nie „prała się” na niebiesko od nieba
-          envMapIntensity={0.55}
+          // trawa matowa (roughness 1, bez mapy chropowatości) — pod ostrym kątem nie „prała się” na niebiesko od nieba
           // trawa: zieleń jak na zdjęciach realizacji (163, 054, 090) — wcześniej szaro-brązowa, wyglądała jak asfalt;
           // przyciemnienie dobrane do zdjęcia 163 (trawa 127/141/59 sRGB)
           color="#c9c070"
