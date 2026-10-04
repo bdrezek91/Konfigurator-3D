@@ -221,8 +221,9 @@ export function DecorLocal({
     const effectiveY = segment.yCenter
     const gallery03Lamella = segment.id === 'gallery03-lamella'
     // lamele (produkcja Dampol): blacha 0,4 mm, profil „kapelusz” _|‾|_ (czoło 30 mm od ściany) na przemian z U (dno na ścianie)
-    const isLamella = segment.kind.startsWith('lamella-')
-    const z = isLamella ? wallDepth / 2 : wallDepth / 2 + 0.070
+    // wszystkie okładziny leżą na licu płyty (produkcja: kasetony i deski przykręcane bezpośrednio do płyty, lamele 30 mm od ściany);
+    // dawne odsunięcie 70 mm (podkonstrukcja) zostawiało deski wiszące przed ścianą
+    const z = wallDepth / 2
     const x0 = segment.center - segment.width / 2
     const y0 = effectiveY - effectiveHeight / 2
 
@@ -378,7 +379,7 @@ export function DecorLocal({
           yCenter={effectiveY}
           width={segment.width}
           height={effectiveHeight}
-          z={z - 0.015}
+          z={z + 0.020}
           depth={0.040}
           color="#17191b"
           openings={openings}
@@ -394,7 +395,7 @@ export function DecorLocal({
             <RoundedPiece
               key={segment.id + '-s-' + i}
               size={[barW, effectiveHeight, 0.058]}
-              position={[x, effectiveY, z + 0.010]}
+              position={[x, effectiveY, z + 0.029]}
               color="#ffffff"
               {...woodMaps('winchester', barW, effectiveHeight)}
               roughness={0.70}
@@ -445,10 +446,10 @@ export function DecorLocal({
       const border = 0.032
       const pattern: ReactNode[] = []
       pattern.push(
-        <Box key={segment.id + '-top'} size={[segment.width, border, 0.055]} position={[segment.center, y0 + effectiveHeight - border / 2, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
-        <Box key={segment.id + '-bottom'} size={[segment.width, border, 0.055]} position={[segment.center, y0 + border / 2, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
-        <Box key={segment.id + '-left'} size={[border, effectiveHeight, 0.055]} position={[x0 + border / 2, effectiveY, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
-        <Box key={segment.id + '-right'} size={[border, effectiveHeight, 0.055]} position={[x0 + segment.width - border / 2, effectiveY, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
+        <Box key={segment.id + '-top'} size={[segment.width, border, 0.055]} position={[segment.center, y0 + effectiveHeight - border / 2, z + 0.0275]} color="#22272a" metalness={0.34} roughness={0.46} />,
+        <Box key={segment.id + '-bottom'} size={[segment.width, border, 0.055]} position={[segment.center, y0 + border / 2, z + 0.0275]} color="#22272a" metalness={0.34} roughness={0.46} />,
+        <Box key={segment.id + '-left'} size={[border, effectiveHeight, 0.055]} position={[x0 + border / 2, effectiveY, z + 0.0275]} color="#22272a" metalness={0.34} roughness={0.46} />,
+        <Box key={segment.id + '-right'} size={[border, effectiveHeight, 0.055]} position={[x0 + segment.width - border / 2, effectiveY, z + 0.0275]} color="#22272a" metalness={0.34} roughness={0.46} />,
       )
       // motyw: dwie listwy pod kątem ±0,62 rad; zasięg pary od x − 0,15 do x + 0,27, w pionie ±0,19 — cały motyw w ramce
       for (let x = x0 + border + 0.15; x + 0.27 < x0 + segment.width - border; x += 0.34) {
@@ -458,7 +459,7 @@ export function DecorLocal({
             <RoundedPiece
               key={segment.id + '-orn-a-' + x.toFixed(2) + '-' + y.toFixed(2)}
               size={[0.034, 0.42, 0.052]}
-              position={[x, y, z + 0.008]}
+              position={[x, y, z + 0.030]}
               rotation={[0, 0, 0.62]}
               color="#22272a"
               metalness={0.30}
@@ -468,7 +469,7 @@ export function DecorLocal({
             <RoundedPiece
               key={segment.id + '-orn-b-' + x.toFixed(2) + '-' + y.toFixed(2)}
               size={[0.034, 0.42, 0.052]}
-              position={[x + 0.12, y, z + 0.008]}
+              position={[x + 0.12, y, z + 0.030]}
               rotation={[0, 0, -0.62]}
               color="#22272a"
               metalness={0.30}
@@ -551,7 +552,7 @@ export function DecorLocal({
         <Box
           key={segment.id}
           size={[segment.width, effectiveHeight, 0.060]}
-          position={[segment.center, effectiveY, z]}
+          position={[segment.center, effectiveY, z + 0.030]}
           color={color}
           metalness={0.08}
           roughness={0.55}
