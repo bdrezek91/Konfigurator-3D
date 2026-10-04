@@ -34,6 +34,31 @@ const g = (
 ): ProjectGeometry => ({ externalHeight: 2.86, openings, decor, exteriorLights, notes })
 
 export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
+  'GALERIA/207': {
+    // Wzorzec kasetonów 1:1 — zdjęcie galerii 207 (= 110: ten sam system). Elewacja kasetonowa na wszystkich ścianach:
+    // attyka 2 × duże bloki, korpus — pasy ~240 mm w kolumnach, łączenia pionowe ciągłe, narożnik L.
+    // Front (z perspektywy zdjęcia, ±5 cm): przeszklenie 3 skrzydła (2 FIX + drzwi), kaseton-deska ~2,7 m, kolumna przy narożniku.
+    externalHeight: 2.92,
+    foundationGap: 0.05,
+    roofEdgeFlashing: false,
+    facadeCladding: {
+      front: { kind: 'cassette-horizontal', color: '#383E42', gap: 0.020, bandHeight: 0.24, atticRowHeight: 0.33, staggered: false },
+      back: { kind: 'cassette-horizontal', color: '#383E42', gap: 0.020, bandHeight: 0.24, atticRowHeight: 0.33, staggered: false },
+      left: { kind: 'cassette-horizontal', color: '#383E42', gap: 0.020, bandHeight: 0.24, atticRowHeight: 0.33, staggered: false },
+      right: { kind: 'cassette-horizontal', color: '#383E42', gap: 0.020, bandHeight: 0.24, atticRowHeight: 0.33, staggered: false },
+    },
+    openings: [
+      o('G207-FIX-1','front',-2.395,0.75,2.10,'fixed-glass',{sill:0,frameColor:'#383E42',profile:'alu-standard'}),
+      o('G207-FIX-2','front',-1.645,0.75,2.10,'fixed-glass',{sill:0,frameColor:'#383E42',profile:'alu-standard'}),
+      o('G207-DOOR','front',-0.84,0.86,2.10,'door-glazed',{sill:0,frameColor:'#383E42',profile:'alu-standard',hinge:'right',handle:'lever'}),
+    ],
+    decor: [
+      d('G207-deska-front','front',0.935,2.69,1.20,2.40,'board-natural'),
+      d('G207-deska-bok','right',-0.13,2.0,1.20,2.40,'board-natural'),
+    ],
+    exteriorLights: [],
+    notes: ['Wzorzec kasetonów: zdjęcie galerii 207 (reference/gallery/przeglad/207.jpg) i 110.'],
+  },
   'GALERIA/163': {
     // Zdjęcie galerii 163 (= zdjęcie od produkcji 2026-10-04): goła płyta 7016 + kaseton-deska (sosna), rama widoczna, ucha.
     // Rozkład frontu z perspektywy zdjęcia (wysokość krawędzi narożnej jako skala głębi) — szacunek ±5 cm.

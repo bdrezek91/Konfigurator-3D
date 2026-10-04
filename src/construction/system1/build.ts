@@ -607,6 +607,8 @@ function addFlashings(ctx: Ctx, f: FlashCtx, finishBySide: FinishBySide) {
     const top = z > 0 ? f.yTopF : f.yTopB
     const sideFB: WallSide = z > 0 ? 'front' : 'back'
     const sideLR: WallSide = x < 0 ? 'left' : 'right'
+    // kasetony po obu stronach narożnika: róg tworzą kasetony zawinięte przez narożnik (zdjęcia 12, 110, 207) — bez obróbki
+    if (finishBySide[sideFB] === 'cassette' && finishBySide[sideLR] === 'cassette') continue
     const oF = finishBySide[sideFB] === 'cassette' ? cassFace : o // lico w płaszczyźnie ściany przód/tył (v)
     const oS = finishBySide[sideLR] === 'cassette' ? cassFace : o // lico w płaszczyźnie ściany bocznej (u)
     const cornerSec = thicken([[-legF, oF], [oS, oF], [oS, -legS]], FLASH_T)

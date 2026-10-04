@@ -870,7 +870,10 @@ export const DEFAULT_BAND_HEIGHT = m(PHYS.cassette.bodyBandHeight)
 export const DEFAULT_GRID_HEIGHT = 0.65
 export const DEFAULT_FACADE_GAP = m(PHYS.cassette.gap)
 const ATTIC_ROW_H = m(PHYS.cassette.atticRowHeight)
-const ATTIC_MODULE_TARGET = m(PHYS.cassette.atticModuleTarget)
+/** maks. szerokość kolumny / bloku kasetonu — zdjęcia 11, 110, 207: bloki attyki 1,0–1,3 m */
+const CASSETTE_COLUMN_MAX = m(PHYS.cassette.columnMax)
+/** maks. długość pasa korpusu (arkusz) — zdjęcie 207: 2,7 m bez łączenia; ASSUMPTION 3,0 m */
+const CASSETTE_STRIP_MAX = 3.0
 
 function facadeSpecForSide(c: PavilionConfig, g: ProjectGeometry, side: WallSide): FacadeCladdingSpec | null {
   const explicit = g.facadeCladding?.[side]
@@ -911,6 +914,24 @@ function facadeSpecForSide(c: PavilionConfig, g: ProjectGeometry, side: WallSide
   }
 }
 
+/**
+ * Pionowe linie łączeń kasetonów (deterministyczne): końce ściany + krawędzie pól (otwory, okładziny). Linie bliższe niż
+ * 6 cm są łączone (bez wąskich skrawków); odcinki dłuższe niż maxLen dzielone na równe części.
+ */
+function cassetteColumnLines(x0: number, x1: number, edges: number[], maxLen: number) {
+  const raw = [x0, x1, ...edges.filter((e) => e > x0 + 0.06 && e < x1 - 0.06)].sort((p, q) => p - q)
+  const merged: number[] = []
+  for (const x of raw) if (!merged.length || x - merged[merged.length - 1] > 0.06) merged.push(x)
+  merged[merged.length - 1] = x1
+  const out: number[] = [merged[0]]
+  for (let i = 0; i < merged.length - 1; i++) {
+    const len = merged[i + 1] - merged[i]
+    const n = Math.max(1, Math.ceil(len / maxLen - 1e-6))
+    for (let k = 1; k <= n; k++) out.push(merged[i] + (len * k) / n)
+  }
+  return out
+}
+
 /** Rzędy kasetonów poziomych: pasy korpusu + (opcjonalnie) 2 rzędy attyki. */
 function horizontalBandRows(maxHeight: number, bandHeight: number, attic: boolean, atticRowH = ATTIC_ROW_H) {
   const rows: Array<{ y0: number; y1: number; attic: boolean; index: number }> = []
@@ -923,7 +944,8 @@ function horizontalBandRows(maxHeight: number, bandHeight: number, attic: boolea
 }
 
 function hasAtticBand(c: PavilionConfig) {
-  return c.attic || c.project === 'GALERIA/03'
+  // System 1: elewacja kasetonowa zawsze z attyką 2 × duże bloki (wszystkie realizacje z kasetonami: 11, 12, 110, 207, 155)
+  return c.attic || c.project === 'GALERIA/03' || frameDims(c).system1
 }
 
 function visibleIntervalsForBand(
@@ -987,10 +1009,10 @@ function pushFacadePiece(
   list.push({
     id,
     positionNo: 0,
-    namePL: isRibbed ? 'Blacha elewacyjna wysokoprofilowana' : 'Kaseton elewacyjny',
+    namePL: isRibbed ? 'Blacha elewacyjna wysokoprofilowana' : color.startsWith('wood-') ? 'Kaseton z dekorem drewna' : 'Kaseton elewacyjny',
     category: 'decor',
     primitive: 'decor',
-    material: isRibbed ? 'Blacha elewacyjna wysokoprofilowana' : 'Kaseton elewacyjny stalowy',
+    material: isRibbed ? 'Blacha elewacyjna wysokoprofilowana' : color.startsWith('wood-') ? 'Kaseton elewacyjny stalowy — dekor drewna' : 'Kaseton elewacyjny stalowy',
     color,
     ral: color,
     dimensions: {
@@ -1015,49 +1037,9 @@ function pushFacadePiece(
 
 /** Dawne pasy kasetonowe z projektów — przy elewacji kasetonowej zastąpione przez nią (render, BOM, cięcie). */
 const LEGACY_FACADE_CASSETTE = new Set<string>(['cassette-black', 'cassette-square-graphite', 'cassette-rect-graphite', 'cassette-white'])
+/** Deska elewacyjna — na ścianie z kasetonami poziomymi realizowana jako kasetony z dekorem drewna (te same pasy). */
+export const BOARD_KINDS = new Set<string>(['board-natural', 'board-horizontal-winchester'])
 
-function visibleIntervalsForCassetteBand(
-  side: WallSide,
-  a: number,
-  b: number,
-  y0: number,
-  y1: number,
-  floorT: number,
-  g: ProjectGeometry,
-) {
-  const cuts: Array<[number, number]> = []
-
-  for (const o of g.openings.filter((x) => x.wall === side)) {
-    const oy0 = floorT + openingSill(o)
-    const oy1 = oy0 + o.height
-    if (Math.min(y1, oy1) - Math.max(y0, oy0) > 0.001) {
-      cuts.push([o.center - o.width / 2, o.center + o.width / 2])
-    }
-  }
-
-  // okładziny (lamele, deski, ornament) zastępują kaseton w swoim polu; dawne pasy kasetonowe z projektów
-  // (cassette-black/graphite/white) są zastąpione elewacją kasetonową i nie są rysowane — nie wycinają otworu w kasetonach
-  for (const d of g.decor.filter((x) => x.wall === side && x.kind !== 'led-strip' && !LEGACY_FACADE_CASSETTE.has(x.kind))) {
-    const dy0 = d.yCenter - d.height / 2
-    const dy1 = d.yCenter + d.height / 2
-    if (Math.min(y1, dy1) - Math.max(y0, dy0) > 0.001) {
-      cuts.push([d.center - d.width / 2, d.center + d.width / 2])
-    }
-  }
-
-  cuts.sort((x, y) => x[0] - y[0])
-  const out: Array<[number, number]> = []
-  let cursor = a
-  for (const [c0, c1] of cuts) {
-    if (c1 <= cursor || c0 >= b) continue
-    const left = Math.max(a, c0)
-    if (left > cursor) out.push([cursor, Math.min(left, b)])
-    cursor = Math.max(cursor, c1)
-    if (cursor >= b) break
-  }
-  if (cursor < b) out.push([cursor, b])
-  return out.filter(([x0, x1]) => x1 - x0 > 0.025)
-}
 
 function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry) {
   const { floorT } = envelope(c)
@@ -1071,40 +1053,63 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
     const maxHeight = Math.max(wallHeightAt(side, -span / 2, c), wallHeightAt(side, span / 2, c))
 
     if (spec.kind === 'cassette-horizontal' && spec.staggered === false) {
+      // System kasetonów Dampol (zdjęcia 11, 12, 110, 207), bez mijanki: łączenia pionowe w liniach narożników, krawędzi
+      // otworów i pól okładzin. Attyka: 2 rzędy bloków ≤ 1,3 m (łączenia obu rzędów w jednej linii). Korpus: pasy ~240 mm
+      // ciągłe między krawędziami pól (kolumny); deska na ścianie kasetonowej = kasetony z dekorem drewna w tych samych pasach.
       const rows = horizontalBandRows(maxHeight, spec.bandHeight ?? DEFAULT_BAND_HEIGHT, hasAtticBand(c), spec.atticRowHeight)
+      const fields = [
+        ...g.openings.filter((o) => o.wall === side).map((o) => {
+          const y0 = floorT + openingSill(o)
+          return { a: o.center - o.width / 2, b: o.center + o.width / 2, y0, y1: y0 + o.height }
+        }),
+        ...g.decor.filter((d) => d.wall === side && d.kind !== 'led-strip' && !LEGACY_FACADE_CASSETTE.has(d.kind) && !BOARD_KINDS.has(d.kind))
+          .map((d) => ({ a: d.center - d.width / 2, b: d.center + d.width / 2, y0: d.yCenter - d.height / 2, y1: d.yCenter + d.height / 2 })),
+      ]
+      // kaseton-deska w systemie kasetonów (zdjęcia 207, 110): te same pasy i fugi co kasetony, tylko dekor drewna
+      const boards = g.decor.filter((d) => d.wall === side && BOARD_KINDS.has(d.kind))
+        .map((d) => ({ a: d.center - d.width / 2, b: d.center + d.width / 2, y0: d.yCenter - d.height / 2, y1: d.yCenter + d.height / 2, wood: d.kind === 'board-horizontal-winchester' ? 'wood-winchester' : 'wood-pine' }))
+      const edges = [...fields, ...boards].flatMap((f) => [f.a, f.b])
+      // attyka: bloki ≤ 1,3 m (łączenia także nad krawędziami pól); korpus: pasy ciągłe między krawędziami pól,
+      // dzielone dopiero powyżej maks. długości kasetonu (zdjęcie 207: pasy deski 2,7 m bez łączenia)
+      // attyka: równe bloki na całej długości (zdjęcie 207: 5 × ~1,2 m na 6 m, łączenia niezależne od skrzydeł okien);
+      // łączenie w linii krawędzi tylko dla pól sięgających attyki (np. tablica, okładzina do góry — zdjęcie 11)
+      const atticRow0 = rows.find((r) => r.attic)?.y0 ?? maxHeight
+      const atticEdges = [...fields, ...boards].filter((f) => f.y1 > atticRow0 + 0.01).flatMap((f) => [f.a, f.b])
+      const atticLines = cassetteColumnLines(-span / 2, span / 2, atticEdges, CASSETTE_COLUMN_MAX)
+      const bodyLines = cassetteColumnLines(-span / 2, span / 2, edges, CASSETTE_STRIP_MAX)
+      // narożnik z kasetonami po obu stronach: pasy przechodzą przez narożnik jak kaseton L (zdjęcie 12) — przód/tył
+      // wydłużone do lica kasetonów ściany bocznej, boki kończą się na tylnej stronie kasetonu przodu/tyłu
+      const fi = frameDims(c).wallFaceInset
+      const th = m(PHYS.cassette.thickness)
+      const [nMinus, nPlus] = ADJACENT[side]
+      const wrap = (n: WallSide) => facadeSpecForSide(c, g, n)?.kind === 'cassette-horizontal'
+      const ext = side === 'front' || side === 'back' ? th - fi : -fi
+      const extMinus = wrap(nMinus) ? ext : 0
+      const extPlus = wrap(nPlus) ? ext : 0
       for (const row of rows) {
-        const { y0, y1 } = row
-        if (!row.attic) {
-          // korpus: pas ciągły, dzielony tylko przez otwory i okładziny (lamele)
-          const visible = visibleIntervalsForCassetteBand(side, -span / 2, span / 2, y0, y1, floorT, g)
-          for (let part = 0; part < visible.length; part++) {
-            const [v0, v1] = visible[part]
-            const leftShrink = Math.abs(v0 + span / 2) < 0.001 ? 0 : gap / 2
-            const rightShrink = Math.abs(v1 - span / 2) < 0.001 ? 0 : gap / 2
-            pushFacadePiece(
-              list, c, side, 'facade-cassette-' + side + '-body-' + row.index + '-' + part,
-              spec.kind, v0 + leftShrink, v1 - rightShrink, y0 + gap / 2, y1 - gap / 2, spec.color ?? c.exteriorColor,
-            )
+        const lines = row.attic ? atticLines : bodyLines
+        for (let i = 0; i < lines.length - 1; i++) {
+          const a = lines[i]
+          const b = lines[i + 1]
+          const mid = (a + b) / 2
+          // kolumna zajęta w tym rzędzie przez otwór / pole okładziny → kaseton docięty (brak elementu)
+          if (fields.some((f) => f.a < mid && f.b > mid && Math.min(row.y1, f.y1) - Math.max(row.y0, f.y0) > 0.01)) continue
+          const atStart = i === 0
+          const atEnd = i === lines.length - 2
+          let a2 = atStart ? a - extMinus : a + gap / 2
+          let b2 = atEnd ? b + extPlus : b - gap / 2
+          // krawędź pola przesunięta przy łączeniu bliskich linii (< 6 cm): kaseton kończy się fugą przy ramie, nie na niej
+          for (const f of fields) {
+            if (Math.min(row.y1, f.y1) - Math.max(row.y0, f.y0) <= 0.01) continue
+            if (f.b > a2 && f.b <= mid) a2 = Math.max(a2, f.b + gap / 2)
+            if (f.a < b2 && f.a >= mid) b2 = Math.min(b2, f.a - gap / 2)
           }
-          continue
-        }
-        // attyka: długość podzielona na równe moduły ≈ 1,1 m, łączenia obu rzędów w jednej linii (zdjęcia 03 i 11)
-        const atticCount = Math.max(1, Math.round(span / ATTIC_MODULE_TARGET))
-        const atticModule = span / atticCount
-        for (let col = 0; col < atticCount; col++) {
-          const cell0 = -span / 2 + col * atticModule
-          const cell1 = cell0 + atticModule
-          if (cell1 - cell0 <= 0.025) continue
-          // lamele/okładziny sięgające attyki zastępują kaseton w swoim polu (jak w pasie korpusu) — kaseton nie wchodzi na lamele
-          const visible = visibleIntervalsForCassetteBand(side, cell0, cell1, y0, y1, floorT, g)
-          visible.forEach(([v0, v1], part) => {
-            const leftShrink = Math.abs(v0 + span / 2) < 0.001 ? 0 : gap / 2
-            const rightShrink = Math.abs(v1 - span / 2) < 0.001 ? 0 : gap / 2
-            pushFacadePiece(
-              list, c, side, 'facade-cassette-' + side + '-attic-' + row.index + '-' + col + (part ? '-' + part : ''),
-              spec.kind, v0 + leftShrink, v1 - rightShrink, y0 + gap / 2, y1 - gap / 2, spec.color ?? c.exteriorColor,
-            )
-          })
+          const rowMid = (row.y0 + row.y1) / 2
+          const board = boards.find((f) => f.a < mid && f.b > mid && rowMid > f.y0 && rowMid < f.y1)
+          pushFacadePiece(
+            list, c, side, 'facade-cassette-' + side + (row.attic ? '-attic-' : '-body-') + row.index + '-' + i,
+            spec.kind, a2, b2, row.y0 + gap / 2, row.y1 - gap / 2, board?.wood ?? spec.color ?? c.exteriorColor,
+          )
         }
       }
       continue
@@ -1192,6 +1197,8 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
     const cassetteSpec = specs.find(isCass)
     if (!cassetteSpec) continue
     if (system1 && !(specs.length === 2 && specs.every(isCass))) continue
+    // kasetony poziome: narożnik L tworzą same pasy (wydłużone przez narożnik) — bez osobnego elementu
+    if (specs.every((x) => x.kind === 'cassette-horizontal')) continue
     const gap = cassetteSpec.gap ?? DEFAULT_FACADE_GAP
     const h = Math.min(
       wallHeightAt(corner.sides[0], corner.sides[0] === 'front' || corner.sides[0] === 'back' ? corner.x : corner.z, c),
@@ -1456,6 +1463,7 @@ function addDecor(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry)
     const facadeSpec = facadeSpecForSide(c, g, d.wall)
     const legacyFacadeCassette = LEGACY_FACADE_CASSETTE.has(d.kind)
     if (facadeSpec && legacyFacadeCassette) continue
+    if (facadeSpec?.kind === 'cassette-horizontal' && BOARD_KINDS.has(d.kind)) continue // liczone jako kasetony z dekorem drewna
 
     const normal = wallNormal(d.wall)
     const p = wallPosition(d.wall, d.center, d.yCenter, c)

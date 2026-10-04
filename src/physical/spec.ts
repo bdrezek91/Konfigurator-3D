@@ -104,6 +104,11 @@ export const PHYS = {
       element: 'Kaseton — lico od lica płyty (= głębokość tacy; kaseton leży na płycie)', value: 25, rank: 5,
       source: 'Wyliczone: mocowanie bezpośrednio do płyty (produkcja) + głębokość tacy (założenie)', confidence: 'LOW', status: 'CHANGED', previous: 75,
     }),
+    columnMax: P({
+      element: 'Kasetony poziome — maks. szerokość kolumny/bloku (łączenia pionowe ciągłe przez całą wysokość, bez mijanki)', value: 1300, rank: 3,
+      source: 'Zdjęcia 11, 12, 110, 207: bloki attyki 1,0–1,3 m, łączenia w liniach krawędzi otworów i pól okładzin, kolumny korpusu tej samej szerokości',
+      confidence: 'MEDIUM', status: 'CHANGED', previous: 3000,
+    }),
     cornerWrap: P({
       element: 'Zawinięcie kasetonu narożnego L (na każdą ścianę) — przy pełnej elewacji kasetonowej na obu ścianach', value: 150, rank: 8,
       source: 'Założenie; galeria: zawinięcie widoczne przy pełnej elewacji kasetonowej (028, 110, 111; dawne 19–21)',

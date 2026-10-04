@@ -30,6 +30,31 @@ const p = (project: string, overrides: Partial<PavilionConfig>): PavilionConfig 
 
 export const PRESETS: PavilionPreset[] = [
   {
+    id: 'galeria-207',
+    label: 'galeria-207 · kasetony + deska · wzorzec kasetonów 1:1',
+    source: 'reference/gallery/przeglad/207.jpg',
+    notes: 'Wzorzec układu kasetonów: attyka 2 × bloki, pasy korpusu w kolumnach, łączenia ciągłe bez mijanki, narożnik L (zdjęcia 207, 110, 11, 12).',
+    config: p('GALERIA/207', {
+      length: 6.03, width: 2.96,
+      frontHeight: 2.62, backHeight: 2.62, roofSlope: 'flat',
+      construction: 'angle50',
+      wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      wallProfile: 'smooth', roofProfile: 'trapezoid',
+      interiorFinish: 'white', floorFinish: 'wood',
+      facade: 'cassette-horizontal',
+      facadeFront: true, facadeLeft: true, facadeRight: true, facadeBack: true,
+      exteriorColor: '#383E42', flashingColor: '#383E42',
+      glazing: 'double',
+      electrical: 'none', doubleSockets: 0, singleSockets: 0, ledCeiling: 0, switches: 0,
+      distributionBoard: false, externalConnection: false, externalLights: 0,
+      bathroom: false, toiletCompact: false, washbasin: false, shower: false,
+      boilerLiters: 0, heater: false, partitionWall: false, internalDoorCount: 0,
+      kitchen: false, kitchenWaterPoint: false,
+      airConditioning: false, hvacPower: 0, gutter: false, attic: true,
+      showStructure: false, showInterior: false,
+    }),
+  },
+  {
     id: 'galeria-163',
     label: 'galeria-163 · goła płyta + kaseton-deska · wzorzec realizmu',
     source: 'reference/gallery/przeglad/163.jpg',

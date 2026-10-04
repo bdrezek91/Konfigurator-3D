@@ -3,7 +3,7 @@ import type { PavilionView } from '../camera/views'
 import { DampolFrameLocal, DecorLocal, FacadeCladdingFromModel, FoundationSupports, PanelProfileLocal } from '../facade/Facade'
 import { facadeKindForWall } from '../facade/facadeKind'
 import { envelope, makeWallShape, wallTransform } from '../geometry'
-import { geometryOf } from '../../components'
+import { BOARD_KINDS, geometryOf } from '../../components'
 import { Box, RoundedPiece } from '../materials/primitives'
 import { renderMetalColor } from '../materials/textures'
 import { isRal9005, RAL_9010_HEX, RENDER } from '../../physical/spec'
@@ -33,7 +33,8 @@ export function Wall({
   const openings = geometry.openings.filter((x) => x.wall === side)
   const facadeKind = facadeKindForWall(side, config, geometry)
   const legacyFacadeKinds = new Set(['cassette-black', 'cassette-square-graphite', 'cassette-rect-graphite', 'cassette-white'])
-  const decor = geometry.decor.filter((x) => x.wall === side && !(facadeKind !== 'none' && legacyFacadeKinds.has(x.kind)))
+  // deska na ścianie z kasetonami poziomymi = kasetony z dekorem drewna (rysowane z elewacją, FacadeCladdingFromModel)
+  const decor = geometry.decor.filter((x) => x.wall === side && !(facadeKind !== 'none' && legacyFacadeKinds.has(x.kind)) && !(facadeKind === 'cassette-horizontal' && BOARD_KINDS.has(x.kind)))
   const lights = geometry.exteriorLights?.filter((x) => x.wall === side) ?? []
   const lampK = useLighting().lampIntensity
   const { floorT } = envelope(config)

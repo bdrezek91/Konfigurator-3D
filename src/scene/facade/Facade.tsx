@@ -1,7 +1,9 @@
-import { buildComponentModel } from '../../components'
-import { type DecorPlacement, type OpeningPlacement, type PavilionConfig, type ProjectGeometry, type WallSide } from '../../types'
+import { buildComponentModel, geometryOf } from '../../components'
+import { frameDims } from '../../construction/frame'
+import { facadeKindForWall } from './facadeKind'
+import { PANEL_THICKNESS_M, type DecorPlacement, type OpeningPlacement, type PavilionConfig, type ProjectGeometry, type WallSide } from '../../types'
 import { envelope, openingSill, overlapsOpening, wallTopAt, wallTopHeights } from '../geometry'
-import { Path, Shape, type Texture } from 'three'
+import { Color, Path, Shape, type Texture } from 'three'
 import { Box, RoundedPiece } from '../materials/primitives'
 import { boardCassetteMaps, renderMetalColor, woodMaps, woodTexture } from '../materials/textures'
 import { type ReactNode, useMemo } from 'react'
@@ -63,8 +65,30 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
     (item.id.startsWith('facade-cassette-') || item.id.startsWith('corner-cassette-') || item.id.startsWith('facade-ribbed-'))
   )
 
+  // narożnik z kasetonami poziomymi po obu stronach: ciemna wnęka za fugami na rogu (pasy przodu wydłużone przez narożnik)
+  const geometry = geometryOf(config)
+  const fi = frameDims(config).wallFaceInset
+  const th = m(PHYS.cassette.thickness)
+  const isCH = (side: WallSide) => facadeKindForWall(side, config, geometry) === 'cassette-horizontal'
+  const corners = ([['front', 'left', -1, 1], ['front', 'right', 1, 1], ['back', 'left', -1, -1], ['back', 'right', 1, -1]] as const)
+    .filter(([a, b]) => isCH(a) && isCH(b))
+  const hCorner = envelope(config).outerFront
+
   return (
     <>
+      {corners.flatMap(([a, b, sx, sz]) => {
+        // blacha wnęki narożnika (w kolorze fugi): zakrywa czoło płyty ściany przód/tył i słup za fugami kasetonów
+        const tw = PANEL_THICKNESS_M[config.wallPanel]
+        const cav = new Color(config.exteriorColor).multiplyScalar(0.3).getStyle()
+        const xPlane = sx * (config.length / 2 - fi + 0.0008)
+        const zPlane = sz * (config.width / 2 - fi + 0.0008)
+        const sideLen = fi + tw + 0.02 + th
+        const frontLen = 0.06 + th
+        return [
+          <Box key={'cavity-s-' + a + b} size={[0.0015, hCorner, sideLen]} position={[xPlane, hCorner / 2, sz * (config.width / 2 + th - sideLen / 2)]} color={cav} metalness={0} roughness={0.9} />,
+          <Box key={'cavity-f-' + a + b} size={[frontLen, hCorner, 0.0015]} position={[sx * (config.length / 2 + th - frontLen / 2), hCorner / 2, zPlane]} color={cav} metalness={0} roughness={0.9} />,
+        ]
+      })}
       {pieces.map((item) => {
         const h = item.dimensions.lengthMm / 1000
         const w = item.dimensions.widthMm / 1000
@@ -113,16 +137,25 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
           )
         }
 
+        if (item.color.startsWith('wood-')) {
+          // kaseton z dekorem drewna (zdjęcia 207, 110): taca jak kaseton, dekor drewna o włóknach poziomych
+          return (
+            <group key={item.id} position={item.position} rotation={item.rotation}>
+              <Box size={[w, h, depth]} position={[0, 0, 0]} color="#ffffff" {...woodMaps(item.color === 'wood-winchester' ? 'winchester' : 'pine', w, h)} metalness={0.02} roughness={0.6} />
+            </group>
+          )
+        }
+
         return (
           <group key={item.id} position={item.position} rotation={item.rotation}>
             {/* kaseton: blacha stalowa 0,5 mm, RAL 7016 mat (produkcja Dampol) */}
-            <RoundedPiece
+            {/* krawędzie gięte ostro (zaokrąglenie łapało jasne odbicie — jasna linia w fudze zamiast cienia) */}
+            <Box
               size={[w, h, depth]}
               position={[0, 0, 0]}
               color={color}
               metalness={RENDER.flashingMattMetalness.value}
               roughness={RENDER.flashingMattRoughness.value}
-              radius={0.002}
             />
           </group>
         )
