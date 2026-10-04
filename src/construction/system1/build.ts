@@ -589,8 +589,9 @@ function addCassettes(ctx: Ctx, k: CassCtx) {
   for (const side of ['front', 'back'] as const) {
     const z = side === 'front' ? k.W / 2 - k.t + off : -k.W / 2 + k.t - off
     const out: Vec3 = side === 'front' ? [0, 0, 1] : [0, 0, -1]
-    // kasetony kończą się pod górnym kątownikiem — kątownik zostaje widoczny, nieprzykryty (zdjęcie gotowego pawilonu)
-    const yTop = (side === 'front' ? k.yTopF : k.yTopB) - 0.003
+    // pełna elewacja kasetonowa: attyka do góry górnej ramy, rama zasłonięta (galeria: 025–029, 093–095, 110, 157);
+    // przy gołej płycie (bez kasetonów) kątownik zostaje widoczny
+    const yTop = (side === 'front' ? k.yTopF : k.yTopB) + m(PHYS.system1.angleLeg)
     const x0 = -k.L / 2 - off + k.t
     const len = k.L + 2 * off - 2 * k.t
     const atticStart = yTop - 2 * attic

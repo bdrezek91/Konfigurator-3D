@@ -1090,8 +1090,9 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
   }
 
   if (c.project === 'GALERIA/03') return
-  // System 1: róg pawilonu zakrywa obróbka narożna (produkcja 2026-10-04), kasetony kończą się pod nią — bez kasetonu narożnego L
-  if (frameDims(c).system1) return
+  // galeria Dampol (226 zdjęć, przegląd 2026-10-04): kaseton narożny L tylko przy pełnej elewacji kasetonowej na obu ścianach
+  // (np. 028, 110, 111); przy gołej płycie z pasami kaseton-deska róg zakrywa obróbka narożna (zdjęcie 163, produkcja 2026-10-04)
+  const system1 = frameDims(c).system1
 
   // narożnik kasetonu L leży na licach ścian (tył tacy na płycie)
   const faceInset = frameDims(c).wallFaceInset
@@ -1112,8 +1113,10 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
 
   for (const corner of corners) {
     const specs = corner.sides.map((side) => facadeSpecForSide(c, g, side)).filter(Boolean) as FacadeCladdingSpec[]
-    const cassetteSpec = specs.find((spec) => spec.kind === 'cassette-horizontal' || spec.kind === 'cassette-grid')
+    const isCass = (spec: FacadeCladdingSpec) => spec.kind === 'cassette-horizontal' || spec.kind === 'cassette-grid'
+    const cassetteSpec = specs.find(isCass)
     if (!cassetteSpec) continue
+    if (system1 && !(specs.length === 2 && specs.every(isCass))) continue
     const gap = cassetteSpec.gap ?? DEFAULT_FACADE_GAP
     const h = Math.min(
       wallHeightAt(corner.sides[0], corner.sides[0] === 'front' || corner.sides[0] === 'back' ? corner.x : corner.z, c),

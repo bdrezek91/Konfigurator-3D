@@ -104,9 +104,10 @@ export const PHYS = {
       source: 'Wyliczone: mocowanie bezpośrednio do płyty (produkcja) + głębokość tacy (założenie)', confidence: 'LOW', status: 'CHANGED', previous: 75,
     }),
     cornerWrap: P({
-      element: 'Zawinięcie kasetonu narożnego L (na każdą ścianę) — tylko konstrukcje inne niż System 1', value: 150, rank: 8, source: 'Założenie; zdjęcia 19–21 pokazują zawinięcie bez listwy',
-      confidence: 'LOW', status: 'CHANGED',
-      conflict: 'Produkcja (2026-10-04, zdjęcie gotowego pawilonu z kasetonami-deską): róg pawilonu przykryty obróbką narożną, nie kasetonem L. System 1: obróbka narożna na licu kasetonów.',
+      element: 'Zawinięcie kasetonu narożnego L (na każdą ścianę) — przy pełnej elewacji kasetonowej na obu ścianach', value: 150, rank: 8,
+      source: 'Założenie; galeria: zawinięcie widoczne przy pełnej elewacji kasetonowej (028, 110, 111; dawne 19–21)',
+      confidence: 'LOW', status: 'OPEN', todo: 'Zmierzyć szerokość zawinięcia na zdjęciu narożnika ze skalą.',
+      conflict: 'Goła płyta z pasami kaseton-deska (zdjęcie 163 = zdjęcie od produkcji 2026-10-04): róg przykryty obróbką narożną, nie kasetonem L — model rozróżnia oba przypadki.',
     }),
   },
   lamella: {
