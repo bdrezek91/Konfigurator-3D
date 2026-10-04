@@ -1806,11 +1806,14 @@ export function buildComponentModel(c: PavilionConfig): ComponentModel {
   assignPositionNumbers(components)
 
   const { outerFront, outerBack, roofDepth } = envelope(c)
-  const grossWallArea = c.length * (outerFront + outerBack) + 2 * c.width * ((outerFront + outerBack) / 2)
   const openingsArea = g.openings.reduce((sum, o) => sum + o.width * o.height, 0)
   const modeledWallPanelArea = components
     .filter((x) => x.category === 'wall-panels')
     .reduce((sum, x) => sum + (x.dimensions.netAreaM2 ?? 0), 0)
+  // System 1: powierzchnia ścian = płyty z modelu (otwory już wycięte); inne konstrukcje — obrys zewnętrzny
+  const grossWallArea = system1
+    ? modeledWallPanelArea + openingsArea
+    : c.length * (outerFront + outerBack) + 2 * c.width * ((outerFront + outerBack) / 2)
   const flashingLength = components
     .filter((x) => x.category === 'flashings')
     .reduce((sum, x) => sum + x.dimensions.lengthMm / 1000, 0)
