@@ -24,13 +24,29 @@ function RealExportBridge() {
   const camera = useThree((state) => state.camera)
 
   useEffect(() => {
-    const root = window as typeof window & { __DAMPOL3D_REAL_CAPTURE__?: () => string }
+    const root = window as typeof window & { __DAMPOL3D_REAL_CAPTURE__?: () => string; __DAMPOL3D_STATS__?: () => Record<string, number> }
     root.__DAMPOL3D_REAL_CAPTURE__ = () => {
       gl.render(scene, camera)
       return gl.domElement.toDataURL('image/png')
     }
+    // statystyki renderu (testy wydajności): wywołania rysowania, trójkąty, obiekty sceny, zasoby GPU
+    root.__DAMPOL3D_STATS__ = () => {
+      let meshes = 0
+      const materials = new Set<string>()
+      scene.traverse((o) => {
+        const m = o as unknown as { isMesh?: boolean; material?: { uuid: string } | Array<{ uuid: string }> }
+        if (!m.isMesh) return
+        meshes++
+        for (const mat of Array.isArray(m.material) ? m.material : m.material ? [m.material] : []) materials.add(mat.uuid)
+      })
+      return {
+        calls: gl.info.render.calls, triangles: gl.info.render.triangles, meshes, materials: materials.size,
+        geometries: gl.info.memory.geometries, textures: gl.info.memory.textures,
+      }
+    }
     return () => {
       delete root.__DAMPOL3D_REAL_CAPTURE__
+      delete root.__DAMPOL3D_STATS__
     }
   }, [gl, scene, camera])
 
