@@ -22,11 +22,18 @@ import {
   Shape,
   Vector3,
 } from 'three'
-import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { createContext, memo, useContext, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from 'react'
 import type { ComponentCategory, ComponentModel, ModelComponent, Vec3 } from '../components'
 import { CATEGORY_COLORS } from '../components'
 import type { PavilionConfig } from '../types'
-import { PANEL_THICKNESS_M } from '../types'
+import { envelope } from '../scene/geometry'
+
+/**
+ * Warstwa DOM na etykiety <Html> (wymiary, numery pozycji) — własna, poza płótnem. Domyślnie drei dokleja etykiety
+ * do kontenera płótna, który przy wyjściu z trybu technicznego znika wcześniej niż etykiety → wyjątek removeChild.
+ */
+const LabelLayerContext = createContext<RefObject<HTMLDivElement> | undefined>(undefined)
+const useLabelLayer = () => useContext(LabelLayerContext)
 
 export type TechnicalView =
   | 'axon'
@@ -458,6 +465,7 @@ function DimensionLine({
   const dir = new Vector3(to[0] - from[0], to[1] - from[1], to[2] - from[2]).normalize()
   const q1 = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), dir)
   const q2 = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), dir.clone().multiplyScalar(-1))
+  const layer = useLabelLayer()
   return (
     <group>
       <Line points={[from, to]} color="#202326" lineWidth={1.6} />
@@ -469,7 +477,7 @@ function DimensionLine({
         <coneGeometry args={[0.035, 0.12, 10]} />
         <meshBasicMaterial color="#202326" />
       </mesh>
-      <Html position={mid} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
+      <Html portal={layer} position={mid} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
         <span className="dimension-label">{label}</span>
       </Html>
     </group>
@@ -477,9 +485,9 @@ function DimensionLine({
 }
 
 function OverallDimensions({ config }: { config: PavilionConfig }) {
-  const floorT = PANEL_THICKNESS_M[config.floorPanel]
-  const roofT = PANEL_THICKNESS_M[config.roofPanel]
-  const h = floorT + Math.max(config.frontHeight, config.backHeight) + roofT
+  // wysokość zewnętrzna z bryły (System 1: kątownik + podłoga + ściana + dach + żebro + górna rama) — jak w panelu Wymiary
+  const env = envelope(config)
+  const h = Math.max(env.outerFront, env.outerBack)
   const x = config.length / 2 + 0.45
   const z = config.width / 2 + 0.42
   return (
@@ -500,6 +508,7 @@ function Balloons({
   exploded: number
   onSelect: (id?: string) => void
 }) {
+  const layer = useLabelLayer()
   const candidates = components
     .filter((c) => c.category !== 'fasteners' && c.category !== 'seals')
     .filter((_, i) => i % 2 === 0)
@@ -523,7 +532,7 @@ function Balloons({
         return (
           <group key={'balloon-' + c.id}>
             <Line points={[p, label]} color="#30363a" lineWidth={1} />
-            <Html position={label} center distanceFactor={11}>
+            <Html portal={layer} position={label} center distanceFactor={11} style={{ pointerEvents: 'auto' }}>
               <button className="tech-balloon" onClick={(e) => { e.stopPropagation(); onSelect(c.id) }}>{c.positionNo}</button>
             </Html>
           </group>
@@ -673,10 +682,13 @@ function FitOrtho({ config, view }: { config: TechnicalProps['config']; view: Te
 }
 
 export default function TechnicalPavilion3D(props: TechnicalProps) {
+  const labelLayer = useRef<HTMLDivElement>(null)
   const camera = cameraFor(props.view, props.config)
   const zoom = Math.max(54, 80 - props.config.length * 2.4)
 
   return (
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <LabelLayerContext.Provider value={labelLayer as RefObject<HTMLDivElement>}>
     <Canvas
       shadows
       dpr={[1, 2]}
@@ -701,5 +713,8 @@ export default function TechnicalPavilion3D(props: TechnicalProps) {
       <TechnicalScene {...props} />
       <OrbitControls makeDefault target={camera.target} enableDamping dampingFactor={0.08} />
     </Canvas>
+    </LabelLayerContext.Provider>
+    <div ref={labelLayer} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }} />
+    </div>
   )
 }
