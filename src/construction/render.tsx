@@ -39,18 +39,23 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
       }),
       roofOuter: new MeshStandardMaterial({ ...common, color: config.flashingColor, metalness: 0.34, roughness: 0.48, envMapIntensity: 1.05 }),
       inner: new MeshStandardMaterial({ ...common, color: '#f1ece1', metalness: 0.1, roughness: 0.35 }),
-      core: new MeshStandardMaterial({ ...common, color: '#e3cf8f', roughness: 0.92 }),
+      // rdzeń odsunięty w buforze głębokości: lico rdzenia leży 0,6 mm za blachą — bez offsetu przy 16-bitowej głębi
+      // (render programowy, część telefonów) rdzeń przebijał na krawędziach trójkątów jako żółte kreski
+      core: new MeshStandardMaterial({ ...common, color: '#e3cf8f', roughness: 0.92, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4 }),
       steel: new MeshStandardMaterial({ side: FrontSide, color: config.flashingColor, metalness: RENDER.flashingMattMetalness.value, roughness: RENDER.flashingMattRoughness.value }),
       flashing: new MeshStandardMaterial({ side: FrontSide, color: config.flashingColor, metalness: RENDER.flashingMattMetalness.value, roughness: RENDER.flashingMattRoughness.value }),
       floor: new MeshStandardMaterial({ side: FrontSide, color: '#9aa0a3', roughness: 0.6 }),
       // wierzch podłogi: MFP 12 + wykładzina Tarkett Activia Latur 3 (deska brązowa — kolor przybliżony)
       floorTop: new MeshStandardMaterial({ side: FrontSide, color: config.floorFinish === 'concrete' ? '#9f9c95' : '#8a6b4c', roughness: 0.7 }),
+      // styk płyt (zamek): ciemna linia — cień w zamku
+      joint: new MeshStandardMaterial({ ...common, color: '#15181a', roughness: 0.85, metalness: 0.1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }),
       glass: new MeshPhysicalMaterial({ color: '#5d6b74', metalness: 0.4, roughness: 0.05, transparent: true, opacity: 0.45 }),
     }
   }, [config.panelManufacturer, config.wallProfile, config.exteriorColor, config.flashingColor, config.floorFinish, transparent, opacity])
   useEffect(() => () => Object.values(materials).forEach((mat) => mat.dispose()), [materials])
 
   const materialOf = (p: Part): Material => {
+    if (p.id.startsWith('wall-joint-')) return materials.joint
     if (p.material === 'steel') return materials.steel
     if (p.material === 'flashing') return materials.flashing
     if (p.material === 'pirCore') return materials.core

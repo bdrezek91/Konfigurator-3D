@@ -58,8 +58,9 @@ export const PHYS = {
       confidence: 'MEDIUM', status: 'OK', todo: 'Niewidoczny na zdjęciach (attyka) — potwierdzić zamówieniem.',
     }),
     jointWidth: P({
-      element: 'Widoczny styk płyt (zamek)', value: 10, rank: 2, source: 'Film WA0017/WA0019: cienka ciemna linia',
-      confidence: 'LOW', status: 'OK', todo: 'Zmierzyć szczelinę zamka z bliska.',
+      element: 'Widoczny styk płyt (zamek) — ciemna linia na licu co moduł', value: 6, rank: 3,
+      source: 'Pomiar zdjęcia z produkcji (zdjecie-produkcja-naroznik-slup-nad-dachem.jpg): styki co 742 px = 1000 mm → 1,35 mm/px, linia 4–7 px = 5–9 mm; filmy WA0017/WA0019: cienka ciemna linia',
+      confidence: 'MEDIUM', status: 'CHANGED', previous: 10,
     }),
   },
   cassette: {

@@ -80,7 +80,7 @@ export default function Pavilion3D({ config, view = 'perspective', lighting = 'd
       frameloop={hq ? 'never' : 'always'}
       dpr={hq ? 1 : [1, 1.75]}
       gl={{ preserveDrawingBuffer: !!hq, antialias: !hq }}
-      camera={{ position: pose.position, fov: pose.fov, near: 0.05, far: 400 }}
+      camera={{ position: pose.position, fov: pose.fov, near: 0.1, far: 400 }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping
         gl.toneMappingExposure = preset.exposure

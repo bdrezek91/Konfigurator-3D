@@ -6,6 +6,9 @@ import type { CameraPose } from './presets'
 
 export type SavedView = CameraPose
 
+/** najniższa wysokość kamery nad gruntem [m] */
+const MIN_CAMERA_Y = 0.15
+
 export type CameraApi = {
   /** Płynne przejście do zadanego kadru. */
   goTo: (pose: CameraPose, animate?: boolean) => void
@@ -72,7 +75,14 @@ export function CameraRig({
     }
   })
 
+  const tmp = useRef(new Vector3())
   useFrame((_, delta) => {
+    // kamera nie schodzi pod grunt — inaczej grunt (jednostronny) znika i pawilon „wisi” w powietrzu
+    const ctl = controls.current
+    if (ctl) {
+      const p = ctl.getPosition(tmp.current)
+      if (p.y < MIN_CAMERA_Y) ctl.setPosition(p.x, MIN_CAMERA_Y, p.z, false)
+    }
     const diff = targetFov.current - camera.fov
     if (Math.abs(diff) > 0.01) {
       camera.fov += diff * Math.min(1, delta * 6)

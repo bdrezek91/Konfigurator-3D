@@ -5,7 +5,7 @@
 Hierarchia źródeł: 1 zdjęcie gotowego pawilonu · 2 film · 3 pomiar zdjęcia ze skalą · 4 katalog · 5 produkcja · 6 rysunek · 7 szkic · 8 założenie.
 Przy sprzeczności wygrywa źródło wyżej; sprzeczność opisana w kolumnie „problem”.
 
-Pewność: VERIFIED 26 · HIGH 17 · MEDIUM 18 · LOW 6 · UNKNOWN 4
+Pewność: VERIFIED 26 · HIGH 17 · MEDIUM 19 · LOW 5 · UNKNOWN 4
 
 ## Wartości fizyczne
 
@@ -14,7 +14,7 @@ Pewność: VERIFIED 26 · HIGH 17 · MEDIUM 18 · LOW 6 · UNKNOWN 4
 | `envelope.claddingHeight` Wysokość zewnętrzna okładziny (attyka płaska) | 2820 mm | rysunek: Projekty 722/08/26 i in. (2,82 m); spójne z proporcją zdjęcia 11: L/H = 2,45 → L = 6,92 m ≈ pawilon 7 × 3 | **HIGH** | Potwierdzić miarą taśmową na gotowym pawilonie (jedyna skala wszystkich pomiarów zdjęć). | — | OK |
 | `panel.wallModule` Moduł płyty ściennej (rozstaw styków) | 1000 mm | produkcja: Produkcja Dampol (2026-10-02): płyty w module metrowym, ściana przednia 6 × 3 = 6 płyt; filmy WA0017/18/19: styki ≈ 1,0 m | **VERIFIED** | Katalog Paneltech PW PIR-S: standard 1130 mm (opcjonalnie 1000 / 1050) — Dampol zamawia 1000. | — | OK |
 | `panel.roofModule` Moduł płyty dachowej | 1050 mm | produkcja: Standard zakupowy konfiguratora (dotychczasowe zakupy) | **MEDIUM** | Niewidoczny na zdjęciach (attyka) — potwierdzić zamówieniem. | — | OK |
-| `panel.jointWidth` Widoczny styk płyt (zamek) | 10 mm | film: Film WA0017/WA0019: cienka ciemna linia | **LOW** | Zmierzyć szczelinę zamka z bliska. | — | OK |
+| `panel.jointWidth` Widoczny styk płyt (zamek) — ciemna linia na licu co moduł | 6 mm | pomiar zdjęcia: Pomiar zdjęcia z produkcji (zdjecie-produkcja-naroznik-slup-nad-dachem.jpg): styki co 742 px = 1000 mm → 1,35 mm/px, linia 4–7 px = 5–9 mm; filmy WA0017/WA0019: cienka ciemna linia | **MEDIUM** | — | było 10 → 6 mm | CHANGED |
 | `cassette.gap` Fuga między kasetonami (w fudze widać wygiętą blachę obrzeża z wkrętami) | 20 mm | produkcja: Produkcja Dampol (2026-10-03): szczeliny 20 mm między kasetonami. Zdjęcia 11/03: ciemny pas 12–18 mm | **VERIFIED** | Zdjęcie mierzy cień, nie prześwit — jasne obrzeże w fudze zwęża ciemny pas; 20 mm mieści się w błędzie pomiaru (±5 mm/px). Przyjęto 20 mm. | było 15 → 20 mm | CHANGED |
 | `cassette.bodyBandHeight` Wysokość pasa kasetonu poziomego (korpus) | 240 mm | pomiar zdjęcia: Zdjęcie 11: 9 pasów, średnio 242 mm (234–254); zdjęcie 03: 232 mm | **HIGH** | Zdjęcie 09 (inna realizacja): kasetony korpusu ≈ 550 mm — inny wariant elewacji, nie domyślny. | było 300 → 240 mm | CHANGED |
 | `cassette.atticRowHeight` Wysokość rzędu kasetonu attyki (2 rzędy) | 330 mm | pomiar zdjęcia: Zdjęcie 11: 2 × 320 mm; zdjęcie 03: 2 × 335 mm | **HIGH** | Zdjęcie 09: attyka 1 rząd ≈ 650 mm — inny wariant. | było 315 → 330 mm | CHANGED |

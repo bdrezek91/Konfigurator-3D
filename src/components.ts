@@ -8,7 +8,7 @@ import type {
 } from './types'
 import { CONSTRUCTION_LABELS, PANEL_LABELS, PANEL_THICKNESS_M } from './types'
 import { m, PHYS, RAL_7016_HEX, RENDER } from './physical/spec'
-import { frameDims } from './construction/frame'
+import { frameDims, wallField } from './construction/frame'
 import { buildSystem1 } from './construction/system1/build'
 import { finishForConfig } from './construction/geometry'
 import type { Part } from './construction/types'
@@ -314,20 +314,22 @@ export function fallbackGeometry(c: PavilionConfig): ProjectGeometry {
     c.facade === 'ornament-panel' ? 'ornament-panel' : null
 
   if (fullDecorKind) {
+    // okładzina na całe pole ściany: między cokołem a koroną i między obróbkami narożnymi (System 1),
+    // a nie na cały obrys ramy — obróbki zostają widoczne, nic nie wystaje poza bryłę
+    const field = wallField(c)
     for (const side of enabledSides) {
       const span = wallSpan(side, c)
-      const h = side === 'front'
-        ? envelope(c).outerFront
-        : side === 'back'
-          ? envelope(c).outerBack
-          : (envelope(c).outerFront + envelope(c).outerBack) / 2
+      const hOuter = side === 'front' ? envelope(c).outerFront : side === 'back' ? envelope(c).outerBack : Math.min(envelope(c).outerFront, envelope(c).outerBack)
+      const bottom = field?.bottom ?? 0
+      const top = field ? (side === 'front' ? field.topFront : side === 'back' ? field.topBack : Math.min(field.topFront, field.topBack)) : hOuter
+      const width = span - 2 * (field?.corner ?? 0.02)
       decor.push({
         id: 'custom-full-' + side,
         wall: side,
         center: 0,
-        width: span,
-        yCenter: h / 2,
-        height: h,
+        width,
+        yCenter: (bottom + top) / 2,
+        height: top - bottom,
         kind: fullDecorKind,
         sourceAccuracy: 'drawing-estimate',
       })
@@ -401,6 +403,16 @@ function reconcileDecor(c: PavilionConfig, g: ProjectGeometry, d: DecorPlacement
       height = newTop - bottom
       yCenter = bottom + height / 2
     }
+  }
+  // System 1: okładzina w pionie między cokołem a koroną (obróbki widoczne, nic nie wchodzi na nie)
+  const field = wallField(c)
+  if (field) {
+    const top = d.wall === 'front' ? field.topFront : d.wall === 'back' ? field.topBack : Math.min(field.topFront, field.topBack)
+    const y0 = Math.max(field.bottom, yCenter - height / 2)
+    const y1 = Math.min(top, yCenter + height / 2)
+    if (y1 - y0 < 0.05) return null
+    yCenter = (y0 + y1) / 2
+    height = y1 - y0
   }
   // obróbka narożna Systemu 1
   if (frameDims(c).system1) {

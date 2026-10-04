@@ -45,7 +45,8 @@ function initialConfig(): PavilionConfig {
   const wall = q.get('wall') as PavilionConfig['wallProfile'] | null
   if (mfr && ['paneltech', 'balex', 'generic'].includes(mfr)) base.panelManufacturer = mfr
   if (wall && ['smooth', 'linear', 'microline', 'microrib', 'microwave', 'carbon', 'ribbed'].includes(wall)) base.wallProfile = wall
-  if (q.get('facade') === 'plain') base.facade = 'plain'
+  const facade = q.get('facade') as PavilionConfig['facade'] | null
+  if (facade && facade in FACADE_NAMES) base.facade = facade
   return base
 }
 

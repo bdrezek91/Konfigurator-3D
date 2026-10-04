@@ -239,10 +239,51 @@ export function buildSystem1(
       const u0 = lay.start + i * wallModule
       const u1 = i === lay.count - 1 ? wdef.length : u0 + wallModule
       const rects = cutRects(u0, u1, wdef.top, ops)
-      rects.forEach((poly, k) => {
+      // pasy jednej płyty (cięcie wokół otworów) zachodzą na siebie o 0,4 mm — bez szczelin renderu, przez które widać rdzeń
+      const ov = 0.0004
+      // (tylko między pasami tej samej płyty — nie na styku z sąsiednią płytą ani przy słupie)
+      const uEnd = i === lay.count - 1 ? wdef.length : u0 + wallModule
+      rects.map((poly) => {
+        const lo = Math.min(...poly.map((q) => q[0]))
+        return poly.map(([pu, pv]) => {
+          const left = pu <= lo + 1e-9
+          const d = left ? (pu > u0 + 1e-6 ? -ov : 0) : (pu < uEnd - 1e-6 ? ov : 0)
+          return [pu + d, pv] as [number, number]
+        })
+      })
+        .forEach((poly, k) => {
         sandwich(ctx, 'wall-' + wdef.side + '-' + i + '-' + k, 'Płyta ścienna ' + wdef.side + ' ' + (i + 1), wdef.stage, 'walls',
           wdef.origin, wdef.inward, wdef.u, steelUp, tw, poly, outer, inner, explode)
       })
+    }
+    // styki płyt na zamku: ciemna linia na licu zewnętrznym na każdej granicy modułu (przerwana otworami)
+    const jw = m(PHYS.panel.jointWidth)
+    for (let i = 1; i < lay.count; i++) {
+      const uj = lay.start + i * wallModule
+      cutRects(uj - jw / 2, uj + jw / 2, wdef.top, ops).forEach((poly, k) => {
+        push(ctx, {
+          id: 'wall-joint-' + wdef.side + '-' + i + '-' + k, name: 'Styk płyt na zamku ' + wdef.side + ' ' + i, layer: 'walls', stage: wdef.stage,
+          material: 'frame', color: '#15181a', explode, confidence: 'MEDIUM',
+          geometry: { start: add(wdef.origin, mul(wdef.inward, -0.0005)), axis: wdef.inward, u: wdef.u, v: steelUp, length: 0.0012, section: poly },
+        })
+      })
+    }
+    // obróbka ościeży: boki, nadproże i parapet otworu wyłożone blachą (rdzeń płyty w otworze niewidoczny; BOM: ościeża/nadproże/parapet)
+    const rv = 0.0008
+    for (const o of ops) {
+      const lin: Array<[string, Array<[number, number]>]> = [
+        ['l', rect(o.a, o.y0, o.a + rv, o.y1)],
+        ['r', rect(o.b - rv, o.y0, o.b, o.y1)],
+        ['t', rect(o.a, o.y1 - rv, o.b, o.y1)],
+        ...(o.y0 > 0.01 ? [['b', rect(o.a, o.y0, o.b, o.y0 + rv)] as [string, Array<[number, number]>]] : []),
+      ]
+      for (const [tag, poly] of lin) {
+        push(ctx, {
+          id: 'reveal-' + o.id + '-' + tag, name: 'Obróbka ościeża ' + o.id + ' (' + tag + ')', layer: 'flashings', stage: 9,
+          material: 'flashing', color: config.flashingColor || outer, explode: mul(explode, 1.2), confidence: 'MEDIUM',
+          geometry: { start: add(wdef.origin, mul(wdef.inward, -0.0005)), axis: wdef.inward, u: wdef.u, v: steelUp, length: tw + 0.001, section: poly },
+        })
+      }
     }
     // stolarka w otworach (uproszczona: rama + szyba) — warstwa ścian, bez zmian konstrukcji
     for (const o of ops) addJoinery(ctx, wdef, o, tw, explode)

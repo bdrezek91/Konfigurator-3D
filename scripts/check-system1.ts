@@ -95,7 +95,7 @@ for (const preset of PRESETS) {
     }
 
     // 2. obrys: konstrukcja nośna w obrysie ramy L × W, nad spodem ramy
-    const structural = model.parts.filter((p) => ['steel', 'floor', 'walls', 'roof', 'topFrame'].includes(p.layer) && !p.id.startsWith('roof-rib'))
+    const structural = model.parts.filter((p) => ['steel', 'floor', 'walls', 'roof', 'topFrame'].includes(p.layer) && !p.id.startsWith('roof-rib') && !p.id.startsWith('wall-joint-'))
     for (const p of structural) {
       const b = box(p)
       // boczne kątowniki górnej ramy leżą na spadku: ramię prostopadłe do dachu wychodzi za obrys o a·sin(spadek) na końcu
@@ -122,6 +122,9 @@ for (const preset of PRESETS) {
         // warstwy tej samej płyty: sąsiadują z definicji
         const base = (id: string) => id.replace(/-(outer|core|inner)$/, '')
         if (base(A.p.id) === base(B.p.id)) continue
+        // pasy tej samej płyty (cięcie wokół otworów) zachodzą celowo o 0,4 mm — bez szczelin renderu
+        const panel = (id: string) => id.match(/^wall-\w+-\d+-/)?.[0]
+        if (panel(A.p.id) && panel(A.p.id) === panel(B.p.id)) continue
         // stal × stal w narożach: węzeł spawany (kątowniki zachodzą na siebie, bez cięcia pod 45°) — liczone osobno
         if (A.p.material === 'steel' && B.p.material === 'steel') {
           if (A.boxes.some((a) => B.boxes.some((b) => overlap(a, b).every((x) => x > EPS)))) steelNodes.add(`${A.p.id}×${B.p.id}`)
@@ -181,6 +184,10 @@ for (const preset of PRESETS) {
       if (!model.parts.some((p) => p.layer === layer)) err(`brak warstwy ${layer}`)
     }
     if (model.parts.filter((p) => p.id.startsWith('post-')).length !== 4) err('liczba słupów ≠ 4')
+    // styki na zamku: przód/tył = liczba płyt − 1 (6 płyt na froncie 6×3 → 5 linii), przerwane otworami
+    const jointLines = new Set(model.parts.filter((p) => p.id.startsWith('wall-joint-front-')).map((p) => p.id.split('-')[3])).size
+    const frontPanels = model.derived.find((d) => d.key === 'wallModules')?.valueMm ?? 0
+    if (jointLines !== frontPanels - 1) err(`styki płyt front: ${jointLines} linii ≠ ${frontPanels - 1}`)
 
     // 9. BOM (komponenty) liczony z tego samego modelu: liczby płyt i długości stali muszą się zgadzać
     if (fname === 'auto') {

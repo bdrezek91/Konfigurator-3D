@@ -215,9 +215,10 @@ export function DecorLocal({
   const out: ReactNode[] = []
 
   decor.forEach((segment) => {
-    const fullWallCassette = segment.kind === 'cassette-black' && segment.height >= 2.8
-    const effectiveHeight = fullWallCassette ? 2.76 : segment.height
-    const effectiveY = fullWallCassette ? 1.39 : Math.min(segment.yCenter, 2.82 - effectiveHeight / 2)
+    // pole okładziny jest już uzgodnione z obróbkami i attyką (geometryOf) — bez dawnego ograniczenia do 2,82 m,
+    // które przy wyższym pawilonie przesuwało okładzinę w dół, poniżej ściany
+    const effectiveHeight = segment.height
+    const effectiveY = segment.yCenter
     const gallery03Lamella = segment.id === 'gallery03-lamella'
     // lamele (produkcja Dampol): blacha 0,4 mm, profil „kapelusz” _|‾|_ (czoło 30 mm od ściany) na przemian z U (dno na ścianie)
     const isLamella = segment.kind.startsWith('lamella-')
@@ -261,6 +262,62 @@ export function DecorLocal({
             floorOffset={floorOffset}
           />,
         )
+      }
+
+      if (diagonal) {
+        // lamele ukośne: oś lameli x(y) = xb + (y − y0)·k, przycięta do pola okładziny i wokół otworów — nic nie wystaje poza pole
+        const theta = 0.35
+        const k = Math.tan(theta)
+        const x1 = x0 + segment.width
+        const y1 = y0 + effectiveHeight
+        const half = slatWidth / 2 / Math.cos(theta) // pół szerokości lameli w poziomie
+        const endTrim = (slatWidth / 2) * Math.tan(theta) // końce cięte prostopadle — cofnięte, żeby narożnik nie wystawał
+        const pitchX = step / Math.cos(theta)
+        let idx = 0
+        for (let xb = x0 - effectiveHeight * k; xb < x1; xb += pitchX) {
+          // zakres y, w którym cała szerokość lameli mieści się w [x0, x1]
+          let ya = Math.max(y0, y0 + (x0 + half - xb) / k)
+          let yb = Math.min(y1, y0 + (x1 - half - xb) / k)
+          ya += endTrim
+          yb -= endTrim
+          if (yb - ya < 0.04) continue
+          // otwory: wytnij przedziały y, w których lamela przechodzi przez otwór (z marginesem szerokości)
+          let spans: Array<[number, number]> = [[ya, yb]]
+          for (const o of openings) {
+            const ox0 = o.center - o.width / 2 - half
+            const ox1 = o.center + o.width / 2 + half
+            const oy0 = floorOffset + openingSill(o) - endTrim
+            const oy1 = floorOffset + openingSill(o) + o.height + endTrim
+            const ca = Math.max(oy0, y0 + (ox0 - xb) / k)
+            const cb = Math.min(oy1, y0 + (ox1 - xb) / k)
+            if (cb <= ca) continue
+            spans = spans.flatMap(([a, b]) => {
+              const out2: Array<[number, number]> = []
+              if (ca - a > 0.04) out2.push([a, Math.min(b, ca)])
+              if (b - cb > 0.04) out2.push([Math.max(a, cb), b])
+              return cb <= a || ca >= b ? [[a, b] as [number, number]] : out2
+            })
+          }
+          for (const [sa, sb] of spans) {
+            const len = (sb - sa) / Math.cos(theta)
+            const ym = (sa + sb) / 2
+            const xm = xb + (ym - y0) * k
+            out.push(
+              <RoundedPiece
+                key={segment.id + '-d-' + idx + '-' + sa.toFixed(3)}
+                size={[slatWidth, len, slatDepth]}
+                position={[xm, ym, z + slatDepth / 2]}
+                rotation={[0, 0, -theta]}
+                color={slatMap ? '#ffffff' : woodPalette[idx % woodPalette.length]}
+                map={slatMap}
+                roughness={0.68}
+                radius={0.005}
+              />,
+            )
+          }
+          idx++
+        }
+        return
       }
 
       const slatCount = Math.floor((segment.width - slatWidth / 2) / step) + 1
@@ -378,9 +435,10 @@ export function DecorLocal({
         <Box key={segment.id + '-left'} size={[border, effectiveHeight, 0.055]} position={[x0 + border / 2, effectiveY, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
         <Box key={segment.id + '-right'} size={[border, effectiveHeight, 0.055]} position={[x0 + segment.width - border / 2, effectiveY, z]} color="#22272a" metalness={0.34} roughness={0.46} />,
       )
-      for (let x = x0 + 0.18; x < x0 + segment.width - 0.10; x += 0.34) {
-        for (let y = y0 + 0.22; y < y0 + effectiveHeight - 0.12; y += 0.42) {
-          if (overlapsOpening(x, y, 0.28, 0.36, openings, floorOffset)) continue
+      // motyw: dwie listwy pod kątem ±0,62 rad; zasięg pary od x − 0,15 do x + 0,27, w pionie ±0,19 — cały motyw w ramce
+      for (let x = x0 + border + 0.15; x + 0.27 < x0 + segment.width - border; x += 0.34) {
+        for (let y = y0 + border + 0.19; y + 0.19 < y0 + effectiveHeight - border; y += 0.42) {
+          if (overlapsOpening(x + 0.06, y, 0.46, 0.40, openings, floorOffset)) continue
           pattern.push(
             <RoundedPiece
               key={segment.id + '-orn-a-' + x.toFixed(2) + '-' + y.toFixed(2)}

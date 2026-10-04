@@ -27,3 +27,24 @@ export function frameDims(c: PavilionConfig) {
     wallFaceInset: system1 ? t : -tw / 2,
   }
 }
+
+/**
+ * Pole ściany na okładzinę (lamele, deska, ornament) — System 1. Układ jak okładziny: y od spodu ramy, x od środka ściany.
+ * Okładzina siedzi między obróbkami: nad cokołem (lico + kołnierz), pod koroną, między obróbkami narożnymi 25 cm.
+ * Zwraca null dla konstrukcji innych niż System 1 (bez obróbek modelowanych z produkcji).
+ */
+export function wallField(c: PavilionConfig) {
+  const fr = frameDims(c)
+  if (!fr.system1) return null
+  const tr = PANEL_THICKNESS_M[c.roofPanel]
+  const tf = PANEL_THICKNESS_M[c.floorPanel]
+  const crownFace = Math.max(m(PHYS.system1.crownFlashingFace), fr.topFrame + fr.roofRib + tr + 0.015)
+  const outer = (h: number) => fr.t + tf + h + tr + fr.roofRib + fr.topFrame
+  const clear = 0.005
+  return {
+    bottom: m(PHYS.system1.baseFlashingFace) + m(PHYS.system1.baseFlashingFlange) + clear,
+    topFront: outer(c.frontHeight) - crownFace - clear,
+    topBack: outer(c.backHeight) - crownFace - clear,
+    corner: m(PHYS.system1.cornerFlashingFront) + clear,
+  }
+}
