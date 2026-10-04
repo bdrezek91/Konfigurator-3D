@@ -45,6 +45,9 @@ function initialConfig(): PavilionConfig {
   const wall = q.get('wall') as PavilionConfig['wallProfile'] | null
   if (mfr && ['paneltech', 'balex', 'generic'].includes(mfr)) base.panelManufacturer = mfr
   if (wall && ['smooth', 'linear', 'microline', 'microrib', 'microwave', 'carbon', 'ribbed'].includes(wall)) base.wallProfile = wall
+  // ?L=9.03 — długość ramy [m] (testy wizualne rozmiarów 6/8/9/10 × 3)
+  const len = Number(q.get('L'))
+  if (Number.isFinite(len) && len >= 3 && len <= 14) base.length = len
   const facade = q.get('facade') as PavilionConfig['facade'] | null
   if (facade && facade in FACADE_NAMES) base.facade = facade
   return base

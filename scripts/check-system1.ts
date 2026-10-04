@@ -9,6 +9,7 @@ import { finishForConfig } from '../src/construction/geometry'
 import { buildComponentModel, geometryOf } from '../src/components'
 import { m, PHYS } from '../src/physical/spec'
 import { PRESETS } from '../src/presets'
+import { DEFAULT_CONFIG, type FacadeStyle, type PavilionConfig } from '../src/types'
 import { envelope } from '../src/scene/geometry'
 import type { Part, Vec3 } from '../src/construction/types'
 import type { FinishVariant } from '../src/construction/types'
@@ -63,7 +64,25 @@ const notes: string[] = []
 let runs = 0
 const steelNodes = new Set<string>()
 
-for (const preset of PRESETS) {
+// konfiguracje z UI (bez geometrii projektu): długości 6/8/9/10 m × wszystkie elewacje × różna stolarka
+const FACADES: FacadeStyle[] = ['plain', 'cassette-graphite', 'cassette-black', 'lamella-winchester', 'lamella-black', 'lamella-diagonal-winchester',
+  'cassette-lamella', 'silver-rectangle', 'cassette-horizontal', 'cassette-grid', 'vertical-ribbed', 'wood-horizontal', 'ornament-panel']
+const GENERATED: Array<{ id: string; config: PavilionConfig }> = []
+for (const L of [6.03, 8.03, 9.03, 10.03]) {
+  for (const [k, facade] of FACADES.entries()) {
+    const n = k % 3
+    GENERATED.push({
+      id: `ui-${L}-${facade}`,
+      config: {
+        ...DEFAULT_CONFIG, length: L, facade, facadeLeft: k % 2 === 0, facadeRight: k % 4 === 0, facadeBack: k % 5 === 0,
+        fixedGlazingCount: 1 + n, aluDoorCount: n === 2 ? 2 : 1, pvcWindowCount: n, attic: k % 2 === 1,
+        exteriorColor: k % 3 === 0 ? '#0e0e10' : '#383e42',
+      },
+    })
+  }
+}
+
+for (const preset of [...PRESETS, ...GENERATED]) {
   const cfg = preset.config
   if (cfg.construction !== 'angle50') {
     notes.push(`${preset.id}: konstrukcja „${cfg.construction}” — poza Systemem 1 (model uproszczony, bez kontroli)`)
@@ -189,6 +208,33 @@ for (const preset of PRESETS) {
     const frontPanels = model.derived.find((d) => d.key === 'wallModules')?.valueMm ?? 0
     if (jointLines !== frontPanels - 1) err(`styki płyt front: ${jointLines} linii ≠ ${frontPanels - 1}`)
 
+    // 10. elewacja (warstwa wizualna): okładziny w obrębie ściany i poza otworami, kasetony nie na otworach
+    if (fname === 'auto') {
+      const geo2 = geometryOf(cfg)
+      const span = (w: string) => (w === 'front' || w === 'back' ? L : W)
+      for (const d of geo2.decor) {
+        if (d.kind === 'led-strip') continue
+        const half = span(d.wall) / 2
+        if (d.center - d.width / 2 < -half - EPS || d.center + d.width / 2 > half + EPS) err(`okładzina ${d.id} (${d.wall}) wystaje poza ścianę`)
+        if (d.yCenter - d.height / 2 < -EPS) err(`okładzina ${d.id} (${d.wall}) poniżej spodu`)
+      }
+      const comps2 = buildComponentModel(cfg).components
+      const floorT = envelope(cfg).floorT
+      for (const cpt of comps2.filter((x) => x.id.startsWith('facade-cassette-') || x.id.startsWith('facade-ribbed-'))) {
+        const wall = cpt.wall!
+        const h = cpt.dimensions.lengthMm / 1000
+        const w = cpt.dimensions.widthMm / 1000
+        // pozycja lokalna wzdłuż ściany z położenia świata (zgodnie z wallPosition)
+        const local = wall === 'front' ? cpt.position[0] : wall === 'back' ? -cpt.position[0] : wall === 'left' ? cpt.position[2] : -cpt.position[2]
+        for (const o of geo2.openings.filter((x) => x.wall === wall)) {
+          const sill = o.sill ?? (o.kind.startsWith('door-') ? 0 : 0.08)
+          const ox = Math.min(local + w / 2, o.center + o.width / 2) - Math.max(local - w / 2, o.center - o.width / 2)
+          const oy = Math.min(cpt.position[1] + h / 2, floorT + sill + o.height) - Math.max(cpt.position[1] - h / 2, floorT + sill)
+          if (ox > 0.005 && oy > 0.005) err(`kaseton ${cpt.id} nachodzi na otwór ${o.id} (${Math.round(ox * 1000)}×${Math.round(oy * 1000)} mm)`)
+        }
+      }
+    }
+
     // 9. BOM (komponenty) liczony z tego samego modelu: liczby płyt i długości stali muszą się zgadzać
     if (fname === 'auto') {
       const comps = buildComponentModel(cfg).components
@@ -211,7 +257,7 @@ for (const preset of PRESETS) {
 
 const uniqueNotes = [...new Set(notes)]
 uniqueNotes.push(`węzły spawane stal × stal (nakładanie w narożach, uproszczenie geometrii): ${steelNodes.size} par`)
-console.log(`System 1 — ${runs} przebiegów (${PRESETS.length} presetów × warianty wykończenia)`)
+console.log(`System 1 — ${runs} przebiegów (${PRESETS.length} presetów + ${GENERATED.length} konfiguracji UI × warianty wykończenia)`)
 for (const n of uniqueNotes) console.log('  uwaga: ' + n)
 if (issues.length) {
   const grouped = new Map<string, string[]>()
