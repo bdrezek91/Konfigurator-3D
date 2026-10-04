@@ -80,16 +80,23 @@ export function Wall({
         floorOffset={floorT}
       />
 
-      {openings.map((opening) => (
-        <OpeningFrame
-          key={opening.id}
-          opening={opening}
-          floorOffset={floorT}
-          depth={depth}
-          revealDepth={hasCladding ? 0.04 : 0}
-          revealColor={renderMetalColor(config.flashingColor)}
-        />
-      ))}
+      {openings.map((opening) => {
+        // sąsiadujące elementy stolarki (przylegające ramy) — wspólny słupek, jak na zdjęciach 11/207
+        const adj = (dir: -1 | 1) => openings.some((o) => o !== opening && Math.abs((o.center - dir * o.width / 2) - (opening.center + dir * opening.width / 2)) < 0.012)
+        return (
+          <OpeningFrame
+            key={opening.id}
+            opening={opening}
+            floorOffset={floorT}
+            depth={depth}
+            // ościeże do lica kasetonu (taca 25 mm przykręcona do płyty)
+            revealDepth={hasCladding ? m(PHYS.cassette.thickness) : 0}
+            revealColor={renderMetalColor(config.flashingColor)}
+            joinLeft={adj(-1)}
+            joinRight={adj(1)}
+          />
+        )
+      })}
 
       {lights.map((lamp, i) => (
         <group key={'light-' + i} position={[lamp.center, lamp.y, depth / 2 + 0.105]}>

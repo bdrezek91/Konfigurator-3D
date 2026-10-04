@@ -40,6 +40,7 @@ export function Box({
   map,
   normalMap,
   envMapIntensity = 1,
+  receiveShadow = true,
 }: {
   size: [number, number, number]
   position: [number, number, number]
@@ -51,9 +52,11 @@ export function Box({
   map?: Texture
   normalMap?: Texture
   envMapIntensity?: number
+  /** false dla wąskich ścianek prawie równoległych do słońca (ościeża) — trądzik cieni w pasy */
+  receiveShadow?: boolean
 }) {
   return (
-    <mesh position={position} rotation={rotation} castShadow receiveShadow material={sharedMaterial({ color, metalness, roughness, opacity, map, normalMap, normalScale: 0.22, envMapIntensity })}>
+    <mesh position={position} rotation={rotation} castShadow receiveShadow={receiveShadow} material={sharedMaterial({ color, metalness, roughness, opacity, map, normalMap, normalScale: 0.22, envMapIntensity })}>
       <boxGeometry args={size} />
     </mesh>
   )
