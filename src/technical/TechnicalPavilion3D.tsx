@@ -652,6 +652,26 @@ function CameraAim({ target }: { target: Vec3 }) {
   return null
 }
 
+/**
+ * Zoom kamery ortograficznej dopasowany do płótna: pawilon mieści się w kadrze przy każdej szerokości panelu
+ * i długości (wcześniej stały zoom — 9–10 m przy wąskim widoku wychodziło poza kadr).
+ */
+function FitOrtho({ config, view }: { config: TechnicalProps['config']; view: TechnicalProps['view'] }) {
+  const get = useThree((state) => state.get)
+  const size = useThree((state) => state.size)
+  useLayoutEffect(() => {
+    const ortho = get().camera as unknown as { isOrthographicCamera?: boolean; zoom: number; updateProjectionMatrix: () => void }
+    if (!ortho.isOrthographicCamera) return
+    const H = Math.max(config.frontHeight, config.backHeight) + 0.5
+    // rzut aksonometryczny: szerokość ≈ przekątna rzutu, wysokość ≈ wysokość + skrót głębokości
+    const extX = view === 'front' ? config.length + 1 : view === 'side' ? config.width + 1 : Math.hypot(config.length, config.width) + 1
+    const extY = view === 'top' ? config.width + 1 : H + (view === 'axon' ? (config.length + config.width) * 0.3 : 0.6)
+    ortho.zoom = Math.max(12, Math.min(140, Math.min(size.width / (extX * 1.08), size.height / (extY * 1.12))))
+    ortho.updateProjectionMatrix()
+  }, [get, size.width, size.height, config.length, config.width, config.frontHeight, config.backHeight, view])
+  return null
+}
+
 export default function TechnicalPavilion3D(props: TechnicalProps) {
   const camera = cameraFor(props.view, props.config)
   const zoom = Math.max(54, 80 - props.config.length * 2.4)
@@ -676,6 +696,7 @@ export default function TechnicalPavilion3D(props: TechnicalProps) {
         <PerspectiveCamera makeDefault position={camera.pos} fov={32} near={0.01} far={200} />
       )}
       <CameraAim target={camera.target} />
+      <FitOrtho config={props.config} view={props.view} />
       <ExportBridge />
       <TechnicalScene {...props} />
       <OrbitControls makeDefault target={camera.target} enableDamping dampingFactor={0.08} />
