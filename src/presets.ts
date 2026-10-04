@@ -30,6 +30,31 @@ const p = (project: string, overrides: Partial<PavilionConfig>): PavilionConfig 
 
 export const PRESETS: PavilionPreset[] = [
   {
+    id: 'galeria-163',
+    label: 'galeria-163 · goła płyta + kaseton-deska · wzorzec realizmu',
+    source: 'reference/gallery/przeglad/163.jpg',
+    notes: 'Wzorzec porównania ZDJĘCIE | RENDER: goła płyta 7016, kaseton-deska (sosna), górna rama widoczna, ucha, obróbki narożne 25 cm.',
+    config: p('GALERIA/163', {
+      length: 6.03, width: 2.96,
+      frontHeight: 2.62, backHeight: 2.62, roofSlope: 'flat',
+      construction: 'angle50',
+      wallPanel: 'PIR100', roofPanel: 'PIR100', floorPanel: 'PIR100',
+      wallProfile: 'smooth', roofProfile: 'trapezoid',
+      interiorFinish: 'white', floorFinish: 'wood',
+      facade: 'plain',
+      facadeFront: false, facadeLeft: false, facadeRight: false, facadeBack: false,
+      exteriorColor: '#383E42', flashingColor: '#383E42',
+      glazing: 'double',
+      electrical: 'none', doubleSockets: 0, singleSockets: 0, ledCeiling: 0, switches: 0,
+      distributionBoard: false, externalConnection: false, externalLights: 0,
+      bathroom: false, toiletCompact: false, washbasin: false, shower: false,
+      boilerLiters: 0, heater: false, partitionWall: false, internalDoorCount: 0,
+      kitchen: false, kitchenWaterPoint: false,
+      airConditioning: false, hvacPower: 0, gutter: false, attic: false,
+      showStructure: false, showInterior: false,
+    }),
+  },
+  {
     id: 'galeria-03',
     label: 'galeria-03 · zdjęcie 03 · wzorzec 1:1',
     source: 'reference/gallery/03-front-kasetony-poziome-zblizenie.jpg',

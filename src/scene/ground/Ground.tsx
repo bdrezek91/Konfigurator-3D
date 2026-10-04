@@ -4,7 +4,7 @@ import { RepeatWrapping, SRGBColorSpace, Shape, type Texture } from 'three'
 import type { PavilionConfig } from '../../types'
 
 /**
- * Grunt PBR: trawa z kamieniami (Poly Haven, CC0) + opaska żwirowa wokół pawilonu.
+ * Grunt: trawnik (tekstura z scripts/gen-wood-textures.py, kolor jak na zdjęciach realizacji) + opaska żwirowa (galeria-03).
  * Dla galerii-03 kształt opaski odwzorowuje zdjęcie 03; dla pozostałych projektów
  * jest liczony z gabarytu pawilonu.
  */
@@ -18,8 +18,8 @@ export function Ground({ config }: { config: PavilionConfig }) {
     gravelNormal,
     gravelRoughness,
   ] = useTexture([
-    './textures/pbr/aerial_grass_rock_diff_1k.jpg',
-    './textures/pbr/aerial_grass_rock_nor_gl_1k.jpg',
+    './textures/pbr/grass_diff.jpg',
+    './textures/pbr/grass_nor.jpg',
     './textures/pbr/aerial_grass_rock_rough_1k.jpg',
     './textures/pbr/gravel_diff.jpg',
     './textures/pbr/gravel_nor.jpg',
@@ -37,8 +37,8 @@ export function Ground({ config }: { config: PavilionConfig }) {
       return texture
     }
     return {
-      grassDiffuse: prep(grassDiffuse, 7, true),
-      grassNormal: prep(grassNormal, 7),
+      grassDiffuse: prep(grassDiffuse, 14, true),
+      grassNormal: prep(grassNormal, 14),
       grassRoughness: prep(grassRoughness, 7),
       gravelDiffuse: prep(gravelDiffuse, 4.5, true),
       gravelNormal: prep(gravelNormal, 4.5),
@@ -59,9 +59,9 @@ export function Ground({ config }: { config: PavilionConfig }) {
       shape.closePath()
       return shape
     }
-    // opaska żwirowa ~0,9 m wokół obrysu, lekko nieregularna krawędź
-    const hx = config.length / 2 + 0.9
-    const hz = config.width / 2 + 0.9
+    // opaska żwirowa ~0,35 m wokół obrysu (jasny żwir przy podkładach, jak na zdjęciach), lekko nieregularna krawędź
+    const hx = config.length / 2 + 0.35
+    const hz = config.width / 2 + 0.35
     shape.moveTo(-hx, -hz)
     shape.lineTo(hx * 0.4, -hz - 0.08)
     shape.lineTo(hx, -hz)
@@ -85,25 +85,29 @@ export function Ground({ config }: { config: PavilionConfig }) {
         <meshStandardMaterial
           map={textures.grassDiffuse}
           normalMap={textures.grassNormal}
-          roughnessMap={textures.grassRoughness}
-          color="#817865"
+          // trawa matowa: bez mapy chropowatości i ze słabszym odbiciem otoczenia — pod ostrym kątem nie „prała się” na niebiesko od nieba
+          envMapIntensity={0.55}
+          // trawa: zieleń jak na zdjęciach realizacji (163, 054, 090) — wcześniej szaro-brązowa, wyglądała jak asfalt;
+          // przyciemnienie dobrane do zdjęcia 163 (trawa 127/141/59 sRGB)
+          color="#c9c070"
           normalScale={[0.55, 0.55]}
-          roughness={0.96}
+          roughness={1}
           metalness={0}
         />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.011, gallery03 ? 1.95 : 0]} receiveShadow>
+      {/* opaska żwirowa tylko dla wzorca galerii-03 (zdjęcie 03); prostokątny pas przy innych projektach wyglądał jak betonowa płyta */}
+      {gallery03 && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.011, 1.95]} receiveShadow>
         <shapeGeometry args={[gravelShape]} />
         <meshStandardMaterial
           map={textures.gravelDiffuse}
           normalMap={textures.gravelNormal}
           roughnessMap={textures.gravelRoughness}
-          color="#6f6a62"
+          color="#b9b4aa"
           normalScale={[0.70, 0.70]}
           roughness={0.93}
           metalness={0}
         />
-      </mesh>
+      </mesh>}
     </>
   )
 }

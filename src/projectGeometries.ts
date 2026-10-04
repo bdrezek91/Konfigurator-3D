@@ -34,6 +34,26 @@ const g = (
 ): ProjectGeometry => ({ externalHeight: 2.86, openings, decor, exteriorLights, notes })
 
 export const PROJECT_GEOMETRIES: Record<string, ProjectGeometry> = {
+  'GALERIA/163': {
+    // Zdjęcie galerii 163 (= zdjęcie od produkcji 2026-10-04): goła płyta 7016 + kaseton-deska (sosna), rama widoczna, ucha.
+    // Rozkład frontu z perspektywy zdjęcia (wysokość krawędzi narożnej jako skala głębi) — szacunek ±5 cm.
+    externalHeight: 2.92,
+    foundationGap: 0.05,
+    roofEdgeFlashing: false,
+    openings: [
+      o('G163-FIX-1','front',-2.18,0.78,1.95,'fixed-glass',{sill:0.1,frameColor:'#383E42',profile:'alu-standard'}),
+      o('G163-FIX-2','front',-1.14,0.86,1.95,'fixed-glass',{sill:0.1,frameColor:'#383E42',profile:'alu-standard'}),
+      o('G163-DOOR','front',0.08,1.0,2.05,'door-glazed',{sill:0,frameColor:'#383E42',profile:'alu-standard',hinge:'left',handle:'lever'}),
+      o('G163-FIX-3','front',1.67,1.17,1.95,'fixed-glass',{sill:0.1,frameColor:'#383E42',profile:'alu-standard'}),
+    ],
+    decor: [
+      d('G163-deska-L','front',-2.79,0.28,1.45,2.9,'board-natural'),
+      d('G163-deska-R','front',2.49,0.43,1.45,2.9,'board-natural'),
+      d('G163-deska-bok','right',-1.075,0.30,1.45,2.9,'board-natural'),
+    ],
+    exteriorLights: [],
+    notes: ['Wzorzec realizmu: zdjęcie galerii 163 (reference/gallery/przeglad/163.jpg).'],
+  },
   'GALERIA/03': {
     // Geometria z rektyfikacji zdjęcia 03 (punkty zbiegu + prostokąt fasady, skala: okładzina 0,03–2,82 m).
     // Szczegóły i dokładność: reference/gallery/POMIARY.md.

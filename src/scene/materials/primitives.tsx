@@ -48,6 +48,8 @@ export function RoundedPiece({
   rotation = [0, 0, 0],
   color,
   map,
+  normalMap,
+  roughnessMap,
   metalness = 0.10,
   roughness = 0.55,
   radius = 0.006,
@@ -57,13 +59,15 @@ export function RoundedPiece({
   rotation?: [number, number, number]
   color: string
   map?: Texture
+  normalMap?: Texture
+  roughnessMap?: Texture
   metalness?: number
   roughness?: number
   radius?: number
 }) {
   return (
     <RoundedBox args={size} position={position} rotation={rotation} radius={Math.min(radius, size[0] / 5, size[1] / 5)} smoothness={2} castShadow receiveShadow>
-      <meshStandardMaterial color={color} map={map} metalness={metalness} roughness={roughness} envMapIntensity={1.15} />
+      <meshStandardMaterial color={color} map={map} normalMap={normalMap} normalScale={[0.6, 0.6]} roughnessMap={roughnessMap} metalness={metalness} roughness={roughness} envMapIntensity={1.15} />
     </RoundedBox>
   )
 }

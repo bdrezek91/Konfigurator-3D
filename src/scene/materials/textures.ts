@@ -1,4 +1,4 @@
-import { CanvasTexture, RepeatWrapping, SRGBColorSpace } from 'three'
+import { CanvasTexture, RepeatWrapping, SRGBColorSpace, TextureLoader, type Texture } from 'three'
 
 export const textureCache = new Map<string, CanvasTexture>()
 
@@ -115,4 +115,66 @@ export function glassReflectionTexture() {
  */
 export function renderMetalColor(color: string) {
   return color
+}
+
+/** Rozmiar fizyczny kafla tekstury drewna [m] (public/textures/wood, scripts/gen-wood-textures.py). */
+const WOOD_TILE_M: Record<WoodKind, number> = { pine: 0.6, winchester: 0.6, floor: 1.0 }
+export type WoodKind = 'pine' | 'winchester' | 'floor'
+const WOOD_FILE: Record<WoodKind, string> = { pine: 'pine', winchester: 'winchester', floor: 'floor_oak' }
+const woodLoader = new TextureLoader()
+const woodBase = new Map<string, Texture>()
+const woodClones = new Map<string, WoodMaps>()
+export type WoodMaps = { map: Texture; normalMap: Texture; roughnessMap: Texture }
+
+const woodPending = new Map<string, Texture[]>()
+
+function woodFile(kind: WoodKind, channel: 'diff' | 'nor' | 'rough') {
+  const key = kind + '-' + channel
+  let t = woodBase.get(key)
+  if (!t) {
+    woodPending.set(key, [])
+    // klony utworzone przed wczytaniem obrazu trzeba oznaczyć do ponownego wysłania na GPU
+    t = woodLoader.load('./textures/wood/' + WOOD_FILE[kind] + '_' + channel + '.jpg', () => {
+      for (const c of woodPending.get(key) ?? []) c.needsUpdate = true
+      woodPending.delete(key)
+    })
+    t.wrapS = RepeatWrapping
+    t.wrapT = RepeatWrapping
+    t.anisotropy = 8
+    if (channel === 'diff') t.colorSpace = SRGBColorSpace
+    woodBase.set(key, t)
+  }
+  return t
+}
+
+/**
+ * Tekstury drewna w skali rzeczywistej dla elementu o wymiarach w × h [m] (UV 0..1 na licu).
+ * Włókna biegną wzdłuż dłuższego boku (deska pozioma — wzdłuż x, lamela — wzdłuż y), bez rozciągania rysunku.
+ */
+export function woodMaps(kind: WoodKind, w: number, h: number): WoodMaps {
+  const tile = WOOD_TILE_M[kind]
+  const horizontal = w > h
+  const rx = Math.max(0.05, Math.round(((horizontal ? h : w) / tile) * 20) / 20)
+  const ry = Math.max(0.05, Math.round(((horizontal ? w : h) / tile) * 20) / 20)
+  const key = kind + '|' + rx + '|' + ry + '|' + horizontal
+  const hit = woodClones.get(key)
+  if (hit) return hit
+  const make = (channel: 'diff' | 'nor' | 'rough') => {
+    const t = woodFile(kind, channel).clone()
+    woodPending.get(kind + '-' + channel)?.push(t)
+    t.repeat.set(rx, ry)
+    // przesunięcie losowe (z klucza), żeby sąsiednie deski nie miały identycznego rysunku
+    let hsh = 0
+    for (const ch of key) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0
+    t.offset.set((hsh % 97) / 97, (hsh % 89) / 89)
+    if (horizontal) {
+      t.center.set(0.5, 0.5)
+      t.rotation = Math.PI / 2
+    }
+    t.needsUpdate = true
+    return t
+  }
+  const maps = { map: make('diff'), normalMap: make('nor'), roughnessMap: make('rough') }
+  woodClones.set(key, maps)
+  return maps
 }

@@ -21,12 +21,13 @@ export type LightingPreset = {
 export const LIGHTING: Record<LightingMode, LightingPreset> = {
   day: {
     hdri: './hdri/kloofendal_43d_clear_2k.hdr',
-    environmentIntensity: 0.85,
-    backgroundIntensity: 0.85,
+    // więcej światła rozproszonego z nieba, mniej jasne tło: porównanie ze zdjęciem 163 (bok w cieniu 85–91, niebo 222–241 sRGB)
+    environmentIntensity: 1.45,
+    backgroundIntensity: 0.62,
     rotationY: Math.PI,
     sunDirection: [-0.52, 0.42, 0.74],
     sunColor: '#fff1dc',
-    sunIntensity: 2.4,
+    sunIntensity: 2.0,
     exposure: 0.95,
     lampIntensity: 0.25,
   },

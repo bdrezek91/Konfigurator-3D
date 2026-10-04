@@ -129,7 +129,7 @@ Pewność: VERIFIED 26 · HIGH 17 · MEDIUM 19 · LOW 5 · UNKNOWN 4
 | `glassMetalness` | 0.82 | Przybliżenie szkła niskoemisyjnego (odbicie) zgodne w rasteryzacji i path tracerze |
 | `cassetteBevelMm` | 3 | Zaokrąglenie krawędzi kasetonu w renderze |
 | `lamellaGrooveShade` | 0.35 | Dno rowka lameli (U, 30 mm w głąb, ≈ 37 mm szer.): przyciemnienie koloru zamiast niedostępnego w czasie rzeczywistym zacienienia (zdjęcie 03: rowek ≈ 0,2 jasności czoła) |
-| `panelSemiMattRoughness` | 0.4 | Płyta 7016 półmat (lekki połysk) — strojenie wizualne powłoki 25 µm |
+| `panelSemiMattRoughness` | 0.33 | Płyta 7016 półmat (lekki połysk) — strojenie wizualne powłoki 25 µm; porównanie ze zdjęciem 163 (odbicie nieba na licu) |
 | `flashingMattRoughness` | 0.72 | Obróbki 7016M faktura mat — wyższa chropowatość |
 | `flashingMattMetalness` | 0.22 | Obróbki 7016M — mniej metaliczny połysk niż płyta |
 | `blackMattRoughness` | 0.7 | Płyta RAL 9005 mat |

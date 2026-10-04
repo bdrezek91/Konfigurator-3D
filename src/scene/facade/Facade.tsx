@@ -3,7 +3,7 @@ import { type DecorPlacement, type OpeningPlacement, type PavilionConfig, type P
 import { envelope, openingSill, overlapsOpening, wallTopAt, wallTopHeights } from '../geometry'
 import { Path, Shape, type Texture } from 'three'
 import { Box, RoundedPiece } from '../materials/primitives'
-import { renderMetalColor, woodTexture } from '../materials/textures'
+import { renderMetalColor, woodMaps, woodTexture } from '../materials/textures'
 import { type ReactNode, useMemo } from 'react'
 import { m, PHYS, RENDER } from '../../physical/spec'
 
@@ -243,6 +243,8 @@ export function DecorLocal({
       const slatMap =
         segment.kind === 'lamella-palisander' ? woodTexture('palisander') :
         segment.kind === 'lamella-winchester' || diagonal ? woodTexture('winchester') : undefined
+      // nadruk winchester w skali rzeczywistej (włókna wzdłuż lameli) — tekstura drewna z generatora, nie płaski gradient
+      const slatWood = (len: number) => (segment.kind === 'lamella-winchester' || diagonal ? woodMaps('winchester', slatWidth, len) : null)
       let slatIndex = 0
 
       if (!segment.shape || segment.shape === 'rect') {
@@ -309,7 +311,7 @@ export function DecorLocal({
                 position={[xm, ym, z + slatDepth / 2]}
                 rotation={[0, 0, -theta]}
                 color={slatMap ? '#ffffff' : woodPalette[idx % woodPalette.length]}
-                map={slatMap}
+                {...(slatWood(len) ?? { map: slatMap })}
                 roughness={0.68}
                 radius={0.005}
               />,
@@ -356,7 +358,7 @@ export function DecorLocal({
               position={[x, (sa + sb) / 2, z + slatDepth / 2]}
               rotation={[0, 0, diagonal ? -0.35 : 0]}
               color={gallery03Lamella ? '#826f66' : (slatMap ? '#ffffff' : slatColor)}
-              map={gallery03Lamella ? undefined : slatMap}
+              {...(gallery03Lamella ? {} : (slatWood(sb - sa) ?? { map: slatMap }))}
               roughness={0.68}
               radius={0.005}
             />,
@@ -394,7 +396,7 @@ export function DecorLocal({
               size={[barW, effectiveHeight, 0.058]}
               position={[x, effectiveY, z + 0.010]}
               color="#ffffff"
-              map={woodTexture('winchester')}
+              {...woodMaps('winchester', barW, effectiveHeight)}
               roughness={0.70}
               radius={0.006}
             />,
@@ -416,7 +418,7 @@ export function DecorLocal({
               size={[segment.width, boardH, 0.024]}
               position={[segment.center, y, z]}
               color="#ffffff"
-              map={woodTexture(segment.kind === 'board-horizontal-winchester' ? 'winchester' : 'natural')}
+              {...woodMaps(segment.kind === 'board-horizontal-winchester' ? 'winchester' : 'pine', segment.width, boardH)}
               roughness={0.72}
               radius={0.006}
             />,
@@ -505,7 +507,7 @@ export function DecorLocal({
                 size={[Math.max(0.02, cw - gap), Math.max(0.02, ch - gap), tray]}
                 position={[x, y, zc]}
                 color={color}
-                map={cassetteMap}
+                {...(cassetteMap ? woodMaps('winchester', Math.max(0.02, cw - gap), Math.max(0.02, ch - gap)) : {})}
                 metalness={metalness}
                 roughness={segment.kind === 'cassette-winchester' ? 0.68 : 0.46}
                 radius={0.006}

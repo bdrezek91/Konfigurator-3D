@@ -15,26 +15,36 @@ const PROFILE_FACE: Record<OpeningProfile, number> = {
 
 const STEEL = { color: '#c3c7c8', metalness: 0.88, roughness: 0.2 }
 
-/** Szyba zespolona: ciemny pakiet odbijający HDRI. Za szybą ciemne wnętrze — kontrast dla odbić. */
+/**
+ * Szyba zespolona (2 tafle 4 mm + ramka): szkło przezroczyste z odbiciem Fresnela — na wprost widać jasne wnętrze
+ * (białe ściany 9010, podłoga), pod ostrym kątem odbija niebo i otoczenie (zdjęcie 163 i większość realizacji).
+ * Wcześniej: metaliczne „lustro” z ciemną płytą za szybą — nierealistyczne przy jasnym wnętrzu.
+ */
 function GlassPane({ width, height }: { width: number; height: number }) {
   return (
     <>
-      <Box size={[width * 0.99, height * 0.99, 0.025]} position={[0, 0, -0.205]} color="#16191b" metalness={0} roughness={0.94} />
-      <Box size={[width * 0.99, 0.055, 0.26]} position={[0, -height / 2 + 0.03, -0.105]} color="#292a28" metalness={0} roughness={0.9} />
-      <mesh position={[0, 0, -0.011]}>
-        <boxGeometry args={[width, height, 0.012]} />
-        {/* Szkło zespolone z powłoką niskoemisyjną: na zdjęciach z realizacji działa prawie jak lustro
-            (jasne otoczenie, ciemne wnętrze). Częściowo metaliczna powierzchnia odtwarza ten efekt
-            stabilnie zarówno w rasteryzacji, jak i w path tracerze. */}
-        <meshPhysicalMaterial
-          color="#5d6b74"
-          roughness={0.015}
-          metalness={0.82}
-          envMapIntensity={1.6}
-          clearcoat={1}
-          clearcoatRoughness={0}
-        />
-      </mesh>
+      {[-0.006, -0.026].map((z) => (
+        <mesh key={z} position={[0, 0, z]}>
+          <boxGeometry args={[width, height, 0.004]} />
+          <meshPhysicalMaterial
+            color="#eef4f2"
+            metalness={0}
+            roughness={0.02}
+            transmission={1}
+            thickness={0.004}
+            ior={1.52}
+            specularIntensity={1}
+            envMapIntensity={1.1}
+            attenuationColor="#d9ece4"
+            attenuationDistance={0.6}
+          />
+        </mesh>
+      ))}
+      {/* ramka dystansowa pakietu (ciemna, widoczna na obwodzie szyby) */}
+      <Box size={[width, 0.012, 0.016]} position={[0, height / 2 - 0.006, -0.016]} color="#1b1d1f" metalness={0.4} roughness={0.5} />
+      <Box size={[width, 0.012, 0.016]} position={[0, -height / 2 + 0.006, -0.016]} color="#1b1d1f" metalness={0.4} roughness={0.5} />
+      <Box size={[0.012, height, 0.016]} position={[-width / 2 + 0.006, 0, -0.016]} color="#1b1d1f" metalness={0.4} roughness={0.5} />
+      <Box size={[0.012, height, 0.016]} position={[width / 2 - 0.006, 0, -0.016]} color="#1b1d1f" metalness={0.4} roughness={0.5} />
     </>
   )
 }

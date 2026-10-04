@@ -404,7 +404,7 @@ export const RENDER = {
   glassMetalness: { value: 0.82, note: 'Przybliżenie szkła niskoemisyjnego (odbicie) zgodne w rasteryzacji i path tracerze' },
   cassetteBevelMm: { value: 3, note: 'Zaokrąglenie krawędzi kasetonu w renderze' },
   lamellaGrooveShade: { value: 0.35, note: 'Dno rowka lameli (U, 30 mm w głąb, ≈ 37 mm szer.): przyciemnienie koloru zamiast niedostępnego w czasie rzeczywistym zacienienia (zdjęcie 03: rowek ≈ 0,2 jasności czoła)' },
-  panelSemiMattRoughness: { value: 0.4, note: 'Płyta 7016 półmat (lekki połysk) — strojenie wizualne powłoki 25 µm' },
+  panelSemiMattRoughness: { value: 0.33, note: 'Płyta 7016 półmat (lekki połysk) — strojenie wizualne powłoki 25 µm; porównanie ze zdjęciem 163 (odbicie nieba na licu)' },
   flashingMattRoughness: { value: 0.72, note: 'Obróbki 7016M faktura mat — wyższa chropowatość' },
   flashingMattMetalness: { value: 0.22, note: 'Obróbki 7016M — mniej metaliczny połysk niż płyta' },
   blackMattRoughness: { value: 0.7, note: 'Płyta RAL 9005 mat' },

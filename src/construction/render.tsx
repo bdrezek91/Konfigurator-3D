@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { FrontSide, Material, MeshPhysicalMaterial, MeshStandardMaterial } from 'three'
 import { isRal9005, RENDER } from '../physical/spec'
 import { flatNormalMap, profileNormalMap, surfaceProfileDef } from '../scene/materials/profiles'
+import { woodMaps } from '../scene/materials/textures'
 import type { PavilionConfig } from '../types'
 import { buildRunGeometry, finishForConfig } from './geometry'
 import { buildSystem1 } from './system1/build'
@@ -32,13 +33,16 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
     const black = isRal9005(config.exteriorColor)
     const common = { side: FrontSide, transparent, opacity }
     return {
+      // blacha powlekana poliestrem 25 µm = lakier (dielektryk), półmat: metalness ≈ 0, połysk z chropowatości;
+      // metaliczny materiał dawał czarny bok w cieniu (zdjęcie 163: bok 85/87/91, front 91/97/111 przy RAL 7016)
       wallOuter: new MeshStandardMaterial({
-        ...common, color: config.exteriorColor, metalness: 0.38, envMapIntensity: 1.05,
+        ...common, color: config.exteriorColor, metalness: 0.04, envMapIntensity: 1.5,
         roughness: black ? RENDER.blackMattRoughness.value : RENDER.panelSemiMattRoughness.value,
         normalMap: profile ? profileNormalMap(profile) : flatNormalMap(),
       }),
       roofOuter: new MeshStandardMaterial({ ...common, color: config.flashingColor, metalness: 0.34, roughness: 0.48, envMapIntensity: 1.05 }),
-      inner: new MeshStandardMaterial({ ...common, color: '#f1ece1', metalness: 0.1, roughness: 0.35 }),
+      // wnętrze jaśniejsze (światło odbite od białych ścian i podłogi przez duże przeszklenia — zdjęcia wnętrz z galerii)
+      inner: new MeshStandardMaterial({ ...common, color: '#f1ece1', metalness: 0.05, roughness: 0.4, envMapIntensity: 3.4 }),
       // rdzeń odsunięty w buforze głębokości: lico rdzenia leży 0,6 mm za blachą — bez offsetu przy 16-bitowej głębi
       // (render programowy, część telefonów) rdzeń przebijał na krawędziach trójkątów jako żółte kreski
       core: new MeshStandardMaterial({ ...common, color: '#e3cf8f', roughness: 0.92, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4 }),
@@ -46,7 +50,10 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
       flashing: new MeshStandardMaterial({ side: FrontSide, color: config.flashingColor, metalness: RENDER.flashingMattMetalness.value, roughness: RENDER.flashingMattRoughness.value }),
       floor: new MeshStandardMaterial({ side: FrontSide, color: '#9aa0a3', roughness: 0.6 }),
       // wierzch podłogi: MFP 12 + wykładzina Tarkett Activia Latur 3 (deska brązowa — kolor przybliżony)
-      floorTop: new MeshStandardMaterial({ side: FrontSide, color: config.floorFinish === 'concrete' ? '#9f9c95' : '#8a6b4c', roughness: 0.7 }),
+      floorTop: config.floorFinish === 'concrete'
+        ? new MeshStandardMaterial({ side: FrontSide, color: '#9f9c95', roughness: 0.7 })
+        // UV wieczka wyciągnięcia = metry przekroju → kafel 1 m; deski Activia Latur 3 (dąb brązowy) wzdłuż długości
+        : new MeshStandardMaterial({ side: FrontSide, color: '#ffffff', roughness: 0.55, envMapIntensity: 2.2, ...woodMaps('floor', 1.001, 1) }),
       // styk płyt (zamek): ciemna linia — cień w zamku
       joint: new MeshStandardMaterial({ ...common, color: '#15181a', roughness: 0.85, metalness: 0.1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }),
       glass: new MeshPhysicalMaterial({ color: '#5d6b74', metalness: 0.4, roughness: 0.05, transparent: true, opacity: 0.45 }),
