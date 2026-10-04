@@ -3,6 +3,9 @@ import { frameDims } from '../frame'
 import { m, PHYS, RAL_7016_HEX, RAL_9010_HEX, RENDER, type Confidence } from '../../physical/spec'
 import { ROOF_TRAPEZOIDS } from '../../scene/materials/profiles'
 import { PANEL_THICKNESS_M, type OpeningPlacement, type PavilionConfig, type WallSide } from '../../types'
+import { angle as angleSection, thickenPath as thicken } from '../../profiles/sections'
+import { buildOpeningJoinery, type WallPlane } from '../joinery/build'
+import { isLayerPoc } from '../../render/poc'
 import type { ConstructionModel, DerivedDimension, FinishVariant, Layer, MaterialKind, Part, Stage, Vec3 } from '../types'
 
 /**
@@ -38,17 +41,13 @@ function push(ctx: Ctx, p: Omit<Part, 'confidence'> & { confidence?: Confidence 
 
 const rect = (u0: number, v0: number, u1: number, v1: number): Array<[number, number]> => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]]
 
-/** Przekrój L kątownika: piętka w (0,0), ramię A wzdłuż u, ramię B wzdłuż v. */
-function angleSection(a: number, t: number): Array<[number, number]> {
-  return [[0, 0], [a, 0], [a, t], [t, t], [t, a], [0, a]]
-}
 
 function angle(ctx: Ctx, id: string, name: string, stage: Stage, layer: Layer, heel: Vec3, axis: Vec3, legA: Vec3, legB: Vec3, length: number, explode: Vec3) {
   const a = m(PHYS.system1.angleLeg)
   const t = m(PHYS.system1.angleThickness)
   push(ctx, {
     id, name, layer, stage, material: 'steel', color: '#6f767c', explode,
-    geometry: { start: heel, axis, u: legA, v: legB, length, section: angleSection(a, t) },
+    geometry: { start: heel, axis, u: legA, v: legB, length, section: angleSection(a, t).poly },
   })
 }
 
@@ -285,8 +284,21 @@ export function buildSystem1(
         })
       }
     }
-    // stolarka w otworach (uproszczona: rama + szyba) — warstwa ścian, bez zmian konstrukcji
-    for (const o of ops) addJoinery(ctx, wdef, o, tw, explode)
+    // stolarka w otworach: PoC (galeria-163) — z przekrojów generic-aluminium-52; pozostałe — uproszczona rama + szyba
+    if (isLayerPoc(config)) {
+      const plane: WallPlane = { origin: wdef.origin, u: wdef.u, up: steelUp, out: mul(wdef.inward, -1), stage: wdef.stage, explode }
+      for (const op of openings.filter((x) => x.wall === wdef.side)) {
+        const o = toWallOpening(op, wdef)
+        ctx.parts.push(...buildOpeningJoinery({
+          id: op.id, kind: op.kind.startsWith('door-') ? 'door' : 'fixed', a: o.a, b: o.b, y0: o.y0, y1: o.y1,
+          // rama przylega do blachy ościeża (0,8 mm); próg drzwi na posadzce
+          inset: { l: rv, r: rv, t: rv, b: o.y0 > 0.01 ? rv : 0 },
+          color: op.frameColor ?? RAL_7016_HEX, hinge: op.hinge === 'right' ? 'right' : 'left', handle: op.handle,
+        }, plane))
+      }
+    } else {
+      for (const o of ops) addJoinery(ctx, wdef, o, tw, explode)
+    }
   }
 
   // mocowanie ścian skrajnych (przód/tył) do słupów: wkręt przez ramię słupa w krawędź płyty
@@ -500,24 +512,6 @@ function addJoinery(ctx: Ctx, w: WallDef, o: ReturnType<typeof toWallOpening>, t
 }
 
 type FlashCtx = { L: number; W: number; y0: number; yTopF: number; yTopB: number; a: number; t: number; tw: number; sideAxis: Vec3; sideLen: number; sideUp: Vec3; color: string; slope: number; roofEdge: number }
-
-/** Linia środkowa obróbki → wielokąt o grubości blachy. Punkty w układzie (na zewnątrz, w górę). */
-function thicken(path: Array<[number, number]>, th: number): Array<[number, number]> {
-  const left: Array<[number, number]> = []
-  const right: Array<[number, number]> = []
-  for (let i = 0; i < path.length; i++) {
-    const p = path[Math.max(0, i - 1)]
-    const n = path[Math.min(path.length - 1, i + 1)]
-    const dx = n[0] - p[0]
-    const dy = n[1] - p[1]
-    const l = Math.hypot(dx, dy) || 1
-    const nx = -dy / l
-    const ny = dx / l
-    left.push([path[i][0] + nx * th / 2, path[i][1] + ny * th / 2])
-    right.push([path[i][0] - nx * th / 2, path[i][1] - ny * th / 2])
-  }
-  return [...left, ...right.reverse()]
-}
 
 /** u lica obróbki cokołowej (od płaszczyzny kątownika na zewnątrz). */
 function baseFlashingFaceU(f: FlashCtx) {

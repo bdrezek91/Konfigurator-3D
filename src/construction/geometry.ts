@@ -5,18 +5,41 @@ import type { PavilionConfig, WallSide } from '../types'
 import type { FinishBySide } from './system1/build'
 import type { FinishVariant, RunGeometry } from './types'
 
-/** Bryła elementu: przekrój (u, v) wyciągnięty wzdłuż osi; baza zawsze prawoskrętna. */
-export function buildRunGeometry(g: RunGeometry) {
+/** Baza elementu (u, v, oś) — zawsze prawoskrętna; `flip` = przekrój odbity w v. */
+export function runBasis(g: RunGeometry) {
   const u = new Vector3(...g.u)
   let v = new Vector3(...g.v)
   const w = new Vector3(...g.axis)
   const flip = new Vector3().crossVectors(u, v).dot(w) < 0
   if (flip) v = v.clone().negate()
-  const sv = (p: [number, number]) => (flip ? -p[1] : p[1])
-  const shape = new Shape(g.section.map((p) => ({ x: p[0], y: sv(p) }) as never))
-  for (const hole of g.holes ?? []) shape.holes.push(new Path(hole.map((p) => ({ x: p[0], y: sv(p) }) as never)))
+  return { matrix: new Matrix4().makeBasis(u, v, w).setPosition(...g.start), flip }
+}
+
+/** Bryła w układzie lokalnym przekroju (u, ±v, oś), z uciosem końców; przesunięcie przekroju (du, dv) — dla instancji. */
+export function runLocalGeometry(g: RunGeometry, flip: boolean, du = 0, dv = 0) {
+  const sv = (p: [number, number]) => (flip ? -p[1] : p[1]) - dv
+  const shape = new Shape(g.section.map((p) => ({ x: p[0] - du, y: sv(p) }) as never))
+  for (const hole of g.holes ?? []) shape.holes.push(new Path(hole.map((p) => ({ x: p[0] - du, y: sv(p) }) as never)))
   const geo = new ExtrudeGeometry(shape, { depth: g.length, bevelEnabled: false, steps: 1 })
-  geo.applyMatrix4(new Matrix4().makeBasis(u, v, w).setPosition(...g.start))
+  const [k0, k1] = g.mitre ?? [0, 0]
+  if (k0 || k1) {
+    // ucios: wierzchołki końca przesunięte wzdłuż osi o k · u (płaszczyzna — ściany boczne i denka pozostają płaskie)
+    const pos = geo.attributes.position
+    for (let i = 0; i < pos.count; i++) {
+      const u = pos.getX(i) + du
+      const z = pos.getZ(i)
+      pos.setZ(i, z < g.length / 2 ? k0 * u : g.length - k1 * u)
+    }
+    geo.computeVertexNormals()
+  }
+  return geo
+}
+
+/** Bryła elementu: przekrój (u, v) wyciągnięty wzdłuż osi; baza zawsze prawoskrętna. */
+export function buildRunGeometry(g: RunGeometry) {
+  const { matrix, flip } = runBasis(g)
+  const geo = runLocalGeometry(g, flip)
+  geo.applyMatrix4(matrix)
   return geo
 }
 

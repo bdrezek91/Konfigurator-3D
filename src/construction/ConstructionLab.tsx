@@ -20,7 +20,7 @@ import { STAGES, type FinishVariant, type Layer, type Part, type Vec3 } from './
 type ViewId = 'assembled' | 'exploded' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G'
 
 const LAYER_LABELS: Record<Layer, string> = {
-  steel: 'Konstrukcja stalowa', floor: 'Podłoga', walls: 'Ściany + stolarka', roof: 'Dach', topFrame: 'Górna rama',
+  steel: 'Konstrukcja stalowa', floor: 'Podłoga', walls: 'Ściany + stolarka', joinery: 'Stolarka (przekroje)', roof: 'Dach', topFrame: 'Górna rama',
   flashings: 'Obróbki', decor: 'Elewacja', fasteners: 'Mocowania',
 }
 

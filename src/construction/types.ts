@@ -6,7 +6,7 @@ export type ConstructionSystemId = 'angle_50x50x4' | 'system_2' | 'system_3'
 export type Vec3 = [number, number, number]
 
 /** Warstwy modelu — każda jest osobnym systemem, konstrukcja nie zależy od elewacji. */
-export type Layer = 'steel' | 'floor' | 'walls' | 'roof' | 'topFrame' | 'flashings' | 'decor' | 'fasteners'
+export type Layer = 'steel' | 'floor' | 'walls' | 'joinery' | 'roof' | 'topFrame' | 'flashings' | 'decor' | 'fasteners'
 
 /** Kolejność montażu (exploded view). */
 export const STAGES = [
@@ -36,9 +36,15 @@ export type RunGeometry = {
   length: number
   section: Array<[number, number]>
   holes?: Array<Array<[number, number]>>
+  /**
+   * Ucios końców: współczynnik k — płaszczyzna cięcia przesuwa koniec o k · u (u = współrzędna przekroju).
+   * 45° przy profilach równej szerokości: k = 1; profile o szerokościach a (ten) i b (sąsiedni): k = b / a
+   * (cięcie przez narożnik zewnętrzny i wewnętrzny). 0 / brak = cięcie proste.
+   */
+  mitre?: [number, number]
 }
 
-export type MaterialKind = 'steel' | 'sheetOuter' | 'sheetInner' | 'pirCore' | 'flashing' | 'cassette' | 'glass' | 'frame' | 'screw' | 'floorFinish'
+export type MaterialKind = 'steel' | 'sheetOuter' | 'sheetInner' | 'pirCore' | 'flashing' | 'cassette' | 'glass' | 'frame' | 'gasket' | 'hardware' | 'screw' | 'floorFinish'
 
 export type Part = {
   id: string
