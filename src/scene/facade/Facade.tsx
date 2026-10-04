@@ -414,31 +414,40 @@ export function DecorLocal({
       const tray = m(PHYS.cassette.thickness)
       const x1 = x0 + segment.width
       const yTop = y0 + effectiveHeight
-      const cuts = openings
-        .filter((o) => o.center + o.width / 2 > x0 && o.center - o.width / 2 < x1)
-        .map((o) => [floorOffset + openingSill(o), floorOffset + openingSill(o) + o.height] as [number, number])
-        .sort((p, q) => p[0] - q[0])
-      const spans: Array<[number, number]> = []
-      let cursor = y0
-      for (const [c0, c1] of cuts) {
-        if (c0 - cursor > 0.05) spans.push([cursor, Math.min(c0, yTop)])
-        cursor = Math.max(cursor, c1)
-      }
-      if (yTop - cursor > 0.05) spans.push([cursor, yTop])
+      // pola tacy = prostokąty okładziny minus otwory (pionowe pasy między krawędziami otworów, jak cięcie płyt)
+      const ops = openings
+        .map((o) => ({ a: o.center - o.width / 2, b: o.center + o.width / 2, y0: floorOffset + openingSill(o), y1: floorOffset + openingSill(o) + o.height }))
+        .filter((o) => o.b > x0 && o.a < x1)
+      const xs = [...new Set([x0, x1, ...ops.flatMap((o) => [Math.max(x0, o.a), Math.min(x1, o.b)])])].sort((p, q) => p - q)
       const kind = segment.kind === 'board-horizontal-winchester' ? 'winchesterBoards' : 'pineBoards'
-      spans.forEach(([sa, sb], k) => {
-        out.push(
-          <RoundedPiece
-            key={segment.id + '-tray-' + k}
-            size={[segment.width, sb - sa, tray]}
-            position={[segment.center, (sa + sb) / 2, z + tray / 2]}
-            color="#ffffff"
-            {...boardCassetteMaps(kind, segment.width, sb - sa)}
-            roughness={0.62}
-            radius={0.003}
-          />,
-        )
-      })
+      let k = 0
+      for (let i = 0; i < xs.length - 1; i++) {
+        const a = xs[i]
+        const b = xs[i + 1]
+        if (b - a < 0.03) continue
+        const mid = (a + b) / 2
+        const blocked = ops.filter((o) => o.a < mid && o.b > mid).sort((p, q) => p.y0 - q.y0)
+        let cursor = y0
+        const spans: Array<[number, number]> = []
+        for (const o of blocked) {
+          if (o.y0 - cursor > 0.04) spans.push([cursor, Math.min(o.y0, yTop)])
+          cursor = Math.max(cursor, o.y1)
+        }
+        if (yTop - cursor > 0.04) spans.push([cursor, yTop])
+        for (const [sa, sb] of spans) {
+          out.push(
+            <RoundedPiece
+              key={segment.id + '-tray-' + k++}
+              size={[b - a, sb - sa, tray]}
+              position={[(a + b) / 2, (sa + sb) / 2, z + tray / 2]}
+              color="#ffffff"
+              {...boardCassetteMaps(kind, b - a, sb - sa, (sa + sb) / 2 - y0)}
+              roughness={0.62}
+              radius={0.003}
+            />,
+          )
+        }
+      }
       return
     }
 

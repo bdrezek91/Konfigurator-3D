@@ -182,9 +182,10 @@ export function woodMaps(kind: WoodKind, w: number, h: number): WoodMaps {
  * Kaseton-deska: lico tacy z dekorem desek poziomych (deska 130 mm, fuga 2 mm — zdjęcie 163). Tekstura bez obrotu
  * (deski i włókna już poziomo), skala rzeczywista; fugi liczone od dołu tacy.
  */
-export function boardCassetteMaps(kind: 'pineBoards' | 'winchesterBoards', w: number, h: number): WoodMaps {
+/** `centerAbove` — wysokość środka kawałka tacy nad dołem pola okładziny [m]: fugi ciągłe między kawałkami (nad/pod oknem). */
+export function boardCassetteMaps(kind: 'pineBoards' | 'winchesterBoards', w: number, h: number, centerAbove = h / 2): WoodMaps {
   const tile = WOOD_TILE_M[kind]
-  const key = 'cass|' + kind + '|' + Math.round(w * 1000) + '|' + Math.round(h * 1000)
+  const key = 'cass|' + kind + '|' + Math.round(w * 1000) + '|' + Math.round(h * 1000) + '|' + Math.round(centerAbove * 1000)
   const hit = woodClones.get(key)
   if (hit) return hit
   let hsh = 0
@@ -192,9 +193,9 @@ export function boardCassetteMaps(kind: 'pineBoards' | 'winchesterBoards', w: nu
   const make = (channel: 'diff' | 'nor' | 'rough') => {
     const t = woodFile(kind, channel).clone()
     woodPending.get(kind + '-' + channel)?.push(t)
-    // UV w metrach, środek lica = 0 (RoundedBox wyśrodkowany): fuga na dole tacy → przesunięcie o h/2
+    // UV w metrach, środek lica = 0 (RoundedBox wyśrodkowany): rysunek liczony od dołu pola okładziny
     t.repeat.set(1 / tile, 1 / tile)
-    t.offset.set((hsh % 97) / 97, ((h / 2) / tile) % 1)
+    t.offset.set((hsh % 97) / 97, (centerAbove / tile) % 1)
     t.needsUpdate = true
     return t
   }
