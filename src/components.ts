@@ -793,7 +793,8 @@ function addSystem1Structure(list: ModelComponent[], c: PavilionConfig) {
     id: 'floor-board-mfp', positionNo: 0, namePL: 'Płyta MFP na podłodze', category: 'interior', primitive: 'interior',
     material: 'Płyta MFP ' + PHYS.floor.board.value + ' mm', color: '#b8a17a',
     dimensions: { lengthMm: Math.round(innerL * 1000), widthMm: Math.round(innerW * 1000), thicknessMm: PHYS.floor.board.value, netAreaM2: round(innerL * innerW) },
-    quantity: 1, position: [0, fr.t + PANEL_THICKNESS_M[c.floorPanel] + m(PHYS.floor.board) / 2, 0], rotation: [0, 0, 0],
+    // widok techniczny: płyta [szer, gr, dł] → obrót 90°, żeby długość szła wzdłuż pawilonu (x)
+    quantity: 1, position: [0, fr.t + PANEL_THICKNESS_M[c.floorPanel] + m(PHYS.floor.board) / 2, 0], rotation: [0, Math.PI / 2, 0],
     explodeDirection: [0, -0.3, 0], assemblyStage: 11, sourceAccuracy: 'project-estimate',
   })
 
@@ -840,7 +841,8 @@ function addSystem1Structure(list: ModelComponent[], c: PavilionConfig) {
 
   // obróbki obwodowe (korona, cokół, narożniki): rozwinięcie = długość linii gięcia z przekroju modelu
   const sheetT = RENDER.flashingSheetRenderMm.value / 1000
-  for (const p of parts.filter((x) => x.layer === 'flashings')) {
+  // ościeża liczone niżej w addFlashings (ościeże/nadproże/parapet) — tu tylko obwodowe: korona, cokół, narożniki
+  for (const p of parts.filter((x) => x.layer === 'flashings' && !x.id.startsWith('reveal-'))) {
     const sec = p.geometry.section
     const developed = Math.max(0.01, (polygonPerimeter(sec) - 2 * sheetT) / 2)
     const side = (['front', 'back', 'left', 'right'] as WallSide[]).find((w) => p.id.endsWith('-' + w))
@@ -849,7 +851,8 @@ function addSystem1Structure(list: ModelComponent[], c: PavilionConfig) {
     const isSideCrown = p.id.startsWith('flash-crown-') && (side === 'left' || side === 'right')
     addFlashing(list, c, {
       id: p.id.replace('flash-', 'fl-'), name: p.name, lengthM: p.geometry.length, developedWidthM: developed,
-      position: boxCenter(partBox([p])), rotation: side ? (isSideCrown ? [-roofSlope, wallRotation(side)[1], 0] : wallRotation(side)) : [0, 0, 0],
+      // obróbka narożna biegnie pionowo (profil wyciągany wzdłuż lokalnej osi x → obrót o 90° wokół z)
+      position: boxCenter(partBox([p])), rotation: side ? (isSideCrown ? [-roofSlope, wallRotation(side)[1], 0] : wallRotation(side)) : [0, 0, Math.PI / 2],
       direction: p.explode, wall: side,
       profile2Dmm: sec.map(([u, v]) => [Math.round((u - uMin) * 1000 * 10) / 10, Math.round((v - vMin) * 1000 * 10) / 10]),
       assumptionCodes: [],
@@ -1762,7 +1765,7 @@ function addInterior(list: ModelComponent[], c: PavilionConfig) {
     dimensions: { lengthMm: Math.round(fl * 1000), widthMm: Math.round(fw * 1000), thicknessMm: finishT, netAreaM2: round(floorArea) },
     quantity: 1,
     position: [0, fr.t + PANEL_THICKNESS_M[c.floorPanel] + (fr.system1 ? m(PHYS.floor.board) : 0) + 0.004, 0],
-    rotation: [0, 0, 0],
+    rotation: [0, Math.PI / 2, 0], // [szer, gr, dł] → długość wzdłuż x
     explodeDirection: [0, -0.35, 0],
     assemblyStage: 12,
     sourceAccuracy: 'assumption',

@@ -52,8 +52,8 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
       // wierzch podłogi: MFP 12 + wykładzina Tarkett Activia Latur 3 (deska brązowa — kolor przybliżony)
       floorTop: config.floorFinish === 'concrete'
         ? new MeshStandardMaterial({ side: FrontSide, color: '#9f9c95', roughness: 0.7 })
-        // UV wieczka wyciągnięcia = metry przekroju → kafel 1 m; deski Activia Latur 3 (dąb brązowy) wzdłuż długości
-        : new MeshStandardMaterial({ side: FrontSide, color: '#ffffff', roughness: 0.55, envMapIntensity: 2.2, ...woodMaps('floor', 1.001, 1) }),
+        // UV wieczka wyciągnięcia = metry przekroju; deski Activia Latur 3 (dąb brązowy) wzdłuż długości (x)
+        : new MeshStandardMaterial({ side: FrontSide, color: '#ffffff', roughness: 0.55, envMapIntensity: 2.2, ...woodMaps('floor', 2, 1) }),
       // styk płyt (zamek): ciemna linia — cień w zamku
       joint: new MeshStandardMaterial({ ...common, color: '#15181a', roughness: 0.85, metalness: 0.1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }),
       glass: new MeshPhysicalMaterial({ color: '#5d6b74', metalness: 0.4, roughness: 0.05, transparent: true, opacity: 0.45 }),

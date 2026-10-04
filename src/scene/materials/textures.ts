@@ -118,9 +118,9 @@ export function renderMetalColor(color: string) {
 }
 
 /** Rozmiar fizyczny kafla tekstury drewna [m] (public/textures/wood, scripts/gen-wood-textures.py). */
-const WOOD_TILE_M: Record<WoodKind, number> = { pine: 0.6, winchester: 0.6, floor: 1.0 }
-export type WoodKind = 'pine' | 'winchester' | 'floor'
-const WOOD_FILE: Record<WoodKind, string> = { pine: 'pine', winchester: 'winchester', floor: 'floor_oak' }
+const WOOD_TILE_M: Record<WoodKind, number> = { pine: 0.6, winchester: 0.6, floor: 1.0, pineBoards: 1.04, winchesterBoards: 1.04 }
+export type WoodKind = 'pine' | 'winchester' | 'floor' | 'pineBoards' | 'winchesterBoards'
+const WOOD_FILE: Record<WoodKind, string> = { pine: 'pine', winchester: 'winchester', floor: 'floor_oak', pineBoards: 'pine_boards', winchesterBoards: 'winchester_boards' }
 const woodLoader = new TextureLoader()
 const woodBase = new Map<string, Texture>()
 const woodClones = new Map<string, WoodMaps>()
@@ -148,29 +148,53 @@ function woodFile(kind: WoodKind, channel: 'diff' | 'nor' | 'rough') {
 }
 
 /**
- * Tekstury drewna w skali rzeczywistej dla elementu o wymiarach w × h [m] (UV 0..1 na licu).
- * Włókna biegną wzdłuż dłuższego boku (deska pozioma — wzdłuż x, lamela — wzdłuż y), bez rozciągania rysunku.
+ * Tekstury drewna w skali rzeczywistej dla elementu o wymiarach w × h [m].
+ * UV brył (RoundedBox, ExtrudeGeometry) są w metrach lica, więc powtórzenie = 1 / rozmiar kafla.
+ * Włókna biegną wzdłuż dłuższego boku (deska pozioma — wzdłuż x, lamela — wzdłuż y);
+ * przesunięcie zależne od wymiarów, żeby sąsiednie elementy nie miały identycznego rysunku.
  */
 export function woodMaps(kind: WoodKind, w: number, h: number): WoodMaps {
   const tile = WOOD_TILE_M[kind]
   const horizontal = w > h
-  const rx = Math.max(0.05, Math.round(((horizontal ? h : w) / tile) * 20) / 20)
-  const ry = Math.max(0.05, Math.round(((horizontal ? w : h) / tile) * 20) / 20)
-  const key = kind + '|' + rx + '|' + ry + '|' + horizontal
+  const key = kind + '|' + horizontal + '|' + Math.round(w * 1000) + '|' + Math.round(h * 1000)
   const hit = woodClones.get(key)
   if (hit) return hit
+  let hsh = 0
+  for (const ch of key) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0
   const make = (channel: 'diff' | 'nor' | 'rough') => {
     const t = woodFile(kind, channel).clone()
     woodPending.get(kind + '-' + channel)?.push(t)
-    t.repeat.set(rx, ry)
-    // przesunięcie losowe (z klucza), żeby sąsiednie deski nie miały identycznego rysunku
-    let hsh = 0
-    for (const ch of key) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0
+    t.repeat.set(1 / tile, 1 / tile)
     t.offset.set((hsh % 97) / 97, (hsh % 89) / 89)
     if (horizontal) {
       t.center.set(0.5, 0.5)
       t.rotation = Math.PI / 2
     }
+    t.needsUpdate = true
+    return t
+  }
+  const maps = { map: make('diff'), normalMap: make('nor'), roughnessMap: make('rough') }
+  woodClones.set(key, maps)
+  return maps
+}
+
+/**
+ * Kaseton-deska: lico tacy z dekorem desek poziomych (deska 130 mm, fuga 2 mm — zdjęcie 163). Tekstura bez obrotu
+ * (deski i włókna już poziomo), skala rzeczywista; fugi liczone od dołu tacy.
+ */
+export function boardCassetteMaps(kind: 'pineBoards' | 'winchesterBoards', w: number, h: number): WoodMaps {
+  const tile = WOOD_TILE_M[kind]
+  const key = 'cass|' + kind + '|' + Math.round(w * 1000) + '|' + Math.round(h * 1000)
+  const hit = woodClones.get(key)
+  if (hit) return hit
+  let hsh = 0
+  for (const ch of key) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0
+  const make = (channel: 'diff' | 'nor' | 'rough') => {
+    const t = woodFile(kind, channel).clone()
+    woodPending.get(kind + '-' + channel)?.push(t)
+    // UV w metrach, środek lica = 0 (RoundedBox wyśrodkowany): fuga na dole tacy → przesunięcie o h/2
+    t.repeat.set(1 / tile, 1 / tile)
+    t.offset.set((hsh % 97) / 97, ((h / 2) / tile) % 1)
     t.needsUpdate = true
     return t
   }

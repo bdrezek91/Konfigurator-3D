@@ -144,3 +144,37 @@ def grass():
 
 
 grass()
+
+
+# kaseton-deska (zdjęcie 163): taca z dekorem desek poziomych — 8 desek po 130 mm na kafel 1,04 × 1,04 m,
+# włókna poziome, każda deska z innym fragmentem rysunku i odcieniem, fuga 2 mm z cieniem pod krawędzią deski
+def board_cassette(name, light, dark, seed):
+    n = N
+    rows = 8
+    pitch = n // rows
+    big = wood(n, 30, 0.3, 0.12, 0.18, 6, seed)  # włókna wzdłuż Y, łagodne łuki
+    out = np.zeros((n, n, 3))
+    h = np.zeros((n, n))
+    r = np.random.default_rng(seed)
+    for k in range(rows):
+        # inny fragment rysunku dla każdej deski: przesunięcie i transpozycja (włókna poziomo)
+        shift = r.integers(0, n)
+        src = np.roll(big, shift, axis=1).T[:pitch, :] if k % 2 == 0 else np.roll(big, shift, axis=0).T[pitch:2 * pitch, :]
+        tone = 1 + (r.random() - 0.5) * 0.16
+        rgb = colorize(src, light, dark) * tone
+        out[k * pitch:(k + 1) * pitch] = rgb
+        h[k * pitch:(k + 1) * pitch] = 1 - src * 0.3
+    yy = np.arange(n) % pitch
+    groove = (yy < 2)[:, None]
+    shadow = np.clip(1 - (yy - 2) / 10.0, 0, 1)[:, None] * (yy >= 2)[:, None]  # cień pod krawędzią deski powyżej
+    out = out * (1 - 0.8 * groove[..., None]) * (1 - 0.22 * shadow[..., None])
+    h = h - 1.0 * groove - 0.2 * shadow
+    Image.fromarray(np.clip(out, 0, 255).astype(np.uint8)).save(os.path.join(OUT, name + '_diff.jpg'), quality=90)
+    Image.fromarray(normal_from_height(h, 2.5)).save(os.path.join(OUT, name + '_nor.jpg'), quality=92)
+    rough = np.clip(0.6 + 0.15 * (h - h.mean()) + 0.2 * groove, 0, 1)
+    Image.fromarray((rough * 255).astype(np.uint8)).save(os.path.join(OUT, name + '_rough.jpg'), quality=90)
+    print('ok', name)
+
+
+board_cassette('pine_boards', light=(214, 140, 66), dark=(176, 104, 46), seed=61)
+board_cassette('winchester_boards', light=(168, 112, 66), dark=(110, 70, 40), seed=67)

@@ -3,7 +3,7 @@ import { type DecorPlacement, type OpeningPlacement, type PavilionConfig, type P
 import { envelope, openingSill, overlapsOpening, wallTopAt, wallTopHeights } from '../geometry'
 import { Path, Shape, type Texture } from 'three'
 import { Box, RoundedPiece } from '../materials/primitives'
-import { renderMetalColor, woodMaps, woodTexture } from '../materials/textures'
+import { boardCassetteMaps, renderMetalColor, woodMaps, woodTexture } from '../materials/textures'
 import { type ReactNode, useMemo } from 'react'
 import { m, PHYS, RENDER } from '../../physical/spec'
 
@@ -408,23 +408,36 @@ export function DecorLocal({
     }
 
     if (segment.kind === 'board-natural' || segment.kind === 'board-horizontal-winchester') {
-      // deska drewnopodobna wg nagrania WA0016
-      const boardH = m(PHYS.board.height)
-      for (let y = y0 + boardH / 2; y < y0 + effectiveHeight; y += boardH + m(PHYS.board.gap)) {
-        if (!overlapsOpening(segment.center, y, segment.width, boardH, openings, floorOffset)) {
-          out.push(
-            <RoundedPiece
-              key={segment.id + '-b-' + y.toFixed(2)}
-              size={[segment.width, boardH, 0.024]}
-              position={[segment.center, y, z]}
-              color="#ffffff"
-              {...woodMaps(segment.kind === 'board-horizontal-winchester' ? 'winchester' : 'pine', segment.width, boardH)}
-              roughness={0.72}
-              radius={0.006}
-            />,
-          )
-        }
+      // kaseton-deska (produkcja Dampol, zdjęcie 163): blaszana taca 25 mm przykręcona do płyty, na licu dekor desek
+      // poziomych z fugami — jedno ciągłe lico, nie osobne klocki; taca przerwana tylko otworami
+      const tray = m(PHYS.cassette.thickness)
+      const x1 = x0 + segment.width
+      const yTop = y0 + effectiveHeight
+      const cuts = openings
+        .filter((o) => o.center + o.width / 2 > x0 && o.center - o.width / 2 < x1)
+        .map((o) => [floorOffset + openingSill(o), floorOffset + openingSill(o) + o.height] as [number, number])
+        .sort((p, q) => p[0] - q[0])
+      const spans: Array<[number, number]> = []
+      let cursor = y0
+      for (const [c0, c1] of cuts) {
+        if (c0 - cursor > 0.05) spans.push([cursor, Math.min(c0, yTop)])
+        cursor = Math.max(cursor, c1)
       }
+      if (yTop - cursor > 0.05) spans.push([cursor, yTop])
+      const kind = segment.kind === 'board-horizontal-winchester' ? 'winchesterBoards' : 'pineBoards'
+      spans.forEach(([sa, sb], k) => {
+        out.push(
+          <RoundedPiece
+            key={segment.id + '-tray-' + k}
+            size={[segment.width, sb - sa, tray]}
+            position={[segment.center, (sa + sb) / 2, z + tray / 2]}
+            color="#ffffff"
+            {...boardCassetteMaps(kind, segment.width, sb - sa)}
+            roughness={0.62}
+            radius={0.003}
+          />,
+        )
+      })
       return
     }
 
