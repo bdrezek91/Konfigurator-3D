@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { Color, FrontSide, Material, MeshPhysicalMaterial, MeshStandardMaterial } from 'three'
 import { isRal9005, RENDER } from '../physical/spec'
 import { flatNormalMap, profileNormalMap, surfaceProfileDef } from '../scene/materials/profiles'
@@ -7,6 +7,9 @@ import type { PavilionConfig } from '../types'
 import { buildRunGeometry, finishForConfig } from './geometry'
 import { buildSystem1 } from './system1/build'
 import type { Part } from './types'
+import { isLayerPoc } from '../render/poc'
+import { LayerRenderer } from '../render/LayerRenderer'
+import type { PartLook } from '../render/layers'
 
 function PartMesh({ part, material }: { part: Part; material: Material }) {
   const geo = useMemo(() => buildRunGeometry(part.geometry), [part.geometry])
@@ -23,9 +26,12 @@ function PartMesh({ part, material }: { part: Part; material: Material }) {
 export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; opacity?: number }) {
   const finish = useMemo(() => finishForConfig(config), [config])
   const model = useMemo(() => buildSystem1(config, finish, { decor: false }), [config, finish])
+  // PoC (galeria-163): stolarka z przekrojów należy do modelu i renderuje się z nim (warstwa JOINERY);
+  // pozostałe presety: uproszczona rama modelu pomijana — stolarkę rysuje OpeningFrame
+  const poc = isLayerPoc(config)
   const parts = useMemo(
-    () => model.parts.filter((p) => p.layer !== 'fasteners' && !p.id.startsWith('joinery-') && !p.id.startsWith('glass-')),
-    [model],
+    () => model.parts.filter((p) => p.layer !== 'fasteners' && (poc || (!p.id.startsWith('joinery-') && !p.id.startsWith('glass-')))),
+    [model, poc],
   )
   const transparent = opacity < 1
   const materials = useMemo(() => {
@@ -67,7 +73,29 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
   }, [config.panelManufacturer, config.wallProfile, config.exteriorColor, config.flashingColor, config.floorFinish, transparent, opacity])
   useEffect(() => () => Object.values(materials).forEach((mat) => mat.dispose()), [materials])
 
-  const materialOf = (p: Part): Material => {
+  // stolarka (PoC): parametry 1:1 z dotychczasowego OpeningFrame (rama, uszczelka, okucia, szkło) — bez strojenia materiałów
+  const joineryMats = useMemo(() => {
+    const cache = new Map<string, Material>()
+    const get = (key: string, make: () => Material) => {
+      let mat = cache.get(key)
+      if (!mat) cache.set(key, (mat = make()))
+      return mat
+    }
+    return {
+      cache,
+      frame: (color: string) => get('frame' + color, () => new MeshStandardMaterial({ color, metalness: 0.12, roughness: 0.42 })),
+      gasket: () => get('gasket', () => new MeshStandardMaterial({ color: '#0c0d0e', metalness: 0, roughness: 0.8 })),
+      hardware: (color: string) => get('hw' + color, () => new MeshStandardMaterial({ color, metalness: color === '#2a2d2f' ? 0.6 : 0.85, roughness: color === '#2a2d2f' ? 0.35 : 0.28 })),
+      // szyba zespolona 4/16/4 low-E — jak GlassPane (OpeningFrame.tsx); pakiet ma tu rzeczywistą grubość 24 mm
+      glass: () => get('glass', () => new MeshPhysicalMaterial({
+        color: '#ffffff', metalness: 0, roughness: 0, transmission: 1, thickness: 0.024, ior: 1.52, specularIntensity: 3.4,
+        attenuationColor: '#9fb0a8', attenuationDistance: 0.024,
+      })),
+    }
+  }, [])
+  useEffect(() => () => joineryMats.cache.forEach((mat) => mat.dispose()), [joineryMats])
+
+  const materialOf = useCallback((p: Part): Material => {
     if (p.id.startsWith('wall-joint-')) return materials.joint
     if (p.material === 'steel') return materials.steel
     if (p.material === 'flashing') return materials.flashing
@@ -81,7 +109,19 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
     }
     if (p.material === 'glass') return materials.glass
     return materials.wallOuter
-  }
+  }, [materials, finish])
+  const lookOf = useCallback((p: Part): PartLook => {
+    if (p.layer === 'joinery') {
+      if (p.material === 'glass') return { material: joineryMats.glass(), castShadow: false }
+      if (p.material === 'gasket') return { material: joineryMats.gasket(), castShadow: true }
+      if (p.material === 'hardware') return { material: joineryMats.hardware(p.color), castShadow: true }
+      return { material: joineryMats.frame(p.color), castShadow: true }
+    }
+    const thinSheet = p.material === 'sheetOuter' || p.material === 'sheetInner'
+    return { material: materialOf(p), castShadow: !thinSheet }
+  }, [materialOf, joineryMats])
+
+  if (poc) return <LayerRenderer parts={parts} lookOf={lookOf} />
   return <group>{parts.map((p) => <PartMesh key={p.id} part={p} material={materialOf(p)} />)}</group>
 }
 

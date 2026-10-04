@@ -1,3 +1,4 @@
+import { isLayerPoc } from '../../render/poc'
 import { PANEL_THICKNESS_M, type PavilionConfig, type ProjectGeometry, type WallSide } from '../../types'
 import type { PavilionView } from '../camera/views'
 import { DampolFrameLocal, DecorLocal, FacadeCladdingFromModel, FoundationSupports, PanelProfileLocal } from '../facade/Facade'
@@ -80,7 +81,8 @@ export function Wall({
         floorOffset={floorT}
       />
 
-      {openings.map((opening) => {
+      {/* PoC (galeria-163): stolarka z przekrojów jest częścią modelu Systemu 1 (warstwa JOINERY w System1Body) */}
+      {!isLayerPoc(config) && openings.map((opening) => {
         // sąsiadujące elementy stolarki (przylegające ramy) — wspólny słupek, jak na zdjęciach 11/207
         const adj = (dir: -1 | 1) => openings.some((o) => o !== opening && Math.abs((o.center - dir * o.width / 2) - (opening.center + dir * opening.width / 2)) < 0.012)
         return (

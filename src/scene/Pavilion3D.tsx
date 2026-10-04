@@ -45,7 +45,21 @@ function RealExportBridge() {
         geometries: gl.info.memory.geometries, textures: gl.info.memory.textures,
       }
     }
+    // pełna klatka (mapa cienia + normalne AO + obraz + postprocessing): renderer.info bez resetu przy każdym render()
+    const frameRoot = root as typeof root & { __DAMPOL3D_FRAME_STATS__?: () => Promise<Record<string, number>> }
+    frameRoot.__DAMPOL3D_FRAME_STATS__ = () => new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        gl.info.autoReset = false
+        gl.info.reset()
+        requestAnimationFrame(() => {
+          const r = { calls: gl.info.render.calls, triangles: gl.info.render.triangles, lines: gl.info.render.lines, points: gl.info.render.points }
+          gl.info.autoReset = true
+          resolve(r)
+        })
+      })
+    })
     return () => {
+      delete frameRoot.__DAMPOL3D_FRAME_STATS__
       delete root.__DAMPOL3D_REAL_CAPTURE__
       delete root.__DAMPOL3D_STATS__
       delete root.__DAMPOL3D_SCENE__
