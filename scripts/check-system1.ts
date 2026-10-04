@@ -146,6 +146,12 @@ for (const preset of PRESETS) {
     }
     if (Math.abs(lv.wallTopFront - (lv.yFloorTop + cfg.frontHeight)) > 1e-6) err('poziom góry ściany przedniej niezgodny z wysokością w świetle')
 
+    // 4b. korona zakrywa krawędź dachu: dół korony przód/tył poniżej góry ściany (inaczej widać rdzeń PIR płyty dachowej)
+    for (const [side, wallTop] of [['front', lv.wallTopFront], ['back', lv.wallTopBack]] as const) {
+      const cr = model.parts.find((p) => p.id === 'flash-crown-' + side)
+      if (cr && box(cr).min[1] > wallTop - 0.005) err(`korona ${side}: dół ${Math.round(box(cr).min[1] * 1000)} mm nad górą ściany ${Math.round(wallTop * 1000)} mm — odsłonięta krawędź dachu`)
+    }
+
     // 5. kontrole z produkcji
     for (const d of model.derived) if (d.check && !d.check.ok) err(`kontrola „${d.label}” = ${d.valueMm}: oczekiwane ${d.check.expected}`)
 
@@ -186,7 +192,7 @@ for (const preset of PRESETS) {
         ['floor-panels', count('floor-panels'), model.parts.filter((p) => p.layer === 'floor' && p.material === 'pirCore').length],
         ['roof-panels', count('roof-panels'), model.parts.filter((p) => p.layer === 'roof' && p.material === 'pirCore').length],
         ['stal', count('floor-frame') + count('corner-posts') + count('roof-beams'), model.parts.filter((p) => p.material === 'steel' && !p.id.startsWith('lift-eye-')).length],
-        ['ucha', comps.filter((x) => x.id.startsWith('lift-eye-')).length, model.parts.filter((p) => p.id.startsWith('lift-eye-')).length],
+        ['ucha', comps.filter((x) => x.id.startsWith('lift-eye-')).length, model.parts.filter((p) => /^lift-eye-(FL|FR|BL|BR)$/.test(p.id)).length],
       ]
       for (const [name, bom, mod] of pairs) if (bom !== mod) err(`BOM ${name}: ${bom} ≠ model ${mod}`)
       const steelBom = comps.filter((x) => ['floor-frame', 'corner-posts', 'roof-beams'].includes(x.category)).reduce((s, x) => s + x.dimensions.lengthMm, 0)

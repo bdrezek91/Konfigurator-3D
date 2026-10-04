@@ -313,35 +313,47 @@ export function buildSystem1(
   angle(ctx, 'frame-top-left', 'Górna rama — kątownik lewy', 8, 'topFrame', [-L / 2, yTopB, -W / 2], sideAxis, sideUp, [1, 0, 0], sideLen, [-0.3, 2.2, 0])
   angle(ctx, 'frame-top-right', 'Górna rama — kątownik prawy', 8, 'topFrame', [L / 2, yTopB, -W / 2], sideAxis, sideUp, [-1, 0, 0], sideLen, [0.3, 2.2, 0])
 
-  // ---- 8b. ucha transportowe: pręt gładki φ16, 250 mm, gięty w U, dospawany w każdym narożu górnej ramy (produkcja 2026-10-04)
+  // ---- 8b. ucha transportowe: pręt gładki φ16, 250 mm, gięty w U, dospawany w każdym górnym narożu (produkcja 2026-10-04)
+  //      pręt okrągły: odcinki (ramiona + łuk) o przekroju koła φ16, oś pręta wzdłuż linii gięcia
   {
     const r = m(PHYS.system1.liftingEyeRod) / 2
     const c2 = m(PHYS.system1.liftingEyeSpan) / 2
     const leg = Math.max(0.02, (m(PHYS.system1.liftingEyeLength) - Math.PI * c2) / 2)
-    const n = 14
-    const outerArc: Array<[number, number]> = []
-    const innerArc: Array<[number, number]> = []
-    for (let i = 0; i <= n; i++) {
+    const circle: Array<[number, number]> = Array.from({ length: 12 }, (_, i) => [r * Math.cos((i / 12) * 2 * Math.PI), r * Math.sin((i / 12) * 2 * Math.PI)])
+    // linia osi pręta w płaszczyźnie U (s — poziomo wzdłuż ściany, h — w górę)
+    const path: Array<[number, number]> = [[-c2, 0], [-c2, leg]]
+    const n = 12
+    for (let i = 1; i <= n; i++) {
       const th = Math.PI - (i / n) * Math.PI
-      outerArc.push([(c2 + r) * Math.cos(th), leg + (c2 + r) * Math.sin(th)])
-      innerArc.push([(c2 - r) * Math.cos(th), leg + (c2 - r) * Math.sin(th)])
+      path.push([c2 * Math.cos(th), leg + c2 * Math.sin(th)])
     }
-    const uShape: Array<[number, number]> = [[-c2 - r, 0], ...outerArc, [c2 + r, 0], [c2 - r, 0], ...innerArc.reverse(), [-c2 + r, 0]]
+    path.push([c2, 0])
     for (const [tag, sx, sz] of [['FL', -1, 1], ['FR', 1, 1], ['BL', -1, -1], ['BR', 1, -1]] as const) {
-      const yBase = sz > 0 ? yTopF : yTopB
+      const yBase = (sz > 0 ? yTopF : yTopB) + 0.002
       // ramiona przy wewnętrznym licu ramienia pionowego kątownika przód/tył, tuż za słupem
       const cx = sx * (L / 2 - a - c2 - r - 0.01)
       const zc = sz * (W / 2 - t - r)
-      push(ctx, {
-        id: 'lift-eye-' + tag, name: 'Ucho transportowe ' + tag + ' — pręt φ16, 250 mm, U', layer: 'topFrame', stage: 8, material: 'steel', color: '#6f767c',
-        explode: [sx * 0.3, 2.5, sz * 0.3], confidence: 'MEDIUM',
-        geometry: { start: [cx, yBase + 0.002, zc - r], axis: [0, 0, 1], u: [1, 0, 0], v: [0, 1, 0], length: 2 * r, section: uShape },
-      })
+      for (let k = 0; k < path.length - 1; k++) {
+        const [s0, h0] = path[k]
+        const [s1, h1] = path[k + 1]
+        const len = Math.hypot(s1 - s0, h1 - h0)
+        const dir: Vec3 = [(s1 - s0) / len, (h1 - h0) / len, 0]
+        const perp: Vec3 = [-dir[1], dir[0], 0]
+        const over = k === 0 || k === path.length - 2 ? 0 : r * Math.tan(Math.PI / n / 2) // zakład na łuku — bez szczelin
+        push(ctx, {
+          id: 'lift-eye-' + tag + (k ? '-' + k : ''), name: 'Ucho transportowe ' + tag + ' — pręt φ16, 250 mm, U', layer: 'topFrame', stage: 8,
+          material: 'steel', color: '#6f767c', explode: [sx * 0.3, 2.5, sz * 0.3], confidence: 'MEDIUM',
+          geometry: {
+            start: [cx + s0 - dir[0] * over, yBase + h0 - dir[1] * over, zc], axis: dir, u: perp, v: [0, 0, 1],
+            length: len + 2 * over, section: circle,
+          },
+        })
+      }
     }
   }
 
   // ---- 9. obróbki
-  addFlashings(ctx, { L, W, y0, yTopF, yTopB, a, t, tw, sideAxis, sideLen, sideUp, color: config.flashingColor || outer, slope: (hF - hB) / (zFrontFace - zBackFace) }, finishBySide)
+  addFlashings(ctx, { L, W, y0, yTopF, yTopB, a, t, tw, sideAxis, sideLen, sideUp, color: config.flashingColor || outer, slope: (hF - hB) / (zFrontFace - zBackFace), roofEdge: ribH + tr }, finishBySide)
 
   // ---- 10. elewacja (tylko wariant pod kasetony) — osobna warstwa, nie zmienia konstrukcji
   if (opts.decor !== false && finish === 'cassette') addCassettes(ctx, { L, W, y0, yFloorTop, yTopF, yTopB, t, walls, openings: geo.openings, color: outer })
@@ -446,7 +458,7 @@ function addJoinery(ctx: Ctx, w: WallDef, o: ReturnType<typeof toWallOpening>, t
   })
 }
 
-type FlashCtx = { L: number; W: number; y0: number; yTopF: number; yTopB: number; a: number; t: number; tw: number; sideAxis: Vec3; sideLen: number; sideUp: Vec3; color: string; slope: number }
+type FlashCtx = { L: number; W: number; y0: number; yTopF: number; yTopB: number; a: number; t: number; tw: number; sideAxis: Vec3; sideLen: number; sideUp: Vec3; color: string; slope: number; roofEdge: number }
 
 /** Linia środkowa obróbki → wielokąt o grubości blachy. Punkty w układzie (na zewnątrz, w górę). */
 function thicken(path: Array<[number, number]>, th: number): Array<[number, number]> {
@@ -472,7 +484,8 @@ function baseFlashingFaceU(f: FlashCtx) {
 }
 
 function flashingProfiles(f: FlashCtx, finish: FinishVariant, kIn = 0) {
-  const face = m(PHYS.system1.crownFlashingFace)
+  // lico korony musi zejść poniżej krawędzi dachu (kątownik + żebro + płyta) z zakładem — inaczej widać rdzeń
+  const face = Math.max(m(PHYS.system1.crownFlashingFace), f.a + f.roofEdge + 0.015)
   const baseFace = m(PHYS.system1.baseFlashingFace)
   const o = 0.0012 // odsunięcie blachy od lica kątownika
   const uWall = -f.t + 0.0008 // lico ściany (4 mm za płaszczyzną kątownika)
@@ -501,7 +514,8 @@ function flashingProfiles(f: FlashCtx, finish: FinishVariant, kIn = 0) {
     label = 'Obróbka „na kwadraty” 25 mm'
     conf = 'HIGH'
   } else {
-    crown = [...cap, [o, vCap], [o, -(f.a + 0.10)]]
+    // płaska pod kaseton: zakrywa krawędź dachu (kątownik + żebro + płyta) z zakładem 30 mm na ścianę — rdzeń niewidoczny
+    crown = [...cap, [o, vCap], [o, -(f.a + f.roofEdge + 0.03)]]
     label = 'Obróbka płaska techniczna (pod kaseton)'
     conf = 'LOW'
   }
@@ -565,10 +579,12 @@ function addFlashings(ctx: Ctx, f: FlashCtx, finishBySide: FinishBySide) {
   // boki: korona po skosie dachu, cokół poziomo
   for (const [tag, x, out] of [['left', -f.L / 2, [-1, 0, 0]], ['right', f.L / 2, [1, 0, 0]]] as const) {
     const { crownSec, baseSec, label, conf } = prof(tag)
+    // korona boczna zachodzi na narożu za lico korony przedniej/tylnej — róg zamknięty, rdzeń płyty niewidoczny
+    const ext = Math.max(0, prof('front').crownU, prof('back').crownU) + FLASH_T
     push(ctx, {
       id: 'flash-crown-' + tag, name: label + ' — korona ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
       explode: mul(out as Vec3, 1.0), confidence: conf,
-      geometry: { start: [x, f.yTopB + f.a, -f.W / 2], axis: f.sideAxis, u: out as Vec3, v: f.sideUp, length: f.sideLen, section: crownSec },
+      geometry: { start: add([x, f.yTopB + f.a, -f.W / 2], mul(f.sideAxis, -ext)), axis: f.sideAxis, u: out as Vec3, v: f.sideUp, length: f.sideLen + 2 * ext, section: crownSec },
     })
     push(ctx, {
       id: 'flash-base-' + tag, name: label + ' — cokół ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,

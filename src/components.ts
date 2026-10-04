@@ -360,8 +360,62 @@ export function fallbackGeometry(c: PavilionConfig): ProjectGeometry {
   }
 }
 
-export function geometryOf(c: PavilionConfig) {
-  return c.geometry ?? fallbackGeometry(c)
+const geometryCache = new WeakMap<PavilionConfig, ProjectGeometry>()
+
+/**
+ * Geometria projektu po uzgodnieniu okładzin z elewacją i obróbkami (jedno źródło dla renderu, BOM i konstrukcji):
+ * - okładzina (lamele/deska) wchodząca w attykę kasetonową o mniej niż pół rzędu kończy się pod attyką (kaseton zostaje),
+ *   o więcej — idzie do góry ściany (kasetony attyki docięte wokół niej); bez pustego pola płyty nad okładziną,
+ * - System 1: przy narożu z obróbką narożną (nie oba boki kasetonowe) okładzina kończy się przy krawędzi obróbki 25 cm,
+ *   jak kaseton-deska obok obróbki narożnej na zdjęciu 163 — obróbka nie przechodzi przez lamele.
+ */
+export function geometryOf(c: PavilionConfig): ProjectGeometry {
+  const hit = geometryCache.get(c)
+  if (hit) return hit
+  const g0 = c.geometry ?? fallbackGeometry(c)
+  const g = { ...g0, decor: g0.decor.map((d) => reconcileDecor(c, g0, d)).filter((d): d is DecorPlacement => d !== null) }
+  geometryCache.set(c, g)
+  return g
+}
+
+const ADJACENT: Record<WallSide, [WallSide, WallSide]> = {
+  // [sąsiad przy lokalnym −span/2, sąsiad przy +span/2] — zgodnie z wallTransform
+  front: ['left', 'right'], back: ['right', 'left'], left: ['back', 'front'], right: ['front', 'back'],
+}
+
+function reconcileDecor(c: PavilionConfig, g: ProjectGeometry, d: DecorPlacement): DecorPlacement | null {
+  if (d.kind === 'led-strip') return d
+  let { center, width, yCenter, height } = d
+  const spec = facadeSpecForSide(c, g, d.wall)
+  const isCass = (x: FacadeCladdingSpec | null) => !!x && (x.kind === 'cassette-horizontal' || x.kind === 'cassette-grid')
+  // attyka kasetonowa
+  if (spec && spec.kind === 'cassette-horizontal' && hasAtticBand(c)) {
+    const span = wallSpan(d.wall, c)
+    const maxH = Math.max(wallHeightAt(d.wall, -span / 2, c), wallHeightAt(d.wall, span / 2, c))
+    const rowH = spec.atticRowHeight ?? ATTIC_ROW_H
+    const atticStart = maxH - 2 * rowH
+    const top = yCenter + height / 2
+    const bottom = yCenter - height / 2
+    if (top > atticStart + 0.001 && bottom < atticStart) {
+      const newTop = top - atticStart < rowH / 2 ? atticStart - (spec.gap ?? DEFAULT_FACADE_GAP) / 2 : maxH
+      height = newTop - bottom
+      yCenter = bottom + height / 2
+    }
+  }
+  // obróbka narożna Systemu 1
+  if (frameDims(c).system1) {
+    const span = wallSpan(d.wall, c)
+    const leg = m(PHYS.system1.cornerFlashingFront) + 0.005
+    const [nMinus, nPlus] = ADJACENT[d.wall]
+    let a = center - width / 2
+    let b = center + width / 2
+    if (!(isCass(spec) && isCass(facadeSpecForSide(c, g, nMinus)))) a = Math.max(a, -span / 2 + leg)
+    if (!(isCass(spec) && isCass(facadeSpecForSide(c, g, nPlus)))) b = Math.min(b, span / 2 - leg)
+    if (b - a < 0.05) return null
+    center = (a + b) / 2
+    width = b - a
+  }
+  return center === d.center && width === d.width && yCenter === d.yCenter && height === d.height ? d : { ...d, center, width, yCenter, height }
 }
 
 function wallSpan(side: WallSide, c: PavilionConfig) {
@@ -694,7 +748,8 @@ function addSystem1Structure(list: ModelComponent[], c: PavilionConfig) {
   const { roofSlope } = envelope(c)
 
   // stal: dolna rama, słupy, górna rama — długości z modelu
-  for (const p of parts.filter((x) => x.id.startsWith('lift-eye-'))) {
+  // ucho = kilka odcinków pręta w modelu; w BOM jedna pozycja na naroże (pręt 250 mm)
+  for (const p of parts.filter((x) => /^lift-eye-(FL|FR|BL|BR)$/.test(x.id))) {
     pushBeam(list, c, p.id, p.name, 'structure', m(PHYS.system1.liftingEyeLength), boxCenter(partBox([p])), [0, 0, Math.PI / 2], p.explode, 8, 'exact')
   }
   for (const p of parts.filter((x) => x.material === 'steel' && !x.id.startsWith('lift-eye-'))) {

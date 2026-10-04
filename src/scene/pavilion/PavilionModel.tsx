@@ -2,7 +2,8 @@ import { PANEL_THICKNESS_M, type PavilionConfig, type ProjectGeometry, type Wall
 import type { PavilionView } from '../camera/views'
 import { DampolFrameLocal, DecorLocal, FacadeCladdingFromModel, FoundationSupports, PanelProfileLocal } from '../facade/Facade'
 import { facadeKindForWall } from '../facade/facadeKind'
-import { envelope, fallbackGeometry, makeWallShape, wallTransform } from '../geometry'
+import { envelope, makeWallShape, wallTransform } from '../geometry'
+import { geometryOf } from '../../components'
 import { Box, RoundedPiece } from '../materials/primitives'
 import { renderMetalColor } from '../materials/textures'
 import { isRal9005, RAL_9010_HEX, RENDER } from '../../physical/spec'
@@ -391,7 +392,8 @@ export function Interior({ config }: Props) {
 
 
 export function ProjectPavilion({ config }: Props) {
-  const geometry = config.geometry ?? fallbackGeometry(config)
+  // geometria uzgodniona z elewacją i obróbkami (attyka, obróbka narożna) — ta sama co w BOM
+  const geometry = geometryOf(config)
   const transparent = config.showInterior || config.showStructure
   const opacity = transparent ? 0.20 : 1
   const foundationGap = geometry.foundationGap ?? m(PHYS.base.groundGap)
