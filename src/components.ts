@@ -1013,6 +1013,9 @@ function pushFacadePiece(
 }
 
 
+/** Dawne pasy kasetonowe z projektów — przy elewacji kasetonowej zastąpione przez nią (render, BOM, cięcie). */
+const LEGACY_FACADE_CASSETTE = new Set<string>(['cassette-black', 'cassette-square-graphite', 'cassette-rect-graphite', 'cassette-white'])
+
 function visibleIntervalsForCassetteBand(
   side: WallSide,
   a: number,
@@ -1032,8 +1035,9 @@ function visibleIntervalsForCassetteBand(
     }
   }
 
-  // okładziny (lamele, deski, ornament) zastępują kaseton w swoim polu
-  for (const d of g.decor.filter((x) => x.wall === side && x.kind !== 'led-strip')) {
+  // okładziny (lamele, deski, ornament) zastępują kaseton w swoim polu; dawne pasy kasetonowe z projektów
+  // (cassette-black/graphite/white) są zastąpione elewacją kasetonową i nie są rysowane — nie wycinają otworu w kasetonach
+  for (const d of g.decor.filter((x) => x.wall === side && x.kind !== 'led-strip' && !LEGACY_FACADE_CASSETTE.has(x.kind))) {
     const dy0 = d.yCenter - d.height / 2
     const dy1 = d.yCenter + d.height / 2
     if (Math.min(y1, dy1) - Math.max(y0, dy0) > 0.001) {
@@ -1450,12 +1454,7 @@ function addJoinery(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometr
 function addDecor(list: ModelComponent[], c: PavilionConfig, g: ProjectGeometry) {
   for (const d of g.decor) {
     const facadeSpec = facadeSpecForSide(c, g, d.wall)
-    const legacyFacadeCassette = [
-      'cassette-black',
-      'cassette-square-graphite',
-      'cassette-rect-graphite',
-      'cassette-white',
-    ].includes(d.kind)
+    const legacyFacadeCassette = LEGACY_FACADE_CASSETTE.has(d.kind)
     if (facadeSpec && legacyFacadeCassette) continue
 
     const normal = wallNormal(d.wall)
