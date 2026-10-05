@@ -1,7 +1,7 @@
 import { Canvas, useThree } from '@react-three/fiber'
 import { EffectComposer, N8AO, SMAA, ToneMapping } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
-import { Suspense, useEffect, useState, type RefObject } from 'react'
+import { Suspense, useEffect, useMemo, useState, type RefObject } from 'react'
 import { PerformanceMonitor } from '@react-three/drei'
 import { autoTier, QUALITY, QualityContext, TIERS, type QualityMode, type QualityTier } from '../render/quality'
 import { ACESFilmicToneMapping, PCFSoftShadowMap, PerspectiveCamera, SRGBColorSpace } from 'three'
@@ -120,18 +120,24 @@ type Props = {
   onEditAdded?: () => void
 }
 
+/** HDRI z wersją 1k w public/hdri */
+const HDRI_1K = new Set(['./hdri/cloudy_vondelpark_2k.hdr', './hdri/pretoria_gardens_2k.hdr'])
+
 export default function Pavilion3D({ config, view = 'perspective', lighting = 'day', resetNonce = 0, cameraApiRef, hq, quality = 'auto', onTier, onEditCassettes, editBrush, editAdding, onEditAdded }: Props) {
   // w trybie dopasowania kasetonów kamera zostaje (przejście na „Własna konfiguracja” nie zmienia kadru)
   const [heldProject, setHeldProject] = useState(config.project)
   const editing = !!onEditCassettes
   if (!editing && heldProject !== config.project) setHeldProject(config.project)
   const poseKey = (editing ? heldProject : config.project) + '|' + view + '|' + resetNonce
-  const preset = resolveLighting(lighting, arch(config).lighting)
+  const base = resolveLighting(lighting, arch(config).lighting)
   const pose = hq?.pose ?? cameraPose(config, view)
   // tryb auto: start z parametrów urządzenia, PerformanceMonitor obniża o jeden poziom przy spadku FPS
   const [autoT, setAutoT] = useState<QualityTier>(autoTier)
   const tier: QualityTier = hq ? 'ultra' : quality === 'auto' ? autoT : quality
   const q = QUALITY[tier]
+  // P13: tryb niski / średni (telefony) — HDRI 1k (1,7–1,8 MB zamiast 6,8–7,2 MB), HQ zawsze 2k
+  const preset = useMemo(() => (tier === 'low' || tier === 'medium') && HDRI_1K.has(base.hdri)
+    ? { ...base, hdri: base.hdri.replace('_2k.hdr', '_1k.hdr') } : base, [base, tier])
   useEffect(() => { onTier?.(tier) }, [tier, onTier])
 
   return (

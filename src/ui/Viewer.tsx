@@ -1,6 +1,6 @@
 import { initialQualityMode, saveQualityMode, TIERS, type QualityMode, type QualityTier } from '../render/quality'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import Pavilion3D, { type CameraApi, type CameraPose, type LightingMode, type PavilionView } from '../scene/Pavilion3D'
+import type { CameraApi, CameraPose, LightingMode, PavilionView } from '../scene/Pavilion3D'
 import { cameraPose, GALLERY03_PHOTO_POSE } from '../scene/camera/presets'
 import { RAL_COLORS, type DecorKind, type PavilionConfig } from '../types'
 
@@ -14,6 +14,10 @@ const FIELD_KINDS: Array<[DecorKind, string]> = [
 ]
 import { cassetteWallLayout, geometryOf } from '../components'
 import { Icon } from './icons'
+
+// scena 3D (three, R3F, postprocessing) w osobnym pakiecie — panel konfiguratora pokazuje się od razu (P13)
+const Pavilion3D = lazy(() => import('../scene/Pavilion3D'))
+const SceneLoading = () => <div className="stage-loading">Ładowanie widoku 3D…</div>
 
 // panel HQ (path tracer) ładowany dopiero po kliknięciu
 const HQPanel = lazy(() => import('./HQPanel').then((m) => ({ default: m.HQPanel })))
@@ -122,7 +126,9 @@ export function Viewer({
             <figcaption>Zdjęcie</figcaption>
           </figure>
           <div className="compare-pane">
-            <Pavilion3D config={config} view="perspective" lighting={lighting} resetNonce={resetNonce} cameraApiRef={cameraApi} quality={quality} onTier={setTier} />
+            <Suspense fallback={<SceneLoading />}>
+              <Pavilion3D config={config} view="perspective" lighting={lighting} resetNonce={resetNonce} cameraApiRef={cameraApi} quality={quality} onTier={setTier} />
+            </Suspense>
             <figcaption>Render interaktywny</figcaption>
           </div>
           <div className="compare-pane">
@@ -147,9 +153,11 @@ export function Viewer({
         </div>
       ) : (
         <div className="viewer-canvas">
-          <Pavilion3D config={config} view={view} lighting={lighting} resetNonce={resetNonce} cameraApiRef={cameraApi} quality={quality} onTier={setTier}
+<Suspense fallback={<SceneLoading />}>
+                    <Pavilion3D config={config} view={view} lighting={lighting} resetNonce={resetNonce} cameraApiRef={cameraApi} quality={quality} onTier={setTier}
             onEditCassettes={editing && canEdit ? onConfig : undefined} editBrush={editing && hasCassettes ? brush : null}
             editAdding={editing ? adding : null} onEditAdded={() => setAdding(null)} />
+          </Suspense>
         </div>
       )}
 
