@@ -17,6 +17,7 @@ import { configFromUrl, shareUrl } from './ui/share'
 import { joineryCutList, joineryCutListCsv } from './construction/joinery/cutlist'
 import { formatPLN, priceItems, quote } from './pricing'
 import { usePrices } from './ui/usePrices'
+import { openPrintSheet } from './ui/printSheet'
 import './App.css'
 
 // tryb techniczny ładowany na żądanie — nie obciąża pierwszego wczytania konfiguratora
@@ -104,8 +105,8 @@ export default function App() {
   const bom = useMemo(() => buildBom(config), [config])
   const metrics = useMetrics(config, model)
   // wycena na żywo: cennik użytkownika × ilości z modelu
-  const { prices } = usePrices()
-  const quoteNow = useMemo(() => quote(priceItems(model), prices), [model, prices])
+  const prices = usePrices()
+  const quoteNow = useMemo(() => quote(priceItems(model), prices.prices), [model, prices])
   const preset = PRESETS.find((p) => p.config.project === config.project)
   const openings = useMemo(() => geometryOf(config).openings, [config])
 
@@ -133,6 +134,16 @@ export default function App() {
     new Blob([JSON.stringify({ version: 8, generatedAt: new Date().toISOString(), config, validation, bom, componentModel: model }, null, 2)], { type: 'application/json' }),
     'pawilon-' + slug + '.json',
   )
+  // arkusz dla klienta (P12): render z bieżącego kadru + elewacje z wymiarami + zestawienie → druk / PDF
+  const exportSheet = () => {
+    const root = window as typeof window & { __DAMPOL3D_REAL_CAPTURE__?: () => string }
+    openPrintSheet({
+      config, model, bom, title: preset ? preset.label.split('·')[0].trim() : config.project,
+      image: mode === 'visual' ? root.__DAMPOL3D_REAL_CAPTURE__?.() : undefined,
+      facadeName: FACADE_NAMES[config.facade], constructionName: CONSTRUCTION_LABELS[config.construction],
+      price: { net: quoteNow.net, vat: prices.vat ?? 0.23, missing: quoteNow.missing, lines: quoteNow.lines.length },
+    })
+  }
   const exportCutList = () => download(new Blob(['﻿' + joineryCutListCsv(joineryCutList(config))], { type: 'text/csv;charset=utf-8' }), 'pawilon-' + slug + '-rozkroj-stolarki.csv')
   const exportCsv = () => download(new Blob(['﻿' + componentModelToCsv(model)], { type: 'text/csv;charset=utf-8' }), 'pawilon-' + slug + '-bom.csv')
   const exportPng = () => {
@@ -190,6 +201,7 @@ export default function App() {
           <button type="button" className="btn ghost icon-only keep" onClick={history.undo} disabled={!history.canUndo} title="Cofnij (Ctrl+Z)" aria-label="Cofnij"><Icon.undo /></button>
           <button type="button" className="btn ghost icon-only keep" onClick={history.redo} disabled={!history.canRedo} title="Ponów (Ctrl+Shift+Z)" aria-label="Ponów"><Icon.redo /></button>
           <button type="button" className="btn ghost keep" onClick={() => void share()} title="Kopiuj link do tej konfiguracji"><Icon.link /> {shared ? 'Skopiowano' : 'Udostępnij'}</button>
+          <button type="button" className="btn ghost keep" onClick={exportSheet} title="Arkusz dla klienta: wizualizacja, elewacje z wymiarami, zestawienie — druk lub PDF"><Icon.download /> PDF</button>
           <button type="button" className="btn ghost" onClick={exportPng} title="Zrzut widoku"><Icon.camera /> PNG</button>
           <button type="button" className="btn ghost" onClick={exportCsv} title="Zestawienie materiałów"><Icon.download /> BOM</button>
           <button type="button" className="btn" onClick={exportJson}><Icon.download /> Zapisz konfigurację</button>
