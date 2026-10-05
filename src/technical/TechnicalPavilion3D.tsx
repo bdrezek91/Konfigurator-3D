@@ -11,6 +11,7 @@ import {
 } from '@react-three/drei'
 import {
   Color,
+  Euler,
   ExtrudeGeometry,
   Group,
   InstancedMesh,
@@ -24,7 +25,12 @@ import {
 } from 'three'
 import { createContext, memo, useContext, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from 'react'
 import type { ComponentCategory, ComponentModel, ModelComponent, Vec3 } from '../components'
-import { CATEGORY_COLORS } from '../components'
+import { CATEGORY_COLORS, geometryOf } from '../components'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { buildRunGeometry } from '../construction/geometry'
+import { joineryPartsByOpening } from '../construction/joinery/cutlist'
+import type { Part } from '../construction/types'
+import { m, PHYS } from '../physical/spec'
 import type { PavilionConfig } from '../types'
 import { envelope } from '../scene/geometry'
 
@@ -131,6 +137,9 @@ function technicalColor(c: ModelComponent, selectedId?: string, hoveredId?: stri
 
 type ItemProps = {
   component: ModelComponent
+  /** P10: stolarka z przekrojów (te same części co widok 3D) zamiast bryły zastępczej; prześwit — model Systemu 1 ma go w y */
+  joineryParts?: Part[]
+  gap?: number
   exploded: number
   assemblyStage: number
   visible: boolean
@@ -269,9 +278,56 @@ function FlashingGeometry({ component }: { component: ModelComponent }) {
   }, [component])
 }
 
+/**
+ * Stolarka z części modelu (przekroje — ościeżnice, skrzydła, listwy, uszczelki, szyby, okucia) w układzie elementu BOM:
+ * geometria modelu Systemu 1 (świat, z prześwitem) → odjęty prześwit → odwrotność pozy elementu (grupa explode go ustawia).
+ */
+function JoineryFromParts({ component, parts, gap, color, opacity, planes }: {
+  component: ModelComponent; parts: Part[]; gap: number; color: string; opacity: number; planes: Plane[]
+}) {
+  const geos = useMemo(() => {
+    const inv = new Matrix4().compose(new Vector3(...component.position), new Quaternion().setFromEuler(new Euler(...component.rotation)), new Vector3(1, 1, 1)).invert()
+    const down = new Matrix4().makeTranslation(0, -gap, 0)
+    const group = (pred: (p: Part) => boolean) => {
+      const list = parts.filter(pred).map((p) => {
+        const g = buildRunGeometry(p.geometry)
+        g.deleteAttribute('color')
+        return g.applyMatrix4(down).applyMatrix4(inv)
+      })
+      return list.length ? mergeGeometries(list, false) : null
+    }
+    return {
+      frame: group((p) => p.material !== 'glass' && p.material !== 'gasket' && p.material !== 'hardware'),
+      gasket: group((p) => p.material === 'gasket'),
+      hardware: group((p) => p.material === 'hardware'),
+      glass: group((p) => p.material === 'glass'),
+    }
+  }, [component, parts, gap])
+  useEffect(() => () => Object.values(geos).forEach((g) => g?.dispose()), [geos])
+  return (
+    <>
+      {geos.frame && (
+        <mesh geometry={geos.frame} castShadow receiveShadow>
+          <meshStandardMaterial color={color} roughness={0.48} metalness={0.3} transparent={opacity < 0.99} opacity={opacity} clippingPlanes={planes} />
+          <Edges threshold={30} color="#111315" />
+        </mesh>
+      )}
+      {geos.gasket && <mesh geometry={geos.gasket}><meshStandardMaterial color="#15181a" roughness={0.8} clippingPlanes={planes} transparent={opacity < 0.99} opacity={opacity} /></mesh>}
+      {geos.hardware && <mesh geometry={geos.hardware}><meshStandardMaterial color="#b9bec0" roughness={0.3} metalness={0.7} clippingPlanes={planes} transparent={opacity < 0.99} opacity={opacity} /></mesh>}
+      {geos.glass && (
+        <mesh geometry={geos.glass}>
+          <meshStandardMaterial color="#88a6b4" roughness={0.18} metalness={0.08} transparent opacity={Math.max(0.18, opacity * 0.52)} clippingPlanes={planes} />
+        </mesh>
+      )}
+    </>
+  )
+}
+
 const TechnicalItem = memo(function TechnicalItem(props: ItemProps) {
   const {
     component,
+    joineryParts,
+    gap = 0,
     exploded,
     assemblyStage,
     visible,
@@ -317,6 +373,10 @@ const TechnicalItem = memo(function TechnicalItem(props: ItemProps) {
           />
           <Edges threshold={16} color="#111315" />
         </mesh>
+      ) : component.primitive === 'joinery' && joineryParts?.length ? (
+        <group {...pointerProps}>
+          <JoineryFromParts component={component} parts={joineryParts} gap={gap} color={color} opacity={opacity} planes={planes} />
+        </group>
       ) : component.primitive === 'joinery' ? (
         <group {...pointerProps}>
           <mesh>
@@ -563,6 +623,8 @@ function TechnicalScene(props: TechnicalProps) {
   const sectionLayers = clipAxis !== 'none'
   const normalComponents = useMemo(() => model.components.filter((c) => c.category !== 'fasteners'), [model])
   const fasteners = useMemo(() => model.components.filter((c) => c.category === 'fasteners'), [model])
+  const joinery = useMemo(() => joineryPartsByOpening(config), [config])
+  const gap = geometryOf(config).foundationGap ?? m(PHYS.base.groundGap)
 
   return (
     <>
@@ -587,6 +649,8 @@ function TechnicalScene(props: TechnicalProps) {
         <TechnicalItem
           key={component.id}
           component={component}
+          joineryParts={component.opening ? joinery.get(component.opening.id) : undefined}
+          gap={gap}
           exploded={exploded}
           assemblyStage={assemblyStage}
           visible={categoryVisibility[component.category]}

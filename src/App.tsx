@@ -14,6 +14,7 @@ import { useMetrics } from './ui/metrics'
 import { Viewer } from './ui/Viewer'
 import { useHistory } from './ui/history'
 import { configFromUrl, shareUrl } from './ui/share'
+import { joineryCutList, joineryCutListCsv } from './construction/joinery/cutlist'
 import './App.css'
 
 // tryb techniczny ładowany na żądanie — nie obciąża pierwszego wczytania konfiguratora
@@ -127,6 +128,7 @@ export default function App() {
     new Blob([JSON.stringify({ version: 8, generatedAt: new Date().toISOString(), config, validation, bom, componentModel: model }, null, 2)], { type: 'application/json' }),
     'pawilon-' + slug + '.json',
   )
+  const exportCutList = () => download(new Blob(['﻿' + joineryCutListCsv(joineryCutList(config))], { type: 'text/csv;charset=utf-8' }), 'pawilon-' + slug + '-rozkroj-stolarki.csv')
   const exportCsv = () => download(new Blob(['﻿' + componentModelToCsv(model)], { type: 'text/csv;charset=utf-8' }), 'pawilon-' + slug + '-bom.csv')
   const exportPng = () => {
     const root = window as typeof window & { __DAMPOL3D_CAPTURE__?: () => string; __DAMPOL3D_REAL_CAPTURE__?: () => string }
@@ -232,6 +234,7 @@ export default function App() {
                   validation={validation}
                   bom={bom}
                   onExportCsv={exportCsv}
+                  onExportCutList={exportCutList}
                   onExportJson={exportJson}
                   onOpenTechnical={() => setMode('technical')}
                 />

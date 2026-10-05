@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { joineryCutList } from '../construction/joinery/cutlist'
 import type { ComponentModel } from '../components'
 import { ACCURACY_HELP, ACCURACY_LABELS, type Metric } from './metrics'
 import type { BomRow } from '../logic'
@@ -35,7 +36,7 @@ export function ValidationList({ items }: { items: ValidationItem[] }) {
 
 /** Zawartość zakładki "Techniczne": metryki, struktura dokładności, walidacja, BOM, założenia, eksport. */
 export function TechnicalTab({
-  config, model, metrics, validation, bom, onExportCsv, onExportJson, onOpenTechnical,
+  config, model, metrics, validation, bom, onExportCsv, onExportJson, onOpenTechnical, onExportCutList,
 }: {
   config: PavilionConfig
   model: ComponentModel
@@ -45,7 +46,16 @@ export function TechnicalTab({
   onExportCsv: () => void
   onExportJson: () => void
   onOpenTechnical: () => void
+  /** rozkrój stolarki z modelu 3D (profile, szyby, okucia) */
+  onExportCutList?: () => void
 }) {
+  // rozkrój stolarki: te same części co widok 3D (System 1, przekroje); podsumowanie w zakładce
+  const cut = useMemo(() => joineryCutList(config), [config])
+  const cutSummary = useMemo(() => ({
+    profileM: cut.filter((r) => r.kind === 'profil').reduce((a, r) => a + (r.lengthMm ?? 0) * r.quantity, 0) / 1000,
+    glassM2: cut.filter((r) => r.kind === 'szyba').reduce((a, r) => a + (r.areaM2 ?? 0) * r.quantity, 0),
+    hardware: cut.filter((r) => r.kind === 'okucie').reduce((a, r) => a + r.quantity, 0),
+  }), [cut])
   const breakdown = useMemo(() => {
     const counts = { exact: 0, 'project-estimate': 0, assumption: 0 }
     for (const c of model.components) counts[c.sourceAccuracy] += 1
@@ -89,6 +99,11 @@ export function TechnicalTab({
         <div className="btn-row">
           <button type="button" className="btn" onClick={onExportCsv}><Icon.download /> CSV</button>
           <button type="button" className="btn" onClick={onExportJson}><Icon.download /> JSON</button>
+          {cut.length > 0 && onExportCutList && (
+            <button type="button" className="btn" onClick={onExportCutList} title={'Rozkrój stolarki z modelu 3D: profile ' + cutSummary.profileM.toFixed(1) + ' mb, szyby ' + cutSummary.glassM2.toFixed(2) + ' m², okucia ' + cutSummary.hardware + ' szt.'}>
+              <Icon.download /> Rozkrój stolarki
+            </button>
+          )}
           <button type="button" className="btn primary" onClick={onOpenTechnical}><Icon.layers /> Widok techniczny</button>
         </div>
       </Group>
