@@ -83,7 +83,7 @@ export function Wall({
         floorOffset={floorT}
       />
 
-      {/* PoC (galeria-163): stolarka z przekrojów jest częścią modelu Systemu 1 (warstwa JOINERY w System1Body) */}
+      {/* presety z `sectionJoinery`: stolarka z przekrojów jest częścią modelu Systemu 1 (warstwa JOINERY w System1Body) */}
       {!arch(config).sectionJoinery && openings.map((opening) => {
         // sąsiadujące elementy stolarki (przylegające ramy) — wspólny słupek, jak na zdjęciach 11/207
         const adj = (dir: -1 | 1) => openings.some((o) => o !== opening && Math.abs((o.center - dir * o.width / 2) - (opening.center + dir * opening.width / 2)) < 0.012)

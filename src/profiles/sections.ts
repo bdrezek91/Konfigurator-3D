@@ -50,15 +50,22 @@ function glazedBody(id: string, face: number, depth: number, outerFace: number, 
 
 export const aluminiumFrame = (): Section => glazedBody('aluminiumFrame', G.frame.face, G.frame.depth, G.frame.outerFace, G.frame.step)
 
+/** Ościeżnica FIX po stronie styku z sąsiednią ramą: ½ słupka (część pełnej głębokości = ½ środka słupka). */
+export const aluminiumFrameCoupled = (): Section =>
+  glazedBody('aluminiumFrameCoupled', G.coupling.face, G.frame.depth, G.coupling.face - G.glazing.rebate, G.frame.step)
+
 /** Skrzydło drzwi: ten sam układ co ościeżnica FIX, inna szerokość lica (bok / góra / cokół). */
 export const aluminiumSash = (face: number): Section =>
   glazedBody('aluminiumSash-' + face, face, G.sash.depth, Math.min(G.sash.outerFace, face - G.glazing.rebate - 2), G.sash.step)
 
 /** Ościeżnica drzwi: bez wrębu na szybę; przylga skrzydła jest osobnym przekrojem (doorStop) — kończy się na progu. */
-export function aluminiumDoorFrame(): Section {
-  const { face, depth, outerFace, step } = G.doorFrame
+export function aluminiumDoorFrame(coupled = false): Section {
+  const { depth, step } = G.doorFrame
+  // po stronie styku z sąsiednią ramą: lico ½ słupka, część pełnej głębokości jak w ościeżnicy FIX sprzężonej
+  const face = coupled ? G.coupling.face : G.doorFrame.face
+  const outerFace = coupled ? G.coupling.face - G.glazing.rebate : G.doorFrame.outerFace
   return {
-    id: 'aluminiumDoorFrame', material: 'frame', anchor: 'outer-edge', orientation: ALU, confidence: 'LOW', assumption: true,
+    id: coupled ? 'aluminiumDoorFrameCoupled' : 'aluminiumDoorFrame', material: 'frame', anchor: 'outer-edge', orientation: ALU, confidence: 'LOW', assumption: true,
     params: { face, depth, outerFace, step },
     poly: [[0, 0], [face, 0], [face, depth - step], [outerFace, depth - step], [outerFace, depth], [0, depth]],
   }

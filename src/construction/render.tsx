@@ -30,7 +30,7 @@ function PartMesh({ part, material }: { part: Part; material: Material }) {
 export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; opacity?: number }) {
   const finish = useMemo(() => finishForConfig(config), [config])
   const model = useMemo(() => buildSystem1(config, finish, { decor: false }), [config, finish])
-  // PoC (galeria-163): stolarka z przekrojów należy do modelu i renderuje się z nim (warstwa JOINERY);
+  // presety z `sectionJoinery` (render/architecture.ts): stolarka z przekrojów należy do modelu i renderuje się z nim (warstwa JOINERY);
   // pozostałe presety: uproszczona rama modelu pomijana — stolarkę rysuje OpeningFrame
   const features = arch(config)
   const sectionJoinery = features.sectionJoinery
@@ -42,7 +42,7 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
     [config.panelManufacturer, config.wallProfile, config.exteriorColor, config.flashingColor, config.floorFinish, opacity]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => Object.values(materials).forEach((mat) => mat.dispose()), [materials])
 
-  // E3 (PoC galeria-163): wnętrze z jawną mapą otoczenia o niskim natężeniu — przy scene.environment three ignoruje
+  // E3 (presety z `lighting`): wnętrze z jawną mapą otoczenia o niskim natężeniu — przy scene.environment three ignoruje
   // envMapIntensity materiału, a IBL nie zna zasłonięcia (wnętrze oświetlone jak plener → szyba „mleczna”).
   // Natężenie ≈ udział światła dziennego przy dużym przeszkleniu (ASSUMPTION, kalibracja: łata szyby na zdjęciu 163).
   const e3 = features.lighting

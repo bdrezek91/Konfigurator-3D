@@ -2,7 +2,7 @@ import type { PavilionConfig } from '../types'
 
 /**
  * Cechy nowej architektury (E0–E5) włączone dla presetu — jedno miejsce zamiast osobnych bramek PoC.
- * Migracja kontrolowana: preset po presecie (E6-A: galeria-163 w pełni; galeria-207 — tylko tace E2).
+ * Migracja kontrolowana: preset po presecie (E6-A: galeria-163, E6-B: galeria-207 — w pełni).
  * E5 (tryby jakości, LOD) działa globalnie i nie ma tu przełącznika.
  */
 export type ArchFeatures = {
@@ -32,7 +32,10 @@ const FULL: ArchFeatures = {
 /** Presety na nowej architekturze (klucz: config.project). */
 export const ARCH_PRESETS: Readonly<Record<string, ArchFeatures>> = {
   'GALERIA/163': FULL,
-  'GALERIA/207': { ...NONE, cassetteTrays: true },
+  // kaseton-deska 207 leży na ścianach kasetonowych — to kasetony z dekorem drewna (tace z modelu komponentów), nie pasy
+  // na gołej płycie; `boardTrays` nie dotyczy (włączone dublowałoby deskę)
+  // E3 (światło) bez zmian: kalibracja E3 pod 163 rozjaśnia antracyt kasetonów 207 (porównanie e6-b-207) — do decyzji
+  'GALERIA/207': { ...FULL, boardTrays: false, lighting: false },
 }
 
 export function arch(config: Pick<PavilionConfig, 'project'>): ArchFeatures {

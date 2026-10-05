@@ -1,7 +1,7 @@
 import { PHYS } from '../physical/spec'
 
 /**
- * GENERIC-ALUMINIUM-52 — jedyne miejsce z wymiarami profili stolarki aluminiowej (proof of concept, preset galeria-163).
+ * GENERIC-ALUMINIUM-52 — jedyne miejsce z wymiarami profili stolarki aluminiowej (presety z `sectionJoinery`: galeria-163, galeria-207).
  *
  * To NIE jest przekrój producenta. Produkcja podaje system Ponzio PE52 (ościeżnica 52 mm), ale nie mamy karty przekrojów,
  * więc przekroje są uogólnione: widoczne szerokości z pomiaru zdjęć (spec.ts), reszta = ASSUMPTION (typowe wartości systemów
@@ -54,6 +54,14 @@ export const GENERIC_ALU_52 = {
     face: 76, // ASSUMPTION
     depth: PHYS.joinery.frameDepth.value,
     step: 4,
+  },
+
+  /**
+   * sprzężenie sąsiednich ram (FIX + FIX, FIX + drzwi — zdjęcie 207): ramy stykają się bez ościeża, po stronie styku każda ma
+   * lico ½ słupka, razem jeden słupek (70–90 mm na zdjęciu). Dotychczasowy render: 2 × 0,6 × 62 = 74 mm. ASSUMPTION
+   */
+  coupling: {
+    face: 38, // ½ × mullion.face
   },
 
   /** pakiet szybowy 4/16/4 i jego osadzenie (wspólne dla ościeżnicy, skrzydła i słupka) */

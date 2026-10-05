@@ -1,7 +1,6 @@
 import { buildComponentModel, geometryOf } from '../../components'
-import { frameDims } from '../../construction/frame'
 import { facadeKindForWall } from './facadeKind'
-import { PANEL_THICKNESS_M, type DecorPlacement, type OpeningPlacement, type PavilionConfig, type ProjectGeometry, type WallSide } from '../../types'
+import { type DecorPlacement, type OpeningPlacement, type PavilionConfig, type ProjectGeometry, type WallSide } from '../../types'
 import { envelope, openingSill, overlapsOpening, wallTopAt, wallTopHeights } from '../geometry'
 import { Color, Path, Shape, type Texture } from 'three'
 import { Box, RoundedPiece } from '../materials/primitives'
@@ -12,6 +11,7 @@ import { isTrayCassette } from '../../construction/facade/tray'
 import { arch } from '../../render/architecture'
 import { ComponentLayers } from './ComponentLayers'
 import { boardTraySpans } from '../../construction/facade/boards'
+import { CAVITY_SHADE, cornerCavitySheets } from '../../construction/facade/corners'
 
 /** Przyciemnienie koloru (mnożnik jasności) — parametr renderingu, nie fizyczny kolor. */
 function shade(hex: string, k: number) {
@@ -72,32 +72,15 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
 
   // narożnik z kasetonami poziomymi po obu stronach: ciemna wnęka za fugami na rogu (pasy przodu wydłużone przez narożnik)
   const geometry = geometryOf(config)
-  const fi = frameDims(config).wallFaceInset
-  const th = m(PHYS.cassette.thickness)
   const isCH = (side: WallSide) => facadeKindForWall(side, config, geometry) === 'cassette-horizontal'
-  const corners = ([['front', 'left', -1, 1], ['front', 'right', 1, 1], ['back', 'left', -1, -1], ['back', 'right', 1, -1]] as const)
-    .filter(([a, b]) => isCH(a) && isCH(b))
-  const hCorner = envelope(config).outerFront
   const trays = arch(config).cassetteTrays
+  // nowa ścieżka (tace): blachy wnęki w rendererze warstw (ComponentLayers); tu — dotychczasowe Box
+  const sheets = trays ? [] : cornerCavitySheets(config, isCH)
+  const cav = new Color(config.exteriorColor).multiplyScalar(CAVITY_SHADE).getStyle()
 
   return (
     <>
-      {corners.flatMap(([a, b, sx, sz]) => {
-        // blacha wnęki narożnika (w kolorze fugi): zakrywa czoło płyty ściany przód/tył i słup za fugami kasetonów
-        const tw = PANEL_THICKNESS_M[config.wallPanel]
-        const cav = new Color(config.exteriorColor).multiplyScalar(0.3).getStyle()
-        // przed licem słupa narożnego (obrys ramy) — słup nie prześwituje w fugach na rogu
-        const xPlane = sx * (config.length / 2 + 0.0008)
-        const zPlane = sz * (config.width / 2 + 0.0008)
-        // obie blachy kończą się 3 mm za licem kasetonów (wystająca krawędź dawała podwójną linię na narożniku)
-        const reach = th - fi - 0.003
-        const sideLen = fi + tw + 0.02 + reach
-        const frontLen = 0.06 + reach
-        return [
-          <Box key={'cavity-s-' + a + b} size={[0.0015, hCorner, sideLen]} position={[xPlane, hCorner / 2, sz * (config.width / 2 + reach - sideLen / 2)]} color={cav} metalness={0} roughness={0.9} />,
-          <Box key={'cavity-f-' + a + b} size={[frontLen, hCorner, 0.0015]} position={[sx * (config.length / 2 + reach - frontLen / 2), hCorner / 2, zPlane]} color={cav} metalness={0} roughness={0.9} />,
-        ]
-      })}
+      {sheets.map((c) => <Box key={c.id} size={c.size} position={c.center} color={cav} metalness={0} roughness={0.9} />)}
       {/* nowa ścieżka: tace kasetonów (E2), kaseton-deska, podkładki — renderer warstw (cechy z render/architecture.ts) */}
       <ComponentLayers config={config} geometry={geometry} components={model.components} />
       {pieces.filter((item) => !(trays && isTrayCassette(item))).map((item) => {

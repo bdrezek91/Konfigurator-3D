@@ -4,6 +4,7 @@ import { flatNormalMap, profileNormalMap, surfaceProfileDef } from '../scene/mat
 import { renderMetalColor, woodMaps, woodSharedMaps, type WoodKind } from '../scene/materials/textures'
 import type { PavilionConfig } from '../types'
 import { CHEAP_GLASS } from './quality'
+import { CAVITY_SHADE } from '../construction/facade/corners'
 
 /**
  * BIBLIOTEKA MATERIAŁÓW NOWEJ ŚCIEŻKI (E6-A): jedna definicja materiału na rodzaj elementu — bryła Systemu 1, stolarka,
@@ -113,6 +114,10 @@ export function trayWoodMaterial(kind: WoodKind, shaded: boolean) {
     return m
   })
 }
+
+/** Blacha wnęki narożnika — jak dotychczasowy Box (kolor elewacji × 0,3, metal 0, roughness 0,9). */
+export const cornerCavityMaterial = (exterior: string) => shared('cavity|' + exterior, () =>
+  new MeshStandardMaterial({ color: new Color(exterior).multiplyScalar(CAVITY_SHADE), metalness: 0, roughness: 0.9 }))
 
 // ---- posadowienie
 /** Bloczek betonowy — jak dotychczasowy RoundedPiece podkładki (#888983, roughness 0,92, metal 0,10). */

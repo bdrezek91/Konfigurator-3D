@@ -269,10 +269,17 @@ export function buildSystem1(
     }
     // obróbka ościeży: boki, nadproże i parapet otworu wyłożone blachą (rdzeń płyty w otworze niewidoczny; BOM: ościeża/nadproże/parapet)
     const rv = 0.0008
+    // stolarka z przekrojów: sąsiednie ramy sprzężone (wspólny słupek) — między nimi bez blachy ościeża
+    const sj = arch(config).sectionJoinery
+    const joinOf = (o: { a: number; b: number; id: string }) => ({
+      l: sj && ops.some((x) => x.id !== o.id && Math.abs(x.b - o.a) < JOIN_TOL),
+      r: sj && ops.some((x) => x.id !== o.id && Math.abs(x.a - o.b) < JOIN_TOL),
+    })
     for (const o of ops) {
+      const j = joinOf(o)
       const lin: Array<[string, Array<[number, number]>]> = [
-        ['l', rect(o.a, o.y0, o.a + rv, o.y1)],
-        ['r', rect(o.b - rv, o.y0, o.b, o.y1)],
+        ...(j.l ? [] : [['l', rect(o.a, o.y0, o.a + rv, o.y1)] as [string, Array<[number, number]>]]),
+        ...(j.r ? [] : [['r', rect(o.b - rv, o.y0, o.b, o.y1)] as [string, Array<[number, number]>]]),
         ['t', rect(o.a, o.y1 - rv, o.b, o.y1)],
         ...(o.y0 > 0.01 ? [['b', rect(o.a, o.y0, o.b, o.y0 + rv)] as [string, Array<[number, number]>]] : []),
       ]
@@ -284,15 +291,17 @@ export function buildSystem1(
         })
       }
     }
-    // stolarka w otworach: PoC (galeria-163) — z przekrojów generic-aluminium-52; pozostałe — uproszczona rama + szyba
-    if (arch(config).sectionJoinery) {
+    // stolarka w otworach: presety z `sectionJoinery` — z przekrojów generic-aluminium-52; pozostałe — uproszczona rama + szyba
+    if (sj) {
       const plane: WallPlane = { origin: wdef.origin, u: wdef.u, up: steelUp, out: mul(wdef.inward, -1), stage: wdef.stage, explode }
       for (const op of openings.filter((x) => x.wall === wdef.side)) {
         const o = toWallOpening(op, wdef)
+        const j = joinOf(o)
         ctx.parts.push(...buildOpeningJoinery({
           id: op.id, kind: op.kind.startsWith('door-') ? 'door' : 'fixed', a: o.a, b: o.b, y0: o.y0, y1: o.y1,
-          // rama przylega do blachy ościeża (0,8 mm); próg drzwi na posadzce
-          inset: { l: rv, r: rv, t: rv, b: o.y0 > 0.01 ? rv : 0 },
+          // rama przylega do blachy ościeża (0,8 mm); przy sprzężeniu — do sąsiedniej ramy; próg drzwi na posadzce
+          inset: { l: j.l ? 0 : rv, r: j.r ? 0 : rv, t: rv, b: o.y0 > 0.01 ? rv : 0 },
+          join: j,
           color: op.frameColor ?? RAL_7016_HEX, hinge: op.hinge === 'right' ? 'right' : 'left', handle: op.handle,
         }, plane))
       }
@@ -482,6 +491,9 @@ export function panelLayout(available: number, module: number, tolerance = 0.03)
   const count = Math.ceil(available / module - 1e-6)
   return { count, start: 0, last: available - (count - 1) * module, rest: 0, cut: true }
 }
+
+/** Tolerancja styku sąsiednich otworów (jak OpeningFrame: wspólny słupek przy odstępie < 12 mm). */
+const JOIN_TOL = 0.012
 
 function toWallOpening(o: OpeningPlacement, w: WallDef) {
   const c = w.toU(o.center)

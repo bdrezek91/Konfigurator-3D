@@ -1,6 +1,6 @@
 import { GENERIC_ALU_52 as G } from '../../profiles/generic-aluminium-52'
 import {
-  aluminiumDoorFrame, aluminiumFrame, aluminiumSash, doorStop, doorStopSeal, GLASS_DEPTH, glazingBead, mullion, sealInner, sealOuter,
+  aluminiumDoorFrame, aluminiumFrame, aluminiumFrameCoupled, aluminiumSash, doorStop, doorStopSeal, GLASS_DEPTH, glazingBead, mullion, sealInner, sealOuter,
   threshold, toMeters, transom, type Section,
 } from '../../profiles/sections'
 import { insetRect, ProfileAssembler, type Profile, type Rect, type Side, type WallPlane } from '../assembly'
@@ -8,7 +8,7 @@ import type { OpeningHandle } from '../../types'
 import type { Part } from '../types'
 
 /**
- * Stolarka z przekrojów (proof of concept — preset galeria-163). Hierarchia części:
+ * Stolarka z przekrojów (presety z `sectionJoinery`: galeria-163, galeria-207). Hierarchia części:
  *   OPENING → OUTER FRAME (ościeżnica, uciosy) → SASH / FIXED GLAZING → MULLION / TRANSOM → GASKETS + BEADS → GLASS → THRESHOLD
  *   (+ okucia). Obróbki ościeży (TRIMS) buduje model ściany (`reveal-*`).
  * Wszystkie wymiary: `profiles/generic-aluminium-52.ts` (ASSUMPTION). Tu tylko geometria złożenia.
@@ -26,6 +26,8 @@ export type OpeningJoinerySpec = {
   color: string
   hinge?: 'left' | 'right'
   handle?: OpeningHandle
+  /** styk z sąsiednią ramą (lewa / prawa krawędź otworu): rama bez ościeża, lico ½ słupka — razem wspólny słupek */
+  join?: { l?: boolean; r?: boolean }
   /** podziały FIX: osie słupków (s) i ślemion (y), m */
   mullions?: number[]
   transoms?: number[]
@@ -97,14 +99,17 @@ export function buildOpeningJoinery(spec: OpeningJoinerySpec, wall: WallPlane): 
   const bld = new Builder(wall, spec)
   const outer: Rect = { s0: spec.a + spec.inset.l, s1: spec.b - spec.inset.r, y0: spec.y0 + spec.inset.b, y1: spec.y1 - spec.inset.t }
   const proud = mm(G.install.proud)
+  const joined = (side: Side) => (side === 'l' || side === 'r') && !!spec.join?.[side]
 
   if (spec.kind === 'fixed') {
-    // OUTER FRAME: pierścień z uciosem 45°
+    // OUTER FRAME: pierścień z uciosem (kąt z proporcji lic — 45° przy równych, inny przy styku ½ słupka)
     const sec = aluminiumFrame()
-    const F = mm(G.frame.face)
+    const coupled = aluminiumFrameCoupled()
+    const faceMm = (side: Side) => (joined(side) ? G.coupling.face : G.frame.face)
+    const faces = { l: faceMm('l'), r: faceMm('r'), t: faceMm('t'), b: faceMm('b') }
     const dBack = proud - mm(G.frame.depth)
-    bld.secRing('frame', outer, () => sec, { l: 1, r: 1, t: 1, b: 1 }, dBack)
-    const sight = inset(outer, { l: F, r: F, t: F, b: F })
+    bld.secRing('frame', outer, (side) => (joined(side) ? coupled : sec), faces, dBack)
+    const sight = inset(outer, { l: mm(faces.l), r: mm(faces.r), t: mm(faces.t), b: mm(faces.b) })
     // MULLION / TRANSOM: pręty między liniami widoczności ościeżnicy, cięte prosto (łącznik słupka)
     const ms = spec.mullions ?? []
     const ts = spec.transoms ?? []
@@ -121,11 +126,13 @@ export function buildOpeningJoinery(spec: OpeningJoinerySpec, wall: WallPlane): 
   }
 
   // ---- DRZWI: ościeżnica (boki do posadzki, góra z uciosem), próg między bokami, przylga, skrzydło, okucia
-  const Fd = mm(G.doorFrame.face)
   const dBack = proud - mm(G.doorFrame.depth)
   const frameSec = aluminiumDoorFrame()
-  bld.secRing('frame', outer, () => frameSec, { l: 1, r: 1, t: 1, b: 1 }, dBack, { skip: 'b' })
-  const sight = inset(outer, { l: Fd, r: Fd, t: Fd, b: 0 })
+  const coupledSec = aluminiumDoorFrame(true)
+  const faceMm = (side: Side) => (joined(side) ? G.coupling.face : G.doorFrame.face)
+  const faces = { l: faceMm('l'), r: faceMm('r'), t: faceMm('t'), b: faceMm('b') }
+  bld.secRing('frame', outer, (side) => (joined(side) ? coupledSec : frameSec), faces, dBack, { skip: 'b' })
+  const sight = inset(outer, { l: mm(faces.l), r: mm(faces.r), t: mm(faces.t), b: 0 })
   // THRESHOLD: między bokami ościeżnicy
   const th = threshold()
   const thH = mm(G.threshold.height)
