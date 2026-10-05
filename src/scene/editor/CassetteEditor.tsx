@@ -27,6 +27,7 @@ function dragKey(d: Drag) {
   if (d.type === 'band') return d.wall + '-band-'
   if (d.type === 'attic') return d.wall + '-attic'
   if (d.type === 'field') return d.wall + '-field-'
+  if (d.type === 'opening') return d.wall + '-opening-' + d.id
   return d.wall + '-' + d.row + '-@' + d.auto
 }
 const snap = (x: number) => Math.round(x / SNAP) * SNAP
@@ -46,6 +47,7 @@ type Drag =
   | { type: 'band'; wall: WallSide; k: number; value: number; span: number }
   | { type: 'attic'; wall: WallSide; value: number; span: number; min: number; max: number }
   | { type: 'field'; wall: WallSide; id: string; edge: 'move' | 'a' | 'b'; a: number; b: number; y0: number; y1: number; grab: number; lo: number; hi: number }
+  | { type: 'opening'; wall: WallSide; id: string; a: number; b: number; y0: number; y1: number; grab: number; lo: number; hi: number; snaps: number[] }
 
 export function CassetteEditor({ config, onChange }: { config: PavilionConfig; onChange: (next: PavilionConfig) => void }) {
   const geometry = geometryOf(config)
@@ -81,14 +83,17 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
     }).filter((x): x is NonNullable<typeof x> => x !== null)
   }, [config])
 
-  if (!walls.length) return null
-  const faceOffset = PANEL_THICKNESS_M[config.wallPanel] / 2 + m(PHYS.cassette.thickness) + 0.004
-  const bodyRows = walls[0].L.rows.filter((r) => !r.attic)
+  // płaszczyzna uchwytów: lico kasetonów (ściana kasetonowa) albo lico płyty
+  const cassetteSides = new Set(walls.map((w) => w.side))
+  const faceOffsetOf = (side: WallSide) => PANEL_THICKNESS_M[config.wallPanel] / 2 + (cassetteSides.has(side) ? m(PHYS.cassette.thickness) : 0) + 0.004
+  const L0 = walls[0]?.L
+  const bodyRows = L0 ? L0.rows.filter((r) => !r.attic) : []
   const pitch = bodyRows.length ? bodyRows[0].y1 - bodyRows[0].y0 : 0.24
-  const atticStart = walls[0].L.atticStart
-  const hasAttic = walls[0].L.rows.some((r) => r.attic)
+  const atticStart = L0?.atticStart ?? 0
+  const hasAttic = !!L0 && L0.rows.some((r) => r.attic)
   const minWallH = Math.min(...walls.map((w) => w.L.maxHeight))
-  const atticRows = walls[0].L.rows.filter((r) => r.attic).length
+  const atticRows = L0 ? L0.rows.filter((r) => r.attic).length : 0
+  const spanOf = (side: WallSide) => (side === 'front' || side === 'back' ? config.length : config.width)
   // attyka nad stolarką (jak układ automatyczny i zdjęcia realizacji): linia attyki nie schodzi poniżej najwyższego otworu
   const floorT = envelope(config).floorT
   const topOpening = Math.max(1.0, ...geometry.openings.map((o) => floorT + openingSill(o) + o.height + 0.01))
@@ -97,7 +102,8 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
   const toLocal = (e: ThreeEvent<PointerEvent>, side: WallSide) => {
     const n = wallNormal(side)
     const p0 = wallPosition(side, 0, gapY, config)
-    const o = new Vector3(p0[0] + n[0] * faceOffset, p0[1], p0[2] + n[2] * faceOffset)
+    const f = faceOffsetOf(side)
+    const o = new Vector3(p0[0] + n[0] * f, p0[1], p0[2] + n[2] * f)
     const hit = e.ray.intersectPlane(new Plane().setFromNormalAndCoplanarPoint(new Vector3(...n), o), new Vector3())
     if (!hit) return null
     const u = wallU(side)
@@ -120,7 +126,16 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
     if (drag.type === 'joint') setDrag({ ...drag, value: clamp(snap(p.x), drag.min, drag.max) })
     else if (drag.type === 'band') setDrag({ ...drag, value: clamp(snap(p.y / drag.k), MIN_CASSETTE, 0.8) * drag.k })
     else if (drag.type === 'attic') setDrag({ ...drag, value: clamp(snap(p.y), drag.min, drag.max) })
-    else {
+    else if (drag.type === 'opening') {
+      // otwór między sąsiadami; przy krawędzi sąsiedniego otworu (< 3 cm) — przyciąga (sprzężenie ram, wspólny słupek)
+      const w = drag.b - drag.a
+      let a = clamp(snap(p.x - drag.grab), drag.lo, drag.hi - w)
+      for (const sx of drag.snaps) {
+        if (Math.abs(a - sx) < 0.03) a = sx
+        if (Math.abs(a + w - sx) < 0.03) a = sx - w
+      }
+      setDrag({ ...drag, a, b: a + w })
+    } else {
       // pole między sąsiednimi otworami / polami (lo, hi) — nie wchodzi na stolarkę
       const w = drag.b - drag.a
       if (drag.edge === 'move') {
@@ -137,6 +152,9 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
     setControls(true)
     commit(drag)
     setDrag(null)
+    // uchwyt przesunął się spod kursora — pointerOut nie przyjdzie
+    setHover(null)
+    document.body.style.cursor = ''
   }
 
   const commit = (d: Drag) => {
@@ -147,7 +165,11 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
       ed.joints = Math.abs(d.value - d.auto) < 0.002 ? keep : [...keep, { wall: d.wall, row: d.row, from: d.auto, to: d.value }]
     } else if (d.type === 'band') ed.bandPitch = d.value / d.k
     else if (d.type === 'attic') ed.atticStart = d.value
-    else {
+    else if (d.type === 'opening') {
+      const openings = base.geometry.openings.map((x) => (x.id === d.id ? { ...x, center: Number(((d.a + d.b) / 2).toFixed(3)), sourceAccuracy: 'drawing-estimate' as const } : x))
+      onChange({ ...base, geometry: { ...base.geometry, openings } })
+      return
+    } else {
       const decor: DecorPlacement[] = base.geometry.decor.map((x) => (x.id === d.id ? { ...x, center: (d.a + d.b) / 2, width: d.b - d.a, sourceAccuracy: 'drawing-estimate' } : x))
       onChange({ ...base, geometry: { ...base.geometry, decor } })
       return
@@ -159,17 +181,23 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
   const bar = (side: WallSide, x0: number, x1: number, y0: number, y1: number) => {
     const p = wallPosition(side, (x0 + x1) / 2, gapY + (y0 + y1) / 2, config)
     const n = wallNormal(side)
-    return { position: [p[0] + n[0] * faceOffset, p[1], p[2] + n[2] * faceOffset] as [number, number, number], size: [x1 - x0, y1 - y0] as [number, number] }
+    const f = faceOffsetOf(side)
+    return { position: [p[0] + n[0] * f, p[1], p[2] + n[2] * f] as [number, number, number], size: [x1 - x0, y1 - y0] as [number, number] }
   }
 
   /** uchwyt: niewidoczna strefa chwytu (hit) + widoczny pasek (linia fugi albo obrys pola) */
-  const handle = (key: string, side: WallSide, x0: number, x1: number, y0: number, y1: number, onDown: (e: ThreeEvent<PointerEvent>) => void, opts: { fill?: boolean; line?: 'v' | 'h' } = {}) => {
+  const handle = (key: string, side: WallSide, x0: number, x1: number, y0: number, y1: number, onDown: (e: ThreeEvent<PointerEvent>) => void, opts: { fill?: boolean; line?: 'v' | 'h'; front?: number } = {}) => {
     const b = bar(side, x0, x1, y0, y1)
+    // `front`: uchwyt minimalnie przed innymi (stolarka wygrywa z fugą poziomą przechodzącą przez otwór)
+    if (opts.front) {
+      const n = wallNormal(side)
+      b.position = [b.position[0] + n[0] * opts.front, b.position[1], b.position[2] + n[2] * opts.front]
+    }
     const hot = hover === key || (drag !== null && (drag.type === 'joint' ? key === dragKey(drag) : key.startsWith(dragKey(drag))))
     const [w, h] = b.size
     const vis: [number, number] = opts.line === 'v' ? [hot ? 0.016 : 0.008, h] : opts.line === 'h' ? [w, hot ? 0.016 : 0.008] : [w, h]
     return (
-      <group key={key} position={b.position} rotation={[0, ROT_Y[side], 0]}>
+      <group key={key} name={key} position={b.position} rotation={[0, ROT_Y[side], 0]}>
         <mesh
           onPointerOver={(e) => { if (!facing(side, e.camera)) return; e.stopPropagation(); setHover(key); document.body.style.cursor = opts.line === 'h' ? 'ns-resize' : opts.line === 'v' ? 'ew-resize' : 'grab' }}
           onPointerOut={() => { setHover((k) => (k === key ? null : k)); if (!drag) document.body.style.cursor = '' }}
@@ -189,10 +217,13 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
   }
 
   const perWall: Array<[WallSide, React.ReactNode[]]> = []
-  for (const { side, L, A } of walls) {
+  for (const side of SIDES) {
     const out: React.ReactNode[] = []
     perWall.push([side, out])
-    const half = L.span / 2
+    const half = spanOf(side) / 2
+    const W = walls.find((w) => w.side === side)
+    if (W) {
+    const { L, A } = W
     // fugi pionowe (przesuwalne — poza krawędziami pól i końcami ściany)
     for (const [row, lines, autoLines, locked, y0, y1] of [
       ['body', L.bodyLines, A.bodyLines, L.isLockedBody, 0, L.atticStart],
@@ -221,9 +252,11 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
         type: 'attic', wall: side, value: atticStart, span: L.span, min: Math.min(topOpening, atticStart), max: minWallH - atticRows * MIN_CASSETTE,
       }), { line: 'h' }))
     }
-    // pola (deska, lamele, okładziny) — przesunięcie i szerokość
+    }
+    // pola (deska, lamele, okładziny) — przesunięcie i szerokość; na ścianie kasetonowej tylko pola układu (dawne pasy kasetonów
+    // zastąpione elewacją pomijamy)
     for (const d of geometry.decor.filter((x) => x.wall === side && x.kind !== 'led-strip')) {
-      const isField = BOARD_KINDS.has(d.kind) || L.fields.some((f) => Math.abs(f.a - (d.center - d.width / 2)) < 1e-6)
+      const isField = !W || BOARD_KINDS.has(d.kind) || W.L.fields.some((f) => Math.abs(f.a - (d.center - d.width / 2)) < 1e-6)
       if (!isField) continue
       const active = drag?.type === 'field' && drag.id === d.id
       const a = active ? drag.a : d.center - d.width / 2
@@ -248,6 +281,27 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
       out.push(handle(side + '-field-a-' + d.id, side, a - 0.03, a + 0.03, y0, y1, (e) => start(e, { ...base, edge: 'a', grab: 0 }), { line: 'v' }))
       out.push(handle(side + '-field-b-' + d.id, side, b - 0.03, b + 0.03, y0, y1, (e) => start(e, { ...base, edge: 'b', grab: 0 }), { line: 'v' }))
     }
+    // stolarka (okna, drzwi) — przesunięcie wzdłuż ściany; nie wchodzi na inne otwory i pola, 15 cm od narożnika
+    for (const o of geometry.openings.filter((x) => x.wall === side)) {
+      const a0 = o.center - o.width / 2
+      const b0 = o.center + o.width / 2
+      const y0 = floorT + openingSill(o)
+      const y1 = y0 + o.height
+      const active = drag?.type === 'opening' && drag.id === o.id
+      const a = active ? drag.a : a0
+      const b = active ? drag.b : b0
+      const others = [
+        ...geometry.openings.filter((x) => x.wall === side && x.id !== o.id).map((x) => ({ a: x.center - x.width / 2, b: x.center + x.width / 2, y0: floorT + openingSill(x), y1: floorT + openingSill(x) + x.height, sep: 0 })),
+        ...geometry.decor.filter((x) => x.wall === side && x.kind !== 'led-strip').map((x) => ({ a: x.center - x.width / 2, b: x.center + x.width / 2, y0: x.yCenter - x.height / 2, y1: x.yCenter + x.height / 2, sep: 0.02 })),
+      ].filter((x) => Math.min(x.y1, y1) - Math.max(x.y0, y0) > 0.01)
+      const lo = Math.max(-half + 0.15, ...others.filter((x) => x.b <= a0 + 0.01).map((x) => x.b + x.sep))
+      const hi = Math.min(half - 0.15, ...others.filter((x) => x.a >= b0 - 0.01).map((x) => x.a - x.sep))
+      const snaps = others.filter((x) => x.sep === 0).flatMap((x) => [x.a, x.b])
+      out.push(handle(side + '-opening-' + o.id, side, a + 0.03, b - 0.03, y0 + 0.03, y1 - 0.03, (e) => {
+        const p = toLocal(e, side)
+        start(e, { type: 'opening', wall: side, id: o.id, a: a0, b: b0, y0, y1, grab: (p?.x ?? a0) - a0, lo: Math.min(lo, a0), hi: Math.max(hi, b0), snaps })
+      }, { fill: true, front: 0.003 }))
+    }
   }
 
   // podpis wymiaru podczas przeciągania
@@ -255,6 +309,7 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
   if (drag?.type === 'joint') label = { side: drag.wall, x: drag.value, y: (drag.y0 + drag.y1) / 2, text: 'kasetony ' + Math.round((drag.value - drag.min + MIN_CASSETTE) * 1000) + ' | ' + Math.round((drag.max + MIN_CASSETTE - drag.value) * 1000) + ' mm' }
   else if (drag?.type === 'band') label = { side: drag.wall, x: 0, y: drag.value, text: 'pas ' + Math.round((drag.value / drag.k) * 1000) + ' mm' }
   else if (drag?.type === 'attic') label = { side: drag.wall, x: 0, y: drag.value, text: 'attyka od ' + Math.round(drag.value * 1000) + ' mm' }
+  else if (drag?.type === 'opening') label = { side: drag.wall, x: (drag.a + drag.b) / 2, y: (drag.y0 + drag.y1) / 2, text: 'oś ' + Math.round(((drag.a + drag.b) / 2) * 1000) + ' mm · od lewej ' + Math.round((drag.a + spanOf(drag.wall) / 2) * 1000) + ' mm' }
   else if (drag?.type === 'field') label = { side: drag.wall, x: (drag.a + drag.b) / 2, y: (drag.y0 + drag.y1) / 2, text: 'pole ' + Math.round((drag.b - drag.a) * 1000) + ' mm, oś ' + Math.round(((drag.a + drag.b) / 2) * 1000) + ' mm' }
 
   return (

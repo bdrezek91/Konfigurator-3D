@@ -55,9 +55,10 @@ export function Viewer({
   // tryb jakości (E5): wybór widza zapisany w przeglądarce; w trybie auto pokazujemy aktualny poziom
   const [quality, setQuality] = useState<QualityMode>(initialQualityMode)
   const [tier, setTier] = useState<QualityTier>('high')
-  // dopasowanie kasetonów: dostępne, gdy któraś ściana ma kasetony poziome (System A / B)
+  // edycja w 3D: stolarka i pola na każdej ścianie, fugi — na ścianach z kasetonami poziomymi (System A / B)
   const [editing, setEditing] = useState(false)
-  const canEdit = !!onConfig && (['front', 'back', 'left', 'right'] as const).some((s) => cassetteWallLayout(config, geometryOf(config), s))
+  const canEdit = !!onConfig
+  const hasCassettes = (['front', 'back', 'left', 'right'] as const).some((s) => cassetteWallLayout(config, geometryOf(config), s))
   const edited = !!config.cassetteEdits && Object.keys(config.cassetteEdits).length > 0
 
   useEffect(() => {
@@ -172,7 +173,7 @@ export function Viewer({
             {lighting === 'day' ? <Icon.moon /> : <Icon.sun />}
           </button>
           {canEdit && !compare && (
-            <button type="button" className={editing ? 'on' : ''} title="Dopasuj kasetony — przeciągnij fugę, linię attyki albo pole" onClick={() => setEditing((v) => !v)}><Icon.facade /></button>
+            <button type="button" className={editing ? 'on' : ''} title="Edycja w 3D — przeciągnij okno, drzwi, pole albo fugę kasetonów" onClick={() => setEditing((v) => !v)}><Icon.facade /></button>
           )}
           {gallery03 && (
             <button type="button" className={compare ? 'on' : ''} title="Porównanie ze zdjęciem" onClick={() => setCompare((v) => !v)}><Icon.compare /></button>
@@ -185,9 +186,9 @@ export function Viewer({
 
       {editing && canEdit && !compare && (
         <div className="cassette-edit-bar">
-          <strong>Dopasowanie kasetonów</strong>
-          <span>Przeciągnij fugę pionową, fugę poziomą, linię attyki albo pole (środek — przesunięcie, krawędź — szerokość). Fugi przy otworach są stałe, pole nie wchodzi na stolarkę.</span>
-          <button type="button" disabled={!edited} onClick={() => onConfig?.({ ...config, cassetteEdits: undefined })}>Przywróć fugi</button>
+          <strong>Edycja w 3D</strong>
+          <span>Przeciągnij okno lub drzwi, pole (środek — przesunięcie, krawędź — szerokość){hasCassettes ? ', fugę kasetonów albo linię attyki' : ''}. Elementy nie wchodzą na siebie; przy sąsiednim oknie rama się sprzęga.</span>
+          {hasCassettes && <button type="button" disabled={!edited} onClick={() => onConfig?.({ ...config, cassetteEdits: undefined })}>Przywróć fugi</button>}
           <button type="button" onClick={() => setEditing(false)}>Gotowe</button>
         </div>
       )}
