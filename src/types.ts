@@ -40,6 +40,17 @@ export type FacadeCladdingSpec = {
   /** Daszki nad grupami przeszkleń stałych (System B — zdjęcie 13). */
   canopy?: boolean
 }
+/**
+ * Ręczne dopasowanie układu kasetonów (System A / B). Fuga pionowa zapisana jako przesunięcie z położenia automatycznego
+ * (`from`) — po zmianie otworów / wymiarów, gdy fugi już nie ma w tym miejscu, edycja jest pomijana (układ automatyczny).
+ */
+export type CassetteEdits = {
+  joints?: Array<{ wall: WallSide; row: 'body' | 'attic'; from: number; to: number }>
+  /** wysokość pasa korpusu [m] — wspólny rytm wszystkich ścian */
+  bandPitch?: number
+  /** początek attyki nad spodem ramy [m] — wspólny dla wszystkich ścian */
+  atticStart?: number
+}
 export type OpeningKind = 'door-glazed' | 'door-full' | 'door-double' | 'fixed-glass' | 'alu-window' | 'pvc-window'
 export type DecorKind =
   | 'cassette-square-graphite'
@@ -187,6 +198,8 @@ export type PavilionConfig = {
   facadeBandHeight?: number
   /** Szerokość fugi między kasetonami [m]. Domyślnie 0,020 (produkcja Dampol). */
   facadeGap?: number
+  /** Ręczne dopasowanie kasetonów (przeciąganie fug i pól w widoku 3D) — tylko „Własna konfiguracja”. */
+  cassetteEdits?: CassetteEdits
   showStructure: boolean
   showInterior: boolean
   geometry?: ProjectGeometry

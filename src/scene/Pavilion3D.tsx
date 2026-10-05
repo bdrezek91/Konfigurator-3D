@@ -7,6 +7,7 @@ import { autoTier, QUALITY, QualityContext, TIERS, type QualityMode, type Qualit
 import { ACESFilmicToneMapping, PCFSoftShadowMap, PerspectiveCamera, SRGBColorSpace } from 'three'
 import type { PavilionConfig } from '../types'
 import { CameraRig, type CameraApi } from './camera/CameraRig'
+import { CassetteEditor } from './editor/CassetteEditor'
 import { cameraPose, type CameraPose } from './camera/presets'
 import type { PavilionView } from './camera/views'
 import { LightingContext, resolveLighting, type LightingMode } from './environment/lighting'
@@ -110,9 +111,16 @@ type Props = {
   quality?: QualityMode
   /** aktualny tryb po automatycznym obniżeniu (do UI) */
   onTier?: (tier: QualityTier) => void
+  /** Dopasowanie kasetonów (przeciąganie fug i pól) — zmiana konfiguracji po puszczeniu uchwytu. */
+  onEditCassettes?: (next: PavilionConfig) => void
 }
 
-export default function Pavilion3D({ config, view = 'perspective', lighting = 'day', resetNonce = 0, cameraApiRef, hq, quality = 'auto', onTier }: Props) {
+export default function Pavilion3D({ config, view = 'perspective', lighting = 'day', resetNonce = 0, cameraApiRef, hq, quality = 'auto', onTier, onEditCassettes }: Props) {
+  // w trybie dopasowania kasetonów kamera zostaje (przejście na „Własna konfiguracja” nie zmienia kadru)
+  const [heldProject, setHeldProject] = useState(config.project)
+  const editing = !!onEditCassettes
+  if (!editing && heldProject !== config.project) setHeldProject(config.project)
+  const poseKey = (editing ? heldProject : config.project) + '|' + view + '|' + resetNonce
   const preset = resolveLighting(lighting, arch(config).lighting)
   const pose = hq?.pose ?? cameraPose(config, view)
   // tryb auto: start z parametrów urządzenia, PerformanceMonitor obniża o jeden poziom przy spadku FPS
@@ -145,6 +153,7 @@ export default function Pavilion3D({ config, view = 'perspective', lighting = 'd
           <SceneEnvironment config={config} lighting={preset} />
           <Ground config={config} />
           <ProjectPavilion config={config} />
+          {!hq && onEditCassettes && <CassetteEditor config={config} onChange={onEditCassettes} />}
           {hq ? (
             <>
               <FixedCamera pose={pose} />
@@ -173,7 +182,7 @@ export default function Pavilion3D({ config, view = 'perspective', lighting = 'd
             </>
           )}
         </Suspense>
-        {!hq && <CameraRig pose={pose} poseKey={config.project + '|' + view + '|' + resetNonce} apiRef={cameraApiRef} />}
+        {!hq && <CameraRig pose={pose} poseKey={poseKey} apiRef={cameraApiRef} />}
       </LightingContext.Provider>
       </QualityContext.Provider>
     </Canvas>

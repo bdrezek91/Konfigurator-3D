@@ -169,6 +169,29 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   padding: 8px 14px; border-radius: 9px; background: var(--ink); color: #fff; font-size: 12.5px; font-weight: 600;
 }
 
+/* dopasowanie kasetonów: pasek podpowiedzi nad dokiem i podpis wymiaru przy uchwycie */
+.cassette-edit-bar {
+  position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px; width: min(820px, calc(100% - 32px));
+  padding: 8px 10px 8px 14px; border-radius: 10px; background: var(--ink); color: #fff; font-size: 12.5px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+.cassette-edit-bar strong { flex: none; }
+.cassette-edit-bar span { flex: 1; opacity: 0.8; line-height: 1.35; }
+.cassette-edit-bar button {
+  flex: none; padding: 6px 10px; border-radius: 7px; border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent; color: #fff; font: inherit; font-weight: 600; cursor: pointer;
+}
+.cassette-edit-bar button:last-child { background: #f0a43a; border-color: #f0a43a; color: #1b1e20; }
+.cassette-edit-bar button:disabled { opacity: 0.4; cursor: default; }
+.cassette-edit-label {
+  padding: 4px 8px; border-radius: 6px; background: #1b1e20; color: #fff; font: 600 12px/1.2 system-ui, sans-serif; white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .cassette-edit-bar { flex-wrap: wrap; bottom: 120px; }
+  .cassette-edit-bar span { flex-basis: 100%; }
+}
+
 /* porównanie zdjęcie | render | HQ — wspólne proporcje 4:3 */
 .compare-grid {
   position: absolute; inset: 0; padding: 70px 18px 80px;

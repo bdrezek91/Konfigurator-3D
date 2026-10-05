@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import Pavilion3D, { type CameraApi, type CameraPose, type LightingMode, type PavilionView } from '../scene/Pavilion3D'
 import { cameraPose, GALLERY03_PHOTO_POSE } from '../scene/camera/presets'
 import type { PavilionConfig } from '../types'
+import { cassetteWallLayout, geometryOf } from '../components'
 import { Icon } from './icons'
 
 // panel HQ (path tracer) ładowany dopiero po kliknięciu
@@ -32,13 +33,15 @@ function readSaved(config: PavilionConfig): CameraPose | null {
 const TIER_LABEL: Record<QualityTier, string> = { low: 'Niska', medium: 'Średnia', high: 'Wysoka', ultra: 'Ultra' }
 
 export function Viewer({
-  config, lighting, onLighting, view, onView,
+  config, lighting, onLighting, view, onView, onConfig,
 }: {
   config: PavilionConfig
   lighting: LightingMode
   onLighting: (mode: LightingMode) => void
   view: PavilionView
   onView: (view: PavilionView) => void
+  /** dopasowanie kasetonów w widoku 3D (przeciąganie) */
+  onConfig?: (next: PavilionConfig) => void
 }) {
   const shell = useRef<HTMLDivElement>(null)
   const cameraApi = useRef<CameraApi | null>(null)
@@ -52,6 +55,10 @@ export function Viewer({
   // tryb jakości (E5): wybór widza zapisany w przeglądarce; w trybie auto pokazujemy aktualny poziom
   const [quality, setQuality] = useState<QualityMode>(initialQualityMode)
   const [tier, setTier] = useState<QualityTier>('high')
+  // dopasowanie kasetonów: dostępne, gdy któraś ściana ma kasetony poziome (System A / B)
+  const [editing, setEditing] = useState(false)
+  const canEdit = !!onConfig && (['front', 'back', 'left', 'right'] as const).some((s) => cassetteWallLayout(config, geometryOf(config), s))
+  const edited = !!config.cassetteEdits && Object.keys(config.cassetteEdits).length > 0
 
   useEffect(() => {
     setSaved(readSaved(config))
@@ -125,7 +132,8 @@ export function Viewer({
         </div>
       ) : (
         <div className="viewer-canvas">
-          <Pavilion3D config={config} view={view} lighting={lighting} resetNonce={resetNonce} cameraApiRef={cameraApi} quality={quality} onTier={setTier} />
+          <Pavilion3D config={config} view={view} lighting={lighting} resetNonce={resetNonce} cameraApiRef={cameraApi} quality={quality} onTier={setTier}
+            onEditCassettes={editing && canEdit ? onConfig : undefined} />
         </div>
       )}
 
@@ -163,6 +171,9 @@ export function Viewer({
           <button type="button" title={lighting === 'day' ? 'Tryb wieczorny' : 'Tryb dzienny'} onClick={() => onLighting(lighting === 'day' ? 'evening' : 'day')}>
             {lighting === 'day' ? <Icon.moon /> : <Icon.sun />}
           </button>
+          {canEdit && !compare && (
+            <button type="button" className={editing ? 'on' : ''} title="Dopasuj kasetony — przeciągnij fugę, linię attyki albo pole" onClick={() => setEditing((v) => !v)}><Icon.facade /></button>
+          )}
           {gallery03 && (
             <button type="button" className={compare ? 'on' : ''} title="Porównanie ze zdjęciem" onClick={() => setCompare((v) => !v)}><Icon.compare /></button>
           )}
@@ -171,6 +182,15 @@ export function Viewer({
         <span className="dock-sep" />
         <button type="button" className="dock-cta" disabled={compare} onClick={openHQ}><Icon.sparkle /> Render HQ</button>
       </div>
+
+      {editing && canEdit && !compare && (
+        <div className="cassette-edit-bar">
+          <strong>Dopasowanie kasetonów</strong>
+          <span>Przeciągnij fugę pionową, fugę poziomą, linię attyki albo pole (środek — przesunięcie, krawędź — szerokość). Fugi przy otworach są stałe, pole nie wchodzi na stolarkę.</span>
+          <button type="button" disabled={!edited} onClick={() => onConfig?.({ ...config, cassetteEdits: undefined })}>Przywróć fugi</button>
+          <button type="button" onClick={() => setEditing(false)}>Gotowe</button>
+        </div>
+      )}
 
       {toast && <div className="viewer-toast">{toast}</div>}
     </div>

@@ -167,7 +167,7 @@ export default function App() {
       <main className={'workspace mode-' + mode}>
         <section className="stage">
           {mode === 'visual' ? (
-            <Viewer config={config} lighting={lighting} onLighting={setLighting} view={view} onView={setView} />
+            <Viewer config={config} lighting={lighting} onLighting={setLighting} view={view} onView={setView} onConfig={setConfig} />
           ) : (
             <Suspense fallback={<div className="stage-loading">Ładowanie widoku technicznego…</div>}>
               <TechnicalWorkspace config={config} model={model} />
