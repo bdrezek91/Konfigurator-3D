@@ -1,7 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { buildComponentModel, componentModelToCsv, geometryOf } from './components'
 import { buildBom, validateConfig } from './logic'
-import { PRESETS } from './presets'
+import { UI_PRESETS as PRESETS } from './presets'
 import { envelope } from './scene/geometry'
 import type { LightingMode, PavilionView } from './scene/Pavilion3D'
 import { CONSTRUCTION_LABELS, DEFAULT_CONFIG, type PavilionConfig } from './types'
