@@ -105,6 +105,23 @@ export const GENERIC_ALU_52 = {
     bar: { section: 26, standoff: 16, standoffDepth: 50, maxLength: 1200, heightRatio: 0.48, standoffInset: 80, centerAbove: 20 },
   },
 
+  /**
+   * Systemy profili (wybór w edytorze stolarki): skala widocznych lic względem ALU standard i głębokość profilu.
+   * ALU slim — dotychczasowy render 50 mm ościeżnicy (galeria-03); PVC — 75 mm, głębokość 70 mm (typowe systemy 5-komorowe).
+   * ASSUMPTION — bez kart producentów.
+   */
+  systems: {
+    'alu-standard': { scale: 1, depth: 52 },
+    'alu-slim': { scale: 50 / 62, depth: 52 },
+    pvc: { scale: 75 / 62, depth: 70 },
+  },
+
+  /** okno otwierane (rozwierno-uchylne): skrzydło w ościeżnicy, klamka okienna; ASSUMPTION (typowe okucia) */
+  windowHandle: { roseWidth: 30, roseHeight: 76, roseDepth: 10, lever: 110, leverSection: 14, neck: 24 },
+
+  /** roleta zewnętrzna: skrzynka nad otworem i prowadnice (jak dotychczasowy render: 140 × 105 mm, wysunięcie 13,5 mm) */
+  roller: { boxHeight: 140, boxDepth: 105, boxProud: 13.5, boxOverhang: 45, boxGap: 16, guideWidth: 30, guideDepth: 30, color: '#1a1d1f' },
+
   /** osadzenie: lico ościeżnicy względem lica zewnętrznego płyty ściennej */
   install: { proud: 1 },
 } as const

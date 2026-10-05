@@ -48,24 +48,27 @@ function glazedBody(id: string, face: number, depth: number, outerFace: number, 
   }
 }
 
-export const aluminiumFrame = (): Section => glazedBody('aluminiumFrame', G.frame.face, G.frame.depth, G.frame.outerFace, G.frame.step)
+export const aluminiumFrame = (face: number = G.frame.face, depth: number = G.frame.depth): Section =>
+  glazedBody('aluminiumFrame' + (face === G.frame.face && depth === G.frame.depth ? '' : '-' + face + 'x' + depth), face, depth,
+    Math.min(G.frame.outerFace, face - G.glazing.rebate - 2), G.frame.step)
 
 /** Ościeżnica FIX po stronie styku z sąsiednią ramą: ½ słupka (część pełnej głębokości = ½ środka słupka). */
 export const aluminiumFrameCoupled = (): Section =>
   glazedBody('aluminiumFrameCoupled', G.coupling.face, G.frame.depth, G.coupling.face - G.glazing.rebate, G.frame.step)
 
 /** Skrzydło drzwi: ten sam układ co ościeżnica FIX, inna szerokość lica (bok / góra / cokół). */
-export const aluminiumSash = (face: number): Section =>
-  glazedBody('aluminiumSash-' + face, face, G.sash.depth, Math.min(G.sash.outerFace, face - G.glazing.rebate - 2), G.sash.step)
+export const aluminiumSash = (face: number, depth: number = G.sash.depth): Section =>
+  glazedBody('aluminiumSash-' + face + (depth === G.sash.depth ? '' : 'x' + depth), face, depth, Math.min(G.sash.outerFace, face - G.glazing.rebate - 2), G.sash.step)
 
 /** Ościeżnica drzwi: bez wrębu na szybę; przylga skrzydła jest osobnym przekrojem (doorStop) — kończy się na progu. */
-export function aluminiumDoorFrame(coupled = false): Section {
-  const { depth, step } = G.doorFrame
+export function aluminiumDoorFrame(coupled = false, faceIn: number = G.doorFrame.face, depth: number = G.doorFrame.depth): Section {
+  const { step } = G.doorFrame
   // po stronie styku z sąsiednią ramą: lico ½ słupka, część pełnej głębokości jak w ościeżnicy FIX sprzężonej
-  const face = coupled ? G.coupling.face : G.doorFrame.face
-  const outerFace = coupled ? G.coupling.face - G.glazing.rebate : G.doorFrame.outerFace
+  const face = coupled ? G.coupling.face : faceIn
+  const outerFace = coupled ? G.coupling.face - G.glazing.rebate : Math.min(G.doorFrame.outerFace, Math.round(face * 0.6))
+  const std = faceIn === G.doorFrame.face && depth === G.doorFrame.depth
   return {
-    id: coupled ? 'aluminiumDoorFrameCoupled' : 'aluminiumDoorFrame', material: 'frame', anchor: 'outer-edge', orientation: ALU, confidence: 'LOW', assumption: true,
+    id: (coupled ? 'aluminiumDoorFrameCoupled' : 'aluminiumDoorFrame') + (std ? '' : '-' + face + 'x' + depth), material: 'frame', anchor: 'outer-edge', orientation: ALU, confidence: 'LOW', assumption: true,
     params: { face, depth, outerFace, step },
     poly: [[0, 0], [face, 0], [face, depth - step], [outerFace, depth - step], [outerFace, depth], [0, depth]],
   }

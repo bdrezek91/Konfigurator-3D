@@ -34,7 +34,7 @@ const FULL: ArchFeatures = {
 /**
  * Zasada (E6-C): nowa architektura dla wszystkich pawilonów — galerie, presety projektów i „Własna konfiguracja”.
  * Światło: E3 „pochmurno” (zdjęcie 207 — kasetony, galerie z pochmurnym niebem) domyślnie; 163 — E3 „słońce” (zdjęcie 163).
- * Stolarka z przekrojów obejmuje otwory z biblioteki (`sectionJoinerySupports`), pozostałe zostają na OpeningFrame.
+ * Stolarka z przekrojów: wszystkie rodzaje otworów (OpeningFrame — tylko konstrukcje poza Systemem 1).
  */
 const DEFAULT: ArchFeatures = { ...FULL, lighting: 'overcast' }
 

@@ -4,8 +4,8 @@ import { m, PHYS, RAL_7016_HEX, RAL_9010_HEX, RENDER, type Confidence } from '..
 import { ROOF_TRAPEZOIDS } from '../../scene/materials/profiles'
 import { PANEL_THICKNESS_M, type OpeningPlacement, type PavilionConfig, type WallSide } from '../../types'
 import { angle as angleSection, thickenPath as thicken } from '../../profiles/sections'
-import { buildOpeningJoinery, sectionJoinerySupports, type WallPlane } from '../joinery/build'
-import { defaultHandle } from '../../scene/openings/openingDefaults'
+import { buildOpeningJoinery, JOINERY_KIND, sectionJoinerySupports, type WallPlane } from '../joinery/build'
+import { defaultHandle, defaultProfile } from '../../scene/openings/openingDefaults'
 import { arch } from '../../render/architecture'
 import type { ConstructionModel, DerivedDimension, FinishVariant, Layer, MaterialKind, Part, Stage, Vec3 } from '../types'
 
@@ -305,7 +305,7 @@ export function buildSystem1(
       }
       const j = joinOf(o)
       ctx.parts.push(...buildOpeningJoinery({
-        id: op.id, kind: op.kind.startsWith('door-') ? 'door' : 'fixed', a: o.a, b: o.b, y0: o.y0, y1: o.y1,
+        id: op.id, kind: JOINERY_KIND[op.kind], profile: defaultProfile(op), roller: op.roller, a: o.a, b: o.b, y0: o.y0, y1: o.y1,
         // rama przylega do blachy ościeża (0,8 mm); przy sprzężeniu — do sąsiedniej ramy; próg drzwi na posadzce
         inset: { l: j.l ? 0 : rv, r: j.r ? 0 : rv, t: rv, b: o.y0 > 0.01 ? rv : 0 },
         join: j,
