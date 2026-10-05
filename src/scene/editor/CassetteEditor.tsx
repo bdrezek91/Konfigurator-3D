@@ -2,7 +2,7 @@ import { Html } from '@react-three/drei'
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { useMemo, useRef, useState } from 'react'
 import { Plane, Vector3, type Camera, type Group } from 'three'
-import { BOARD_KINDS, cassetteWallLayout, geometryOf, MIN_CASSETTE, wallNormal, wallPosition } from '../../components'
+import { BOARD_KINDS, buildComponentModel, cassetteWallLayout, geometryOf, MIN_CASSETTE, wallNormal, wallPosition } from '../../components'
 import { m, PHYS } from '../../physical/spec'
 import { PANEL_THICKNESS_M, type CassetteEdits, type DecorPlacement, type PavilionConfig, type WallSide } from '../../types'
 import { CUSTOM_PROJECT, editableGeometry } from '../../ui/configState'
@@ -53,7 +53,10 @@ type Drag =
   | { type: 'field'; wall: WallSide; id: string; edge: 'move' | 'a' | 'b'; a: number; b: number; y0: number; y1: number; grab: number; lo: number; hi: number }
   | { type: 'opening'; wall: WallSide; id: string; a: number; b: number; y0: number; y1: number; grab: number; lo: number; hi: number; snaps: number[] }
 
-export function CassetteEditor({ config, onChange }: { config: PavilionConfig; onChange: (next: PavilionConfig) => void }) {
+/** Pędzel trybu malowania: kolor RAL (hex), 'wood-pine' / 'wood-winchester' albo 'default' (kolor elewacji). */
+export type Brush = string
+
+export function CassetteEditor({ config, onChange, brush }: { config: PavilionConfig; onChange: (next: PavilionConfig) => void; brush?: Brush | null }) {
   const geometry = geometryOf(config)
   const gapY = geometry.foundationGap ?? m(PHYS.base.groundGap)
   const get = useThree((s) => s.get)
@@ -101,6 +104,35 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
   // attyka nad stolarką (jak układ automatyczny i zdjęcia realizacji): linia attyki nie schodzi poniżej najwyższego otworu
   const floorT = envelope(config).floorT
   const topOpening = Math.max(1.0, ...geometry.openings.map((o) => floorT + openingSill(o) + o.height + 0.01))
+
+  // kasetony elewacji (model komponentów — to samo co render i BOM): prostokąt w układzie ściany, do malowania
+  const cells = useMemo(() => {
+    const map = new Map<string, { side: WallSide; a: number; b: number; y0: number; y1: number }>()
+    if (!brush) return map
+    for (const c of buildComponentModel(config).components) {
+      if (!c.id.startsWith('facade-cassette-') || !c.wall) continue
+      const side = c.wall as WallSide
+      const p0 = wallPosition(side, 0, 0, config)
+      const u = wallU(side)
+      const x = (c.position[0] - p0[0]) * u[0] + (c.position[2] - p0[2]) * u[2]
+      const w = c.dimensions.widthMm / 1000
+      const h = c.dimensions.lengthMm / 1000
+      map.set(c.id, { side, a: x - w / 2, b: x + w / 2, y0: c.position[1] - h / 2, y1: c.position[1] + h / 2 })
+    }
+    return map
+  }, [config, brush])
+  const cellAt = (side: WallSide, e: ThreeEvent<PointerEvent | MouseEvent>) => {
+    const p = toLocal(e as ThreeEvent<PointerEvent>, side)
+    if (!p) return null
+    for (const [id, c] of cells) if (c.side === side && p.x >= c.a - 0.01 && p.x <= c.b + 0.01 && p.y >= c.y0 - 0.01 && p.y <= c.y1 + 0.01) return id
+    return null
+  }
+  const paint = (id: string) => {
+    const colors = { ...config.cassetteEdits?.colors }
+    if (brush === 'default') delete colors[id]
+    else if (brush) colors[id] = brush
+    onChange({ ...config, project: CUSTOM_PROJECT, geometry: editableGeometry(config), cassetteEdits: { ...config.cassetteEdits, colors } })
+  }
 
   /** punkt kursora na płaszczyźnie lica kasetonów ściany → lokalne (x wzdłuż ściany, y od spodu ramy) */
   const toLocal = (e: ThreeEvent<PointerEvent>, side: WallSide) => {
@@ -221,7 +253,42 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
   }
 
   const perWall: Array<[WallSide, React.ReactNode[]]> = []
-  for (const side of SIDES) {
+  if (brush) {
+    // MALOWANIE: klik w kaseton → kolor z pędzla (bez przeciągania; obrót kamery działa, bo plaszczyzna nie zatrzymuje zdarzeń)
+    for (const { side, L } of walls) {
+      const out: React.ReactNode[] = []
+      perWall.push([side, out])
+      const half = L.span / 2
+      const b = bar(side, -half, half, 0, L.maxHeight)
+      out.push(
+        <mesh key={side + '-paint'} position={b.position} rotation={[0, ROT_Y[side], 0]}
+          onPointerMove={(e) => { if (!facing(side, e.camera)) return; const id = cellAt(side, e); setHover(id); setCursor(id ? 'pointer' : '') }}
+          onPointerOut={() => { setHover(null); setCursor('') }}
+          onClick={(e) => {
+            if (e.delta > 4 || !facing(side, e.camera)) return
+            const id = cellAt(side, e)
+            if (!id) return
+            e.stopPropagation()
+            paint(id)
+          }}
+        >
+          <planeGeometry args={b.size} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>,
+      )
+      const cell = hover ? cells.get(hover) : undefined
+      if (cell && cell.side === side) {
+        const r = bar(side, cell.a, cell.b, cell.y0, cell.y1)
+        out.push(
+          <mesh key={side + '-paint-hover'} position={r.position} rotation={[0, ROT_Y[side], 0]} renderOrder={10} raycast={() => null}>
+            <planeGeometry args={r.size} />
+            <meshBasicMaterial color={brush === 'default' ? '#ffffff' : brush.startsWith('wood-') ? '#c58a4a' : brush} transparent opacity={0.55} depthWrite={false} polygonOffset polygonOffsetFactor={-2} />
+          </mesh>,
+        )
+      }
+    }
+  }
+  if (!brush) for (const side of SIDES) {
     const out: React.ReactNode[] = []
     perWall.push([side, out])
     const half = spanOf(side) / 2

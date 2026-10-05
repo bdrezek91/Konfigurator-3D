@@ -2,7 +2,7 @@ import { initialQualityMode, saveQualityMode, TIERS, type QualityMode, type Qual
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import Pavilion3D, { type CameraApi, type CameraPose, type LightingMode, type PavilionView } from '../scene/Pavilion3D'
 import { cameraPose, GALLERY03_PHOTO_POSE } from '../scene/camera/presets'
-import type { PavilionConfig } from '../types'
+import { RAL_COLORS, type PavilionConfig } from '../types'
 import { cassetteWallLayout, geometryOf } from '../components'
 import { Icon } from './icons'
 
@@ -57,6 +57,8 @@ export function Viewer({
   const [tier, setTier] = useState<QualityTier>('high')
   // edycja w 3D: stolarka i pola na każdej ścianie, fugi — na ścianach z kasetonami poziomymi (System A / B)
   const [editing, setEditing] = useState(false)
+  // malowanie kasetonów: pędzel (RAL / drewno / 'default'); null — przesuwanie
+  const [brush, setBrush] = useState<string | null>(null)
   const canEdit = !!onConfig
   const hasCassettes = (['front', 'back', 'left', 'right'] as const).some((s) => cassetteWallLayout(config, geometryOf(config), s))
   const edited = !!config.cassetteEdits && Object.keys(config.cassetteEdits).length > 0
@@ -134,7 +136,7 @@ export function Viewer({
       ) : (
         <div className="viewer-canvas">
           <Pavilion3D config={config} view={view} lighting={lighting} resetNonce={resetNonce} cameraApiRef={cameraApi} quality={quality} onTier={setTier}
-            onEditCassettes={editing && canEdit ? onConfig : undefined} />
+            onEditCassettes={editing && canEdit ? onConfig : undefined} editBrush={editing && hasCassettes ? brush : null} />
         </div>
       )}
 
@@ -187,9 +189,28 @@ export function Viewer({
       {editing && canEdit && !compare && (
         <div className="cassette-edit-bar">
           <strong>Edycja w 3D</strong>
-          <span>Przeciągnij okno lub drzwi, pole (środek — przesunięcie, krawędź — szerokość){hasCassettes ? ', fugę kasetonów albo linię attyki' : ''}. Elementy nie wchodzą na siebie; przy sąsiednim oknie rama się sprzęga.</span>
+          {hasCassettes && (
+            <div className="edit-mode">
+              <button type="button" className={!brush ? 'on' : ''} onClick={() => setBrush(null)}>Przesuń</button>
+              <button type="button" className={brush ? 'on' : ''} onClick={() => setBrush((b) => b ?? RAL_COLORS[0].value)}>Maluj</button>
+            </div>
+          )}
+          {brush && (
+            <div className="edit-brushes" role="radiogroup" aria-label="Kolor kasetonu">
+              {[...RAL_COLORS.map((c) => ({ value: c.value, name: c.name, bg: c.value })),
+                { value: 'wood-pine', name: 'Dekor drewna — sosna', bg: '#c58a4a' },
+                { value: 'wood-winchester', name: 'Dekor drewna — winchester', bg: '#8a5a30' },
+                { value: 'default', name: 'Kolor elewacji (przywróć)', bg: 'transparent' }].map((c) => (
+                <button key={c.value} type="button" role="radio" aria-checked={brush === c.value} title={c.name}
+                  className={'swatch' + (brush === c.value ? ' on' : '') + (c.value === 'default' ? ' reset' : '')} style={{ background: c.bg }}
+                  onClick={() => setBrush(c.value)} />
+              ))}
+            </div>
+          )}
+          {!brush && <span>Przeciągnij okno lub drzwi, pole (środek — przesunięcie, krawędź — szerokość){hasCassettes ? ', fugę kasetonów albo linię attyki' : ''}. Elementy nie wchodzą na siebie; przy sąsiednim oknie rama się sprzęga.</span>}
+          {brush && <span>Kliknij kaseton, żeby nadać mu kolor.</span>}
           {hasCassettes && <button type="button" disabled={!edited} onClick={() => onConfig?.({ ...config, cassetteEdits: undefined })}>Przywróć fugi</button>}
-          <button type="button" onClick={() => setEditing(false)}>Gotowe</button>
+          <button type="button" className="done" onClick={() => setEditing(false)}>Gotowe</button>
         </div>
       )}
 

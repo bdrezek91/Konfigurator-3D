@@ -113,9 +113,11 @@ type Props = {
   onTier?: (tier: QualityTier) => void
   /** Dopasowanie kasetonów (przeciąganie fug i pól) — zmiana konfiguracji po puszczeniu uchwytu. */
   onEditCassettes?: (next: PavilionConfig) => void
+  /** tryb malowania kasetonów: pędzel (kolor) albo null — przesuwanie */
+  editBrush?: string | null
 }
 
-export default function Pavilion3D({ config, view = 'perspective', lighting = 'day', resetNonce = 0, cameraApiRef, hq, quality = 'auto', onTier, onEditCassettes }: Props) {
+export default function Pavilion3D({ config, view = 'perspective', lighting = 'day', resetNonce = 0, cameraApiRef, hq, quality = 'auto', onTier, onEditCassettes, editBrush }: Props) {
   // w trybie dopasowania kasetonów kamera zostaje (przejście na „Własna konfiguracja” nie zmienia kadru)
   const [heldProject, setHeldProject] = useState(config.project)
   const editing = !!onEditCassettes
@@ -153,7 +155,7 @@ export default function Pavilion3D({ config, view = 'perspective', lighting = 'd
           <SceneEnvironment config={config} lighting={preset} />
           <Ground config={config} />
           <ProjectPavilion config={config} />
-          {!hq && onEditCassettes && <CassetteEditor config={config} onChange={onEditCassettes} />}
+          {!hq && onEditCassettes && <CassetteEditor config={config} onChange={onEditCassettes} brush={editBrush} />}
           {hq ? (
             <>
               <FixedCamera pose={pose} />

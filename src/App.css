@@ -180,12 +180,19 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 }
 .cassette-edit-bar strong { flex: none; }
 .cassette-edit-bar span { flex: 1; opacity: 0.8; line-height: 1.35; }
-.cassette-edit-bar button {
+.cassette-edit-bar > button {
   flex: none; padding: 6px 10px; border-radius: 7px; border: 1px solid rgba(255, 255, 255, 0.25);
   background: transparent; color: #fff; font: inherit; font-weight: 600; cursor: pointer;
 }
-.cassette-edit-bar button:last-child { background: #f0a43a; border-color: #f0a43a; color: #1b1e20; }
+.cassette-edit-bar button.done { background: #f0a43a; border-color: #f0a43a; color: #1b1e20; }
 .cassette-edit-bar button:disabled { opacity: 0.4; cursor: default; }
+.cassette-edit-bar .edit-mode { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: rgba(255, 255, 255, 0.1); flex: none; }
+.cassette-edit-bar .edit-mode button { border: 0; padding: 5px 9px; background: transparent; color: #fff; }
+.cassette-edit-bar .edit-mode button.on { background: #fff; color: #1b1e20; }
+.cassette-edit-bar .edit-brushes { display: flex; gap: 5px; flex: none; }
+.cassette-edit-bar .edit-brushes .swatch { width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.35); }
+.cassette-edit-bar .edit-brushes .swatch.on { border-color: #f0a43a; box-shadow: 0 0 0 2px #f0a43a; }
+.cassette-edit-bar .edit-brushes .swatch.reset { background: repeating-linear-gradient(45deg, #fff 0 3px, transparent 3px 6px) !important; }
 .cassette-edit-label {
   padding: 4px 8px; border-radius: 6px; background: #1b1e20; color: #fff; font: 600 12px/1.2 system-ui, sans-serif; white-space: nowrap;
 }

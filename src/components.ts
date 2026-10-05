@@ -1236,10 +1236,9 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
           }
           const rowMid = (row.y0 + row.y1) / 2
           const board = boards.find((f) => f.a < mid && f.b > mid && rowMid > f.y0 && rowMid < f.y1)
-          pushFacadePiece(
-            list, c, side, 'facade-cassette-' + side + (row.attic ? '-attic-' : '-body-') + row.index + '-' + i,
-            spec.kind, a2, b2, y0, y1, board?.wood ?? spec.color ?? c.exteriorColor,
-          )
+          const id = 'facade-cassette-' + side + (row.attic ? '-attic-' : '-body-') + row.index + '-' + i
+          // kolor pojedynczego kasetonu (edycja w 3D) > deska > kolor elewacji
+          pushFacadePiece(list, c, side, id, spec.kind, a2, b2, y0, y1, c.cassetteEdits?.colors?.[id] ?? board?.wood ?? spec.color ?? c.exteriorColor)
         }
       }
       // daszki (System B, zdjęcie 13): nad każdą grupą sąsiadujących przeszkleń stałych (bez drzwi), spód na górze ramy,

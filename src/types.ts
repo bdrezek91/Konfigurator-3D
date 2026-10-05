@@ -50,6 +50,8 @@ export type CassetteEdits = {
   bandPitch?: number
   /** początek attyki nad spodem ramy [m] — wspólny dla wszystkich ścian */
   atticStart?: number
+  /** kolor / dekor pojedynczego kasetonu (klucz: id kasetonu w modelu komponentów; wartość: RAL hex albo 'wood-pine' | 'wood-winchester') */
+  colors?: Record<string, string>
 }
 export type OpeningKind = 'door-glazed' | 'door-full' | 'door-double' | 'fixed-glass' | 'alu-window' | 'pvc-window'
 export type DecorKind =
