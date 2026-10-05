@@ -10,6 +10,7 @@ import type { PartLook } from '../../render/layers'
 import { cassetteSteelMaterial, concreteBlockMaterial, cornerCavityMaterial, trayWoodMaterial } from '../../render/materials'
 import { PANEL_THICKNESS_M, type PavilionConfig, type ProjectGeometry } from '../../types'
 import { envelope } from '../geometry'
+import { useLighting } from '../environment/lighting'
 import { facadeKindForWall } from './facadeKind'
 
 /**
@@ -39,14 +40,15 @@ export function ComponentLayers({ config, geometry, components }: { config: Pavi
     return out
   }, [components, config, geometry, features.cassetteTrays, features.boardTrays, features.foundationParts])
 
+  const woodTint = useLighting().woodTint
   const lookOf = useCallback((p: Part): PartLook => {
     if (p.material === 'concrete') return { material: concreteBlockMaterial(), castShadow: true }
     if (p.material === 'flashing') return { material: cornerCavityMaterial(p.color), castShadow: true }
     const shaded = !!p.geometry.shade
     const wood = trayWood(p.color)
-    if (wood) return { material: trayWoodMaterial(wood, shaded), castShadow: true }
+    if (wood) return { material: trayWoodMaterial(wood, shaded, woodTint), castShadow: true }
     return { material: cassetteSteelMaterial(p.color, shaded), castShadow: true }
-  }, [])
+  }, [woodTint])
   if (!parts.length) return null
   return <LayerRenderer parts={parts} lookOf={lookOf} />
 }

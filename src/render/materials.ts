@@ -106,10 +106,10 @@ export const cassetteSteelMaterial = (color: string, shaded: boolean) => shared(
  * Drewno tacy: kaseton z dekorem drewna (jak Box: metal 0,02, roughness 0,6, normalScale 0,22) albo kaseton-deska
  * (jak RoundedPiece pasa: metal 0,10, roughness 0,62, normalScale 0,6). Rysunek elementu jest w UV geometrii.
  */
-export function trayWoodMaterial(kind: WoodKind, shaded: boolean) {
+export function trayWoodMaterial(kind: WoodKind, shaded: boolean, tint = '#ffffff') {
   const boards = kind === 'pineBoards' || kind === 'winchesterBoards'
-  return shared('wood|' + kind + '|' + shaded, () => {
-    const m = new MeshStandardMaterial({ color: '#ffffff', metalness: boards ? 0.1 : 0.02, roughness: boards ? 0.62 : 0.6, vertexColors: shaded, ...woodSharedMaps(kind) })
+  return shared('wood|' + kind + '|' + shaded + '|' + tint, () => {
+    const m = new MeshStandardMaterial({ color: tint, metalness: boards ? 0.1 : 0.02, roughness: boards ? 0.62 : 0.6, vertexColors: shaded, ...woodSharedMaps(kind) })
     m.normalScale.set(boards ? 0.6 : 0.22, boards ? 0.6 : 0.22)
     return m
   })

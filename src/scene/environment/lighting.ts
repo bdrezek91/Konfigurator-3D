@@ -23,6 +23,8 @@ export type LightingPreset = {
   toneMapping?: ToneMappingId
   /** Mnożnik koloru trawy podłoża (domyślnie #c9c070) — E3: kalibracja łatą trawy zdjęcia 163 (mniej zielonego odblasku w HQ) */
   groundTint?: string
+  /** Mnożnik koloru drewna tac (kaseton z dekorem drewna, deska) — kalibracja łatą deski zdjęcia (P1: 207) */
+  woodTint?: string
 }
 
 export type ToneMappingId = 'aces' | 'agx' | 'neutral'
@@ -100,6 +102,33 @@ export const LIGHTING_E3: Record<LightingMode, LightingPreset> = {
   evening: LIGHTING.evening,
 }
 
+/**
+ * E3 „pochmurno” (P1): HDRI z pochmurnym parkiem jesienią (cloudy_vondelpark — Poly Haven CC0; zdjęcie 207 to ten sam typ
+ * dnia: pełne zachmurzenie, gołe drzewa). Bez tarczy słońca — najjaśniejsze niebo przy zenicie (pomiar mapy: el. ≈ 84°,
+ * 3,2 × mediana nieba), więc światło kierunkowe słabe i wysokie (miękkie cienie). Kalibracja łatami zdjęcia 207 —
+ * reference/P1-POCHMURNO.md.
+ */
+export const LIGHTING_OVERCAST: Record<LightingMode, LightingPreset> = {
+  day: {
+    ...LIGHTING.day,
+    hdri: './hdri/cloudy_vondelpark_2k.hdr',
+    rotationY: 0,
+    sunDirection: [-0.2, 1, 0.28],
+    sunColor: '#f2f4f7',
+    toneMapping: 'neutral',
+    // łaty sRGB zdjęcie 207 → render (kaseton / attyka / deska): 47/52/60 → 41/49/59, 49/53/62 → 43/52/62, 157/100/53 → 203/127/45
+    exposure: 0.8,
+    environmentIntensity: 3.0,
+    backgroundIntensity: 0.9,
+    sunIntensity: 0.3,
+    // deska: 203/127/45 → 158/99/35 (zdjęcie 207: 157/100/53) — mnożnik 0,78
+    woodTint: '#c7c7c7',
+    groundTint: GROUND_TINT_E3,
+    lampIntensity: 0.25,
+  },
+  evening: LIGHTING.evening,
+}
+
 export const LightingContext = createContext<LightingPreset>(LIGHTING.day)
 
 export function useLighting() {
@@ -110,8 +139,8 @@ export function useLighting() {
  * Preset oświetlenia dla konfiguracji: PoC E3 → LIGHTING_E3; diagnostyka (testy wizualne, jak ?L=): `?env=<hdri z HDRI_SUN>`
  * podmienia mapę (słońce zgrane), `?tm=aces|agx|neutral` — mapowanie tonów.
  */
-export function resolveLighting(mode: LightingMode, e3: boolean): LightingPreset {
-  let preset = e3 ? LIGHTING_E3[mode] : LIGHTING[mode]
+export function resolveLighting(mode: LightingMode, e3: 'sun' | 'overcast' | false): LightingPreset {
+  let preset = e3 === 'overcast' ? LIGHTING_OVERCAST[mode] : e3 ? LIGHTING_E3[mode] : LIGHTING[mode]
   if (typeof window === 'undefined' || mode !== 'day') return preset
   const q = new URLSearchParams(window.location.search)
   const env = q.get('env')
