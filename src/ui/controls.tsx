@@ -136,7 +136,8 @@ export function Swatches({
   label, value, options, onChange,
 }: {
   label: string; value: string
-  options: Array<{ value: string; name: string }>
+  /** `swatch` — tło próbki, gdy wartość nie jest kolorem (np. dekor drewna) */
+  options: Array<{ value: string; name: string; swatch?: string }>
   onChange: (value: string) => void
 }) {
   const current = options.find((o) => o.value === value)
@@ -151,7 +152,7 @@ export function Swatches({
             title={o.name}
             aria-label={o.name}
             className={o.value === value ? 'on' : ''}
-            style={{ background: o.value }}
+            style={{ background: o.swatch ?? o.value }}
             onClick={() => onChange(o.value)}
           />
         ))}

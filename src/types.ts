@@ -37,7 +37,7 @@ export type FacadeCladdingSpec = {
   atticRowHeight?: number
   /** System kasetonów: A — poziome pasy + attyka 2 rzędy (zdjęcia 207/110/11/12), B — duże bloki + attyka 1 rząd (zdjęcie 13). */
   cassetteSystem?: 'A' | 'B'
-  /** Daszki nad grupami przeszkleń stałych (System B — zdjęcie 13). */
+  /** Kasety żaluzji fasadowych nad grupami przeszkleń stałych (zdjęcie 13 — wcześniej opisane jako daszki). */
   canopy?: boolean
 }
 /**
@@ -202,6 +202,16 @@ export type PavilionConfig = {
   facadeBandHeight?: number
   /** Szerokość fugi między kasetonami [m]. Domyślnie 0,020 (produkcja Dampol). */
   facadeGap?: number
+  /** Prześwit pod ramą (podkładki) [m]; domyślnie z projektu / 50 mm. */
+  foundationGap?: number
+  /** Kolor kasetonów (RAL hex albo 'wood-pine' / 'wood-winchester'); domyślnie kolor elewacji. */
+  cassetteColor?: string
+  /** Wysokość rzędu attyki [m] (System A, 2 rzędy). */
+  facadeAtticRowHeight?: number
+  /** Kasety żaluzji fasadowych nad grupami witryn FIX (kolor kasetonów). */
+  facadeBlindBox?: boolean
+  /** Żaluzje fasadowe opuszczone (lamele na przeszkleniu, prowadnice). */
+  facadeBlindsDown?: boolean
   /** Kasetony z obrzeżem wysuniętym w fugę i widocznymi wkrętami (wariant montażu; domyślnie obrzeże schowane). */
   cassetteFlange?: boolean
   /** Ręczne dopasowanie kasetonów (przeciąganie fug i pól w widoku 3D) — tylko „Własna konfiguracja”. */
@@ -294,6 +304,20 @@ export const RAL_COLORS = [
   { name: 'RAL 9010 — biały', value: '#f1ece1' },
   { name: 'RAL 9006 — aluminium', value: '#a5a5a3' },
   { name: 'RAL 9007 — szary aluminium', value: '#7d7d7a' },
+]
+
+/**
+ * Rozszerzona paleta RAL (kasetony, elewacja, obróbki): przybliżenia sRGB z tabel RAL Classic — kolor na ekranie poglądowy,
+ * do zamówienia zawsze numer RAL.
+ */
+export const RAL_COLORS_EXTENDED = [
+  ...RAL_COLORS,
+  { name: 'RAL 7021 — szaroczarny', value: '#2e3234' },
+  { name: 'RAL 7024 — grafitowy', value: '#45494e' },
+  { name: 'RAL 7035 — jasnoszary', value: '#cbd0cc' },
+  { name: 'RAL 8017 — brąz czekoladowy', value: '#45322e' },
+  { name: 'RAL 3009 — czerwień tlenkowa', value: '#6d342d' },
+  { name: 'RAL 6005 — zieleń mchu', value: '#114232' },
 ]
 
 export const PANEL_MANUFACTURER_LABELS: Record<PanelManufacturer, string> = {

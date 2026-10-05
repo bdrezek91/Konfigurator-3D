@@ -172,6 +172,7 @@ export default function App() {
           </div>
         </div>
 
+        {PRESETS.length > 0 && (
         <div className="project-picker">
           <label htmlFor="preset">Projekt</label>
           <div className="select-wrap">
@@ -182,6 +183,7 @@ export default function App() {
             <Icon.chevron />
           </div>
         </div>
+        )}
 
         <div className="mode-switch" role="tablist">
           <button type="button" role="tab" aria-selected={mode === 'visual'} className={mode === 'visual' ? 'on' : ''} onClick={() => setMode('visual')}>

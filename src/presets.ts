@@ -367,7 +367,7 @@ export const PRESETS: PavilionPreset[] = [
 ]
 
 /**
- * Projekty widoczne w konfiguratorze: wzorce z galerii (+ „Własna konfiguracja”). Pozostałe presety (projekty produkcyjne)
+ * Projekty widoczne w konfiguratorze: tylko „Własna konfiguracja” (decyzja: bez wzorców galerii w UI). Wszystkie presety
  * zostają w danych — na nich opierają się walidacja produkcji i kontrola Systemu 1 (scripts/) oraz laboratorium konstrukcji.
  */
-export const UI_PRESETS: PavilionPreset[] = PRESETS.filter((p) => p.id.startsWith('galeria-'))
+export const UI_PRESETS: PavilionPreset[] = []

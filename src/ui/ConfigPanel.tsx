@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
 import { envelope } from '../scene/geometry'
-import { DEFAULT_BAND_HEIGHT, DEFAULT_FACADE_GAP, DEFAULT_GRID_HEIGHT } from '../components'
+import { DEFAULT_BAND_HEIGHT, DEFAULT_FACADE_GAP, DEFAULT_GRID_HEIGHT, geometryOf } from '../components'
 import {
   CONSTRUCTION_LABELS,
   PANEL_LABELS,
   PANEL_MANUFACTURER_LABELS,
-  RAL_COLORS,
+  RAL_COLORS_EXTENDED,
   SURFACE_PROFILE_LABELS,
   type FacadeStyle,
   type PavilionConfig,
@@ -84,6 +84,8 @@ export function ConfigPanel({
               <NumberField label="Przód" value={config.frontHeight} min={2.3} max={3.3} step={0.01} unit="m" onChange={(v) => update('frontHeight', v)} />
               <NumberField label="Tył" value={config.backHeight} min={2.3} max={3.3} step={0.01} unit="m" onChange={(v) => update('backHeight', v)} />
             </div>
+            <NumberField label="Prześwit pod ramą (podkładki)" value={Math.round((config.foundationGap ?? geometryOf(config).foundationGap ?? 0.05) * 1000)} min={0} max={200} step={5} unit="mm"
+              onChange={(v) => setConfig({ ...config, foundationGap: v / 1000 })} />
             <dl className="spec-list">
               <div><dt>Wysokość zewnętrzna (bez prześwitu)</dt><dd>{outerFront.toFixed(3)} → {outerBack.toFixed(3)} m</dd></div>
               <div><dt>Powierzchnia zabudowy</dt><dd>{(config.length * config.width).toFixed(2)} m²</dd></div>
@@ -124,7 +126,7 @@ export function ConfigPanel({
           <Group title="Styl elewacji">
             <CardPicker value={config.facade} options={FACADE_OPTIONS} onChange={(v) => update('facade', v)} />
           </Group>
-          {isCassette(config.facade) && config.facade !== 'cassette-graphite' && config.facade !== 'cassette-black' && config.facade !== 'silver-rectangle' && (
+          {((isCassette(config.facade) && config.facade !== 'cassette-graphite' && config.facade !== 'cassette-black' && config.facade !== 'silver-rectangle') || (config.facade as string) === 'cassette-blocks') && (
             <Group title="Kasetony" tip="Wysokość pasa i szerokość fugi wg pomiarów z realizacji: pas 240–330 mm, fuga 12–18 mm. Pasy biegną na całe pole między narożnikiem a otworem.">
               <div className="grid-2">
                 <NumberField
@@ -137,12 +139,27 @@ export function ConfigPanel({
                   onChange={(v) => setConfig({ ...config, facadeGap: v / 1000 })} />
               </div>
               <Switch label="Attyka" note="2 rzędy kasetonów po 330 mm, moduły ≈ 1,1 m bez mijanki (zdjęcia 03, 11)" checked={config.attic} onChange={(v) => update('attic', v)} />
+              {config.attic && (config.facade as string) !== 'cassette-blocks' && (
+                <NumberField label="Wysokość rzędu attyki" value={config.facadeAtticRowHeight ?? 0.33} min={0.2} max={0.6} step={0.01} unit="m"
+                  onChange={(v) => setConfig({ ...config, facadeAtticRowHeight: v })} />
+              )}
+              <Swatches label="Kolor kasetonów" value={config.cassetteColor ?? 'same'}
+                options={[{ value: 'same', name: 'Jak elewacja', swatch: 'repeating-linear-gradient(45deg, #fff 0 3px, ' + config.exteriorColor + ' 3px 6px)' },
+                  ...RAL_COLORS_EXTENDED.map((c) => ({ value: c.value, name: c.name })),
+                  { value: 'wood-pine', name: 'Dekor drewna — sosna', swatch: '#c58a4a' }, { value: 'wood-winchester', name: 'Dekor drewna — winchester', swatch: '#8a5a30' }]}
+                onChange={(v) => setConfig({ ...config, cassetteColor: v === 'same' ? undefined : v })} />
+              <Switch label="Kasety żaluzji fasadowych" note="kaseta nad każdą grupą przeszkleń FIX, w kolorze kasetonów (przy dekorze drewna — kolor elewacji; jak zdjęcie 13)" checked={config.facadeBlindBox ?? (config.facade as string) === 'cassette-blocks'}
+                onChange={(v) => setConfig({ ...config, facadeBlindBox: v })} />
+              {(config.facadeBlindBox ?? (config.facade as string) === 'cassette-blocks') && (
+                <Switch label="Żaluzje opuszczone" note="lamele 80 mm na przeszkleniu, prowadnice po bokach (pozycja w BOM)" checked={!!config.facadeBlindsDown}
+                  onChange={(v) => setConfig({ ...config, facadeBlindsDown: v })} />
+              )}
               <Switch label="Obrzeże z wkrętami w fudze" note="wariant montażu: obrzeże kasetonu wysunięte w fugę, wkręty co 400 mm (widoczne z bliska)" checked={!!config.cassetteFlange} onChange={(v) => setConfig({ ...config, cassetteFlange: v })} />
             </Group>
           )}
           <Group title="Kolory">
-            <Swatches label="Elewacja" value={config.exteriorColor} options={RAL_COLORS.map((c) => ({ value: c.value, name: c.name }))} onChange={(v) => update('exteriorColor', v)} />
-            <Swatches label="Obróbki blacharskie i rama stalowa" value={config.flashingColor} options={RAL_COLORS.map((c) => ({ value: c.value, name: c.name }))} onChange={(v) => update('flashingColor', v)} />
+            <Swatches label="Elewacja" value={config.exteriorColor} options={RAL_COLORS_EXTENDED.map((c) => ({ value: c.value, name: c.name }))} onChange={(v) => update('exteriorColor', v)} />
+            <Swatches label="Obróbki blacharskie i rama stalowa" value={config.flashingColor} options={RAL_COLORS_EXTENDED.map((c) => ({ value: c.value, name: c.name }))} onChange={(v) => update('flashingColor', v)} />
           </Group>
           <Group title="Ściany z okładziną">
             <div className="chip-row">

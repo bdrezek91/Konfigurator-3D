@@ -131,12 +131,12 @@ export const PHYS = {
       source: 'ASSUMPTION — zdjęcie 13 pokazuje tylko kolumnę przy narożniku (~0,5 m); dłuższych ścian brak', confidence: 'LOW', status: 'OPEN',
     }),
     canopyHeight: P({
-      element: 'Daszek nad witryną (System B) — wysokość lica', value: 270, rank: 3,
-      source: 'Pomiar zdjęcia 13: lico ≈ 0,43 wysokości rzędu attyki (0,63 m) → ~0,27 m', confidence: 'MEDIUM', status: 'CHANGED',
+      element: 'Kaseta żaluzji fasadowej nad witryną — wysokość lica', value: 270, rank: 3,
+      source: 'Pomiar zdjęcia 13: lico ≈ 0,43 wysokości rzędu attyki (0,63 m) → ~0,27 m. Produkcja (2026-10-05): na zdjęciu 13 to kasety żaluzji fasadowych, nie daszki', confidence: 'MEDIUM', status: 'CHANGED',
     }),
     canopyProjection: P({
-      element: 'Daszek nad witryną (System B) — wysięg przed lico kasetonów', value: 250, rank: 8,
-      source: 'ASSUMPTION — zdjęcie 13: widoczny bok daszka przy narożniku, wysięg oceniony 0,2–0,3 m', confidence: 'LOW', status: 'OPEN',
+      element: 'Kaseta żaluzji fasadowej — wysięg przed lico kasetonów', value: 250, rank: 8,
+      source: 'ASSUMPTION — zdjęcie 13: widoczny bok kasety przy narożniku, wysięg oceniony 0,2–0,3 m', confidence: 'LOW', status: 'OPEN',
     }),
     cornerWrap: P({
       element: 'Zawinięcie kasetonu narożnego L (na każdą ścianę) — przy pełnej elewacji kasetonowej na obu ścianach', value: 150, rank: 8,

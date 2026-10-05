@@ -382,7 +382,8 @@ export function geometryOf(c: PavilionConfig): ProjectGeometry {
   const hit = geometryCache.get(c)
   if (hit) return hit
   const g0 = c.geometry ?? fallbackGeometry(c)
-  const g = { ...g0, decor: g0.decor.map((d) => reconcileDecor(c, g0, d)).filter((d): d is DecorPlacement => d !== null) }
+  const g0g = c.foundationGap !== undefined ? { ...g0, foundationGap: c.foundationGap } : g0
+  const g = { ...g0g, decor: g0g.decor.map((d) => reconcileDecor(c, g0g, d)).filter((d): d is DecorPlacement => d !== null) }
   geometryCache.set(c, g)
   return g
 }
@@ -883,6 +884,18 @@ const ATTIC_ROW_H = m(PHYS.cassette.atticRowHeight)
 const CASSETTE_COLUMN_MAX = m(PHYS.cassette.columnMax)
 
 function facadeSpecForSide(c: PavilionConfig, g: ProjectGeometry, side: WallSide): FacadeCladdingSpec | null {
+  const spec = facadeSpecBase(c, g, side)
+  if (!spec || spec.kind === 'vertical-ribbed') return spec
+  // parametry konfiguratora (kolor kasetonów, attyka, kasety żaluzji) nadpisują projekt
+  return {
+    ...spec,
+    color: c.cassetteColor ?? spec.color,
+    atticRowHeight: c.facadeAtticRowHeight ?? spec.atticRowHeight,
+    canopy: c.facadeBlindBox ?? spec.canopy,
+  }
+}
+
+function facadeSpecBase(c: PavilionConfig, g: ProjectGeometry, side: WallSide): FacadeCladdingSpec | null {
   const explicit = g.facadeCladding?.[side]
   if (explicit) {
     if (explicit.kind === 'none') return null
@@ -1258,31 +1271,48 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
           pushFacadePiece(list, c, side, id, spec.kind, a2, b2, y0, y1, c.cassetteEdits?.colors?.[id] ?? board?.wood ?? spec.color ?? c.exteriorColor)
         }
       }
-      // daszki (System B, zdjęcie 13): nad każdą grupą sąsiadujących przeszkleń stałych (bez drzwi), spód na górze ramy,
-      // szerokość = szerokość grupy, boki zamknięte, kolor kasetonów
+      // kasety żaluzji fasadowych (zdjęcie 13; produkcja 2026-10-05: to nie daszki): nad każdą grupą sąsiadujących przeszkleń
+      // stałych (bez drzwi), spód na górze ramy, szerokość = szerokość grupy, boki zamknięte, kolor kasetonów.
+      // Opcja: żaluzje opuszczone — pakiet lamel od kasety do dołu przeszkleń
       if (spec.canopy) {
         const fixes = g.openings.filter((o) => o.wall === side && o.kind === 'fixed-glass').sort((p, q) => p.center - q.center)
-        const groups: Array<{ a: number; b: number; top: number }> = []
+        const groups: Array<{ a: number; b: number; top: number; bottom: number }> = []
         for (const o of fixes) {
           const a = o.center - o.width / 2
           const b = o.center + o.width / 2
-          const top = floorT + openingSill(o) + o.height
+          const bottom = floorT + openingSill(o)
+          const top = bottom + o.height
           const last = groups[groups.length - 1]
-          if (last && a - last.b < 0.05) { last.b = b; last.top = Math.max(last.top, top) } else groups.push({ a, b, top })
+          if (last && a - last.b < 0.05) { last.b = b; last.top = Math.max(last.top, top); last.bottom = Math.min(last.bottom, bottom) } else groups.push({ a, b, top, bottom })
         }
         const ch = m(PHYS.cassette.canopyHeight)
+        // kaseta i lamele żaluzji — blacha / aluminium lakierowane: przy kasetonach z dekorem drewna kolor elewacji
+        const blindColor = spec.color && !spec.color.startsWith('wood-') ? spec.color : c.exteriorColor
         const proj = m(PHYS.cassette.canopyProjection)
         const normal = wallNormal(side)
         const off = PANEL_THICKNESS_M[c.wallPanel] / 2 + m(PHYS.cassette.thickness) + proj / 2
         groups.forEach((gr, k) => {
           const p = wallPosition(side, (gr.a + gr.b) / 2, gr.top + ch / 2, c)
           list.push({
-            id: 'facade-canopy-' + side + '-' + k, positionNo: 0, namePL: 'Daszek nad witryną', category: 'decor', primitive: 'decor',
-            material: 'Blacha stalowa powlekana — daszek', color: spec.color ?? c.exteriorColor, ral: spec.color ?? c.exteriorColor,
+            id: 'facade-canopy-' + side + '-' + k, positionNo: 0, namePL: 'Kaseta żaluzji fasadowej', category: 'decor', primitive: 'decor',
+            material: 'Blacha stalowa powlekana — kaseta żaluzji fasadowej', color: blindColor, ral: blindColor,
             dimensions: { lengthMm: Math.round(ch * 1000), widthMm: Math.round((gr.b - gr.a) * 1000), thicknessMm: Math.round(proj * 1000), netAreaM2: round((gr.b - gr.a) * proj) },
             quantity: 1, position: [p[0] + normal[0] * off, p[1], p[2] + normal[2] * off], rotation: wallRotation(side),
             explodeDirection: [normal[0] * 1.6, 0.2, normal[2] * 1.6], assemblyStage: 9, wall: side, sourceAccuracy: 'project-estimate',
           })
+          if (c.facadeBlindsDown) {
+            // pakiet lamel żaluzji (opuszczony) przed przeszkleniem: od spodu kasety do dołu grupy; 40 mm przed licem płyty — ASSUMPTION
+            const h = gr.top - gr.bottom
+            const offB = PANEL_THICKNESS_M[c.wallPanel] / 2 + m(PHYS.cassette.thickness) + 0.02
+            const pb = wallPosition(side, (gr.a + gr.b) / 2, gr.bottom + h / 2, c)
+            list.push({
+              id: 'facade-blind-' + side + '-' + k, positionNo: 0, namePL: 'Żaluzja fasadowa (lamele 80 mm, prowadnice)', category: 'decor', primitive: 'decor',
+              material: 'Aluminium — lamele żaluzji fasadowej', color: blindColor, ral: blindColor,
+              dimensions: { lengthMm: Math.round(h * 1000), widthMm: Math.round((gr.b - gr.a) * 1000), thicknessMm: 40, netAreaM2: round((gr.b - gr.a) * h) },
+              quantity: 1, position: [pb[0] + normal[0] * offB, pb[1], pb[2] + normal[2] * offB], rotation: wallRotation(side),
+              explodeDirection: [normal[0] * 1.5, 0.1, normal[2] * 1.5], assemblyStage: 9, wall: side, sourceAccuracy: 'assumption',
+            })
+          }
         })
       }
       continue

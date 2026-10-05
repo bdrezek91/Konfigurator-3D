@@ -68,7 +68,7 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
   // memo: lista części jest wejściem renderera tac (przebudowa geometrii tylko przy zmianie modelu)
   const pieces = useMemo(() => model.components.filter((item) =>
     item.category === 'decor' &&
-    (item.id.startsWith('facade-cassette-') || item.id.startsWith('corner-cassette-') || item.id.startsWith('facade-ribbed-') || item.id.startsWith('facade-canopy-'))
+    (item.id.startsWith('facade-cassette-') || item.id.startsWith('corner-cassette-') || item.id.startsWith('facade-ribbed-') || item.id.startsWith('facade-canopy-') || item.id.startsWith('facade-blind-'))
   ), [model])
 
   // narożnik z kasetonami poziomymi po obu stronach: ciemna wnęka za fugami na rogu (pasy przodu wydłużone przez narożnik)
@@ -113,6 +113,28 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
                 roughness={0.48}
                 radius={0.003}
               />
+            </group>
+          )
+        }
+
+        if (item.id.startsWith('facade-blind-')) {
+          // żaluzja fasadowa opuszczona: lamele ~80 mm (lekko pochylone, zamknięte) między prowadnicami bocznymi
+          const pitch = 0.075
+          const rail = 0.03
+          const slats: ReactNode[] = []
+          for (let y = -h / 2 + pitch / 2; y < h / 2 - pitch / 4; y += pitch) {
+            slats.push(
+              <group key={item.id + '-s-' + y.toFixed(3)} position={[0, y, 0]} rotation={[-0.32, 0, 0]}>
+                <Box size={[w - rail * 2, 0.08, 0.004]} position={[0, 0, 0]} color={color} metalness={0.2} roughness={0.6} />
+              </group>,
+            )
+          }
+          return (
+            <group key={item.id} position={item.position} rotation={item.rotation}>
+              {slats}
+              <Box size={[rail, h, depth]} position={[-w / 2 + rail / 2, 0, 0]} color={color} metalness={0.4} roughness={0.5} />
+              <Box size={[rail, h, depth]} position={[w / 2 - rail / 2, 0, 0]} color={color} metalness={0.4} roughness={0.5} />
+              <Box size={[w - rail * 2, 0.04, depth * 0.8]} position={[0, -h / 2 + 0.02, 0]} color={color} metalness={0.4} roughness={0.5} />
             </group>
           )
         }
