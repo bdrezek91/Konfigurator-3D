@@ -40,7 +40,8 @@ export const ARCH_PRESETS: Readonly<Record<string, ArchFeatures>> = {
 
 export function arch(config: Pick<PavilionConfig, 'project'>): ArchFeatures {
   const f = ARCH_PRESETS[config.project] ?? NONE
-  // `?e3=0` — diagnostyka: wyłącza światło E3 na presecie (porównanie przed / po w jednym buildzie)
-  if (f.lighting && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('e3') === '0') return { ...f, lighting: false }
+  // `?e3=0` / `?e3=1` — diagnostyka: wyłącza / włącza światło E3 na presecie (porównanie w jednym buildzie, nie zmienia presetu)
+  const e3 = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('e3') : null
+  if (e3 === '0' || e3 === '1') return { ...f, lighting: e3 === '1' }
   return f
 }
