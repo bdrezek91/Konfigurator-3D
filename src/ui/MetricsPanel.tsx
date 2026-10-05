@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { joineryCutList } from '../construction/joinery/cutlist'
+import { PricingPanel } from './PricingPanel'
 import type { ComponentModel } from '../components'
 import { ACCURACY_HELP, ACCURACY_LABELS, type Metric } from './metrics'
 import type { BomRow } from '../logic'
@@ -107,6 +108,7 @@ export function TechnicalTab({
           <button type="button" className="btn primary" onClick={onOpenTechnical}><Icon.layers /> Widok techniczny</button>
         </div>
       </Group>
+      <PricingPanel model={model} />
       <Group title="Założenia modelu" aside={<span className="muted">{model.assumptions.length}</span>}>
         <ul className="assumption-list">
           {model.assumptions.map((a) => <li key={a.code}><b>{a.code}</b>{a.description}</li>)}

@@ -604,3 +604,16 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   .opening-add { grid-template-columns: 1fr; }
   .mode-switch button { padding: 7px 10px; }
 }
+
+/* wycena (P11) */
+.table-wrap { overflow-x: auto; }
+table.pricing { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+table.pricing th, table.pricing td { padding: 5px 6px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+table.pricing td.num, table.pricing th:nth-child(n+2), table.pricing td:nth-child(3) { text-align: right; white-space: nowrap; }
+table.pricing td small { display: block; margin-top: 2px; color: var(--text-2); font-size: 11px; }
+table.pricing input[type='number'] { width: 100%; box-sizing: border-box; height: 26px; padding: 0 6px; border: 1px solid var(--line-strong); border-radius: 6px; text-align: right; font: inherit; }
+table.pricing tfoot input[type='number'] { width: 46px; }
+table.pricing td:first-child { overflow-wrap: anywhere; }
+table.pricing tr.missing td:first-child { color: var(--text-2); }
+table.pricing tfoot td { font-weight: 600; }
+table.pricing tfoot tr.total td { font-size: 13.5px; border-bottom: 0; }

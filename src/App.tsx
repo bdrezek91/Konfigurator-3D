@@ -15,6 +15,8 @@ import { Viewer } from './ui/Viewer'
 import { useHistory } from './ui/history'
 import { configFromUrl, shareUrl } from './ui/share'
 import { joineryCutList, joineryCutListCsv } from './construction/joinery/cutlist'
+import { formatPLN, priceItems, quote } from './pricing'
+import { usePrices } from './ui/usePrices'
 import './App.css'
 
 // tryb techniczny ładowany na żądanie — nie obciąża pierwszego wczytania konfiguratora
@@ -101,6 +103,9 @@ export default function App() {
   const validation = useMemo(() => validateConfig(config), [config])
   const bom = useMemo(() => buildBom(config), [config])
   const metrics = useMetrics(config, model)
+  // wycena na żywo: cennik użytkownika × ilości z modelu
+  const { prices } = usePrices()
+  const quoteNow = useMemo(() => quote(priceItems(model), prices), [model, prices])
   const preset = PRESETS.find((p) => p.config.project === config.project)
   const openings = useMemo(() => geometryOf(config).openings, [config])
 
@@ -258,6 +263,7 @@ export default function App() {
               <li><span>Konstrukcja</span>{CONSTRUCTION_LABELS[config.construction]}</li>
               <li><span>Elewacja</span>{FACADE_NAMES[config.facade]}</li>
               <li><span>Stolarka</span>{openings.length} elem. · {config.glazing === 'triple' ? '3 szyby' : '2 szyby'}</li>
+              <li><span>Cena netto</span>{quoteNow.missing === quoteNow.lines.length ? <em className="muted">uzupełnij cennik (Techniczne → Wycena)</em> : formatPLN(quoteNow.net) + (quoteNow.missing ? ' · bez ' + quoteNow.missing + ' poz.' : '')}</li>
               <li><span>Instalacje</span>{config.electrical === 'none' ? 'bez elektryki' : config.electrical === '3p400' ? '400 V' : '230 V'}{config.waterConnection ? ' · woda' : ''}{config.airConditioning ? ' · klima' : ''}</li>
             </ul>
             <MetricGrid metrics={metrics.slice(0, 4)} compact />
