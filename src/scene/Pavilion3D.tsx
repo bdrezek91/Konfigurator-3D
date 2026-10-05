@@ -119,12 +119,13 @@ type Props = {
   /** tryb dodawania pola okładziny (rodzaj) albo null */
   editAdding?: DecorKind | null
   onEditAdded?: () => void
+  editStretch?: boolean
 }
 
 /** HDRI z wersją 1k w public/hdri */
 const HDRI_1K = new Set(['./hdri/cloudy_vondelpark_2k.hdr', './hdri/pretoria_gardens_2k.hdr'])
 
-export default function Pavilion3D({ config, view = 'perspective', lighting = 'day', resetNonce = 0, cameraApiRef, hq, quality = 'auto', onTier, onEditCassettes, editBrush, editAdding, onEditAdded }: Props) {
+export default function Pavilion3D({ config, view = 'perspective', lighting = 'day', resetNonce = 0, cameraApiRef, hq, quality = 'auto', onTier, onEditCassettes, editBrush, editAdding, onEditAdded, editStretch }: Props) {
   // w trybie dopasowania kasetonów kamera zostaje (przejście na „Własna konfiguracja” nie zmienia kadru)
   const [heldProject, setHeldProject] = useState(config.project)
   const editing = !!onEditCassettes
@@ -183,7 +184,7 @@ export default function Pavilion3D({ config, view = 'perspective', lighting = 'd
           <SceneEnvironment config={config} lighting={preset} />
           <Ground config={config} />
           <ProjectPavilion config={config} />
-          {!hq && onEditCassettes && <CassetteEditor config={config} onChange={onEditCassettes} brush={editBrush} adding={editAdding} onAdded={onEditAdded} />}
+          {!hq && onEditCassettes && <CassetteEditor config={config} onChange={onEditCassettes} brush={editBrush} adding={editAdding} onAdded={onEditAdded} stretch={editStretch} />}
           {hq ? (
             <>
               <FixedCamera pose={pose} />

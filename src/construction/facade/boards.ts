@@ -61,7 +61,24 @@ export function boardTraySources(config: PavilionConfig, geometry: ProjectGeomet
     for (const d of geometry.decor.filter((x) => x.wall === side && BOARD_TRAY_KINDS.has(x.kind))) {
       const kind = d.kind === 'board-horizontal-winchester' ? 'winchesterBoards' : 'pineBoards'
       const y0 = d.yCenter - d.height / 2
-      boardTraySpans(d, openings, floorOffset).forEach((s, k) => {
+      const x0 = d.center - d.width / 2
+      // skos boku (wedge): pole dzielone na pasy co deskę, każdy pas skrócony do linii skosu na górze pasa (deski cięte schodkowo)
+      const wedge = d.shape === 'wedge-left' || d.shape === 'wedge-right'
+      const pitch = m(PHYS.board.height) + m(PHYS.board.gap)
+      const pieces = boardTraySpans(d, openings, floorOffset).flatMap((sp) => {
+        if (!wedge) return [sp]
+        const out2: BoardSpan[] = []
+        for (let ya = sp.sa; ya < sp.sb - 0.02; ya += pitch) {
+          const yb = Math.min(sp.sb, ya + pitch)
+          const ry = Math.min(1, (yb - y0) / d.height)
+          const lim = d.shape === 'wedge-left' ? { a: x0, b: x0 + (1 - ry) * d.width } : { a: x0 + ry * d.width, b: x0 + d.width }
+          const a = Math.max(sp.a, lim.a)
+          const b = Math.min(sp.b, lim.b)
+          if (b - a > 0.03) out2.push({ a, b, sa: ya, sb: yb })
+        }
+        return out2
+      })
+      pieces.forEach((s, k) => {
         const w = s.b - s.a
         const h = s.sb - s.sa
         // środek pola w układzie ściany → świat (Wall: obrót wokół Y + pozycja osi ściany, grupa: prześwit)

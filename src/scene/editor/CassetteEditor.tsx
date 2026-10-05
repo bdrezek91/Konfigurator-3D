@@ -7,6 +7,7 @@ import { m, PHYS } from '../../physical/spec'
 import { PANEL_THICKNESS_M, type CassetteEdits, type DecorKind, type DecorPlacement, type PavilionConfig, type WallSide } from '../../types'
 import { CUSTOM_PROJECT, editableGeometry } from '../../ui/configState'
 import { envelope, openingSill } from '../geometry'
+import { isVerticalLamella } from '../../construction/facade/lamellas'
 
 /**
  * Dopasowanie kasetonów w widoku 3D: zaznacz i przeciągnij
@@ -28,6 +29,7 @@ function dragKey(d: Drag) {
   if (d.type === 'attic') return d.wall + '-attic'
   if (d.type === 'field') return d.wall + '-field-'
   if (d.type === 'opening') return d.wall + '-opening-' + d.id
+  if (d.type === 'stretch') return d.wall + '-stretch-'
   return d.wall + '-' + d.row + '-@' + d.auto
 }
 /** kursor nad uchwytem (poza komponentem — zmiana stylu dokumentu, nie stanu Reacta) */
@@ -50,19 +52,22 @@ type Drag =
   | { type: 'joint'; wall: WallSide; row: 'body' | 'attic'; auto: number; value: number; min: number; max: number; y0: number; y1: number }
   | { type: 'band'; wall: WallSide; k: number; value: number; span: number }
   | { type: 'attic'; wall: WallSide; value: number; span: number; min: number; max: number }
-  | { type: 'field'; wall: WallSide; id: string; edge: 'move' | 'a' | 'b'; a: number; b: number; y0: number; y1: number; grab: number; lo: number; hi: number }
+  | { type: 'field'; wall: WallSide; id: string; edge: 'move' | 'a' | 'b' | 't' | 'bottom'; a: number; b: number; y0: number; y1: number; grab: number; lo: number; hi: number; maxY: number }
+  | { type: 'stretch'; wall: WallSide; id: string; a: number; b: number; y0: number; tops: number[]; k: number }
   | { type: 'opening'; wall: WallSide; id: string; a: number; b: number; y0: number; y1: number; grab: number; lo: number; hi: number; snaps: number[] }
 
 /** Pędzel trybu malowania: kolor RAL (hex), 'wood-pine' / 'wood-winchester' albo 'default' (kolor elewacji). */
 export type Brush = string
 
-export function CassetteEditor({ config, onChange, brush, adding, onAdded }: {
+export function CassetteEditor({ config, onChange, brush, adding, onAdded, stretch }: {
   config: PavilionConfig
   onChange: (next: PavilionConfig) => void
   brush?: Brush | null
   /** tryb dodawania pola: rodzaj okładziny (deska, lamele) — klik w ścianę wstawia pole */
   adding?: DecorKind | null
   onAdded?: () => void
+  /** tryb rozciągania kasetonu w pionie (łączenie pasów korpusu) */
+  stretch?: boolean
 }) {
   const geometry = geometryOf(config)
   const gapY = geometry.foundationGap ?? m(PHYS.base.groundGap)
@@ -117,7 +122,7 @@ export function CassetteEditor({ config, onChange, brush, adding, onAdded }: {
   // kasetony elewacji (model komponentów — to samo co render i BOM): prostokąt w układzie ściany, do malowania
   const cells = useMemo(() => {
     const map = new Map<string, { side: WallSide; a: number; b: number; y0: number; y1: number }>()
-    if (!brush) return map
+    if (!brush && !stretch) return map
     for (const c of buildComponentModel(config).components) {
       if (!c.id.startsWith('facade-cassette-') || !c.wall) continue
       const side = c.wall as WallSide
@@ -129,7 +134,7 @@ export function CassetteEditor({ config, onChange, brush, adding, onAdded }: {
       map.set(c.id, { side, a: x - w / 2, b: x + w / 2, y0: c.position[1] - h / 2, y1: c.position[1] + h / 2 })
     }
     return map
-  }, [config, brush])
+  }, [config, brush, stretch])
   const cellAt = (side: WallSide, e: ThreeEvent<PointerEvent | MouseEvent>) => {
     const p = toLocal(e as ThreeEvent<PointerEvent>, side)
     if (!p) return null
@@ -167,6 +172,10 @@ export function CassetteEditor({ config, onChange, brush, adding, onAdded }: {
     onChange({ ...config, project: CUSTOM_PROJECT, geometry: { ...g, decor: [...g.decor, decor] } })
     setSelected(decor.id)
     onAdded?.()
+  }
+  const setShape = (id: string, shape: 'rect' | 'wedge-left' | 'wedge-right') => {
+    const g = editableGeometry(config)
+    onChange({ ...config, project: CUSTOM_PROJECT, geometry: { ...g, decor: g.decor.map((d) => (d.id === id ? { ...d, shape } : d)) } })
   }
   const removeField = (id: string) => {
     const g = editableGeometry(config)
@@ -211,10 +220,17 @@ export function CassetteEditor({ config, onChange, brush, adding, onAdded }: {
         if (Math.abs(a + w - sx) < 0.03) a = sx - w
       }
       setDrag({ ...drag, a, b: a + w })
+    } else if (drag.type === 'stretch') {
+      // najbliższa górna krawędź pasa nad kursorem (skok co pas korpusu)
+      let k = 0
+      drag.tops.forEach((t, j) => { if (Math.abs(t - p.y) < Math.abs(drag.tops[k] - p.y)) k = j })
+      setDrag({ ...drag, k })
     } else {
       // pole między sąsiednimi otworami / polami (lo, hi) — nie wchodzi na stolarkę
       const w = drag.b - drag.a
-      if (drag.edge === 'move') {
+      if (drag.edge === 't') setDrag({ ...drag, y1: clamp(snap(p.y), drag.y0 + 0.3, drag.maxY) })
+      else if (drag.edge === 'bottom') setDrag({ ...drag, y0: clamp(snap(p.y), 0, drag.y1 - 0.3) })
+      else if (drag.edge === 'move') {
         const a = clamp(snap(p.x - drag.grab), drag.lo, drag.hi - w)
         setDrag({ ...drag, a, b: a + w })
       } else if (drag.edge === 'a') setDrag({ ...drag, a: clamp(snap(p.x), drag.lo, drag.b - MIN_CASSETTE) })
@@ -245,8 +261,14 @@ export function CassetteEditor({ config, onChange, brush, adding, onAdded }: {
       const openings = base.geometry.openings.map((x) => (x.id === d.id ? { ...x, center: Number(((d.a + d.b) / 2).toFixed(3)), sourceAccuracy: 'drawing-estimate' as const } : x))
       onChange({ ...base, geometry: { ...base.geometry, openings } })
       return
+    } else if (d.type === 'stretch') {
+      const spans = { ...ed.spans }
+      if (d.k > 0) spans[d.id] = d.k
+      else delete spans[d.id]
+      ed.spans = spans
     } else {
-      const decor: DecorPlacement[] = base.geometry.decor.map((x) => (x.id === d.id ? { ...x, center: (d.a + d.b) / 2, width: d.b - d.a, sourceAccuracy: 'drawing-estimate' } : x))
+      const decor: DecorPlacement[] = base.geometry.decor.map((x) => (x.id === d.id
+        ? { ...x, center: (d.a + d.b) / 2, width: d.b - d.a, yCenter: (d.y0 + d.y1) / 2, height: d.y1 - d.y0, sourceAccuracy: 'drawing-estimate' } : x))
       onChange({ ...base, geometry: { ...base.geometry, decor } })
       return
     }
@@ -318,6 +340,53 @@ export function CassetteEditor({ config, onChange, brush, adding, onAdded }: {
       )
     }
   }
+  if (stretch && !brush && !adding) {
+    // ROZCIĄGANIE: złap kaseton korpusu i ciągnij w górę — obejmuje kolejne pasy (w dół — skraca)
+    for (const { side, L } of walls) {
+      const out: React.ReactNode[] = []
+      perWall.push([side, out])
+      const half = L.span / 2
+      const b = bar(side, -half, half, 0, L.maxHeight)
+      const gap = L.spec.gap ?? 0.02
+      const rowsBody = L.rows.filter((r) => !r.attic)
+      out.push(
+        <mesh key={side + '-stretch'} position={b.position} rotation={[0, ROT_Y[side], 0]}
+          onPointerMove={(e) => {
+            if (drag) { move(e); return }
+            if (!facing(side, e.camera)) return
+            const id = cellAt(side, e)
+            const ok = !!id && id.includes('-body-')
+            setHover(ok ? id : null); setCursor(ok ? 'ns-resize' : '')
+          }}
+          onPointerOut={() => { if (!drag) { setHover(null); setCursor('') } }}
+          onPointerDown={(e) => {
+            if (!facing(side, e.camera)) return
+            const id = cellAt(side, e)
+            const m = id && /-body-(\d+)-(\d+)$/.exec(id)
+            if (!id || !m) return
+            const cell = cells.get(id)!
+            const r = Number(m[1])
+            const tops = rowsBody.filter((row) => row.index >= r).map((row) => row.y1 - gap / 2)
+            start(e, { type: 'stretch', wall: side, id, a: cell.a, b: cell.b, y0: cell.y0, tops, k: config.cassetteEdits?.spans?.[id] ?? 0 })
+          }}
+          onPointerUp={end}
+        >
+          <planeGeometry args={b.size} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>,
+      )
+      const cell = drag?.type === 'stretch' && drag.wall === side ? { a: drag.a, b: drag.b, y0: drag.y0, y1: drag.tops[drag.k] } : hover ? cells.get(hover) : undefined
+      if (cell && (drag?.type === 'stretch' ? drag.wall === side : cells.get(hover!)?.side === side)) {
+        const r = bar(side, cell.a, cell.b, cell.y0, cell.y1)
+        out.push(
+          <mesh key={side + '-stretch-hover'} position={r.position} rotation={[0, ROT_Y[side], 0]} renderOrder={10} raycast={() => null}>
+            <planeGeometry args={r.size} />
+            <meshBasicMaterial color={ACTIVE} transparent opacity={drag ? 0.4 : 0.22} depthWrite={false} polygonOffset polygonOffsetFactor={-2} />
+          </mesh>,
+        )
+      }
+    }
+  }
   if (brush && !adding) {
     // MALOWANIE: klik w kaseton → kolor z pędzla (bez przeciągania; obrót kamery działa, bo plaszczyzna nie zatrzymuje zdarzeń)
     for (const { side, L } of walls) {
@@ -353,7 +422,7 @@ export function CassetteEditor({ config, onChange, brush, adding, onAdded }: {
       }
     }
   }
-  if (!brush && !adding) for (const side of SIDES) {
+  if (!brush && !adding && !stretch) for (const side of SIDES) {
     const out: React.ReactNode[] = []
     perWall.push([side, out])
     const half = spanOf(side) / 2
@@ -397,8 +466,10 @@ export function CassetteEditor({ config, onChange, brush, adding, onAdded }: {
       const active = drag?.type === 'field' && drag.id === d.id
       const a = active ? drag.a : d.center - d.width / 2
       const b = active ? drag.b : d.center + d.width / 2
-      const y0 = d.yCenter - d.height / 2
-      const y1 = d.yCenter + d.height / 2
+      const fy0 = d.yCenter - d.height / 2
+      const fy1 = d.yCenter + d.height / 2
+      const y0 = active ? drag.y0 : fy0
+      const y1 = active ? drag.y1 : fy1
       // sąsiedzi pola na tej ścianie: otwory i inne pola zachodzące w pionie (fuga 20 mm odstępu)
       const others = [
         ...geometry.openings.filter((o) => o.wall === side).map((o) => ({ a: o.center - o.width / 2, b: o.center + o.width / 2, y0: floorT + openingSill(o), y1: floorT + openingSill(o) + o.height })),
@@ -409,7 +480,8 @@ export function CassetteEditor({ config, onChange, brush, adding, onAdded }: {
       const sep = 0.02
       const lo = Math.max(-half, ...others.filter((o) => o.b <= a0 + 0.01).map((o) => o.b + sep))
       const hi = Math.min(half, ...others.filter((o) => o.a >= b0 - 0.01).map((o) => o.a - sep))
-      const base = { type: 'field' as const, wall: side, id: d.id, a: a0, b: b0, y0, y1, lo: Math.min(lo, a0), hi: Math.max(hi, b0) }
+      const maxY = W ? W.L.maxHeight : Math.max(...walls.map((w) => w.L.maxHeight), envelope(config).outerFront)
+      const base = { type: 'field' as const, wall: side, id: d.id, a: a0, b: b0, y0: fy0, y1: fy1, lo: Math.min(lo, a0), hi: Math.max(hi, b0), maxY }
       out.push(handle(side + '-field-' + d.id, side, a + 0.04, b - 0.04, y0 + 0.04, y1 - 0.04, (e) => {
         const p = toLocal(e, side)
         setSelected(d.id)
@@ -417,6 +489,9 @@ export function CassetteEditor({ config, onChange, brush, adding, onAdded }: {
       }, { fill: true }))
       out.push(handle(side + '-field-a-' + d.id, side, a - 0.03, a + 0.03, y0, y1, (e) => start(e, { ...base, edge: 'a', grab: 0 }), { line: 'v' }))
       out.push(handle(side + '-field-b-' + d.id, side, b - 0.03, b + 0.03, y0, y1, (e) => start(e, { ...base, edge: 'b', grab: 0 }), { line: 'v' }))
+      // górna / dolna krawędź pola — wysokość (np. deska wyżej, pod attykę)
+      out.push(handle(side + '-field-t-' + d.id, side, a, b, y1 - 0.025, y1 + 0.025, (e) => start(e, { ...base, edge: 't', grab: 0 }), { line: 'h' }))
+      out.push(handle(side + '-field-bottom-' + d.id, side, a, b, y0 - 0.025, y0 + 0.025, (e) => start(e, { ...base, edge: 'bottom', grab: 0 }), { line: 'h' }))
     }
     // stolarka (okna, drzwi) — przesunięcie wzdłuż ściany; nie wchodzi na inne otwory i pola, 15 cm od narożnika
     for (const o of geometry.openings.filter((x) => x.wall === side)) {
@@ -447,17 +522,30 @@ export function CassetteEditor({ config, onChange, brush, adding, onAdded }: {
   else if (drag?.type === 'band') label = { side: drag.wall, x: 0, y: drag.value, text: 'pas ' + Math.round((drag.value / drag.k) * 1000) + ' mm' }
   else if (drag?.type === 'attic') label = { side: drag.wall, x: 0, y: drag.value, text: 'attyka od ' + Math.round(drag.value * 1000) + ' mm' }
   else if (drag?.type === 'opening') label = { side: drag.wall, x: (drag.a + drag.b) / 2, y: (drag.y0 + drag.y1) / 2, text: 'oś ' + Math.round(((drag.a + drag.b) / 2) * 1000) + ' mm · od lewej ' + Math.round((drag.a + spanOf(drag.wall) / 2) * 1000) + ' mm' }
-  else if (drag?.type === 'field') label = { side: drag.wall, x: (drag.a + drag.b) / 2, y: (drag.y0 + drag.y1) / 2, text: 'pole ' + Math.round((drag.b - drag.a) * 1000) + ' mm, oś ' + Math.round(((drag.a + drag.b) / 2) * 1000) + ' mm' }
+  else if (drag?.type === 'field') label = { side: drag.wall, x: (drag.a + drag.b) / 2, y: (drag.y0 + drag.y1) / 2, text: 'pole ' + Math.round((drag.b - drag.a) * 1000) + ' × ' + Math.round((drag.y1 - drag.y0) * 1000) + ' mm, oś ' + Math.round(((drag.a + drag.b) / 2) * 1000) + ' mm' }
+  else if (drag?.type === 'stretch') label = { side: drag.wall, x: (drag.a + drag.b) / 2, y: (drag.y0 + drag.tops[drag.k]) / 2, text: 'kaseton ' + Math.round((drag.tops[drag.k] - drag.y0) * 1000) + ' mm · ' + (drag.k + 1) + (drag.k === 0 ? ' pas' : drag.k < 4 ? ' pasy' : ' pasów') }
 
   return (
     <group>
       {perWall.map(([side, items]) => <group key={side} ref={(g) => { groups.current[side] = g }}>{items}</group>)}
-      {!brush && !adding && selected && (() => {
+      {!brush && !adding && !stretch && selected && (() => {
         const d = geometry.decor.find((x) => x.id === selected)
         if (!d) return null
+        // skos boku: lamele na ścianie bez kasetonów i deska na gołej płycie (na ścianie kasetonowej kasetony nie są cięte skośnie)
+        const canWedge = !cassetteSides.has(d.wall) && (isVerticalLamella(d.kind) || BOARD_KINDS.has(d.kind))
+        const shape = d.shape ?? 'rect'
+        const btn = (value: 'rect' | 'wedge-left' | 'wedge-right', label: string, title: string) => (
+          <button type="button" className={'cassette-edit-shape' + (shape === value ? ' on' : '')} title={title} disabled={value !== 'rect' && !canWedge}
+            onClick={() => setShape(d.id, value)}>{label}</button>
+        )
         return (
-          <Html position={bar(d.wall, d.center, d.center, d.yCenter + d.height / 2 + 0.12, d.yCenter + d.height / 2 + 0.12).position} center>
-            <button type="button" className="cassette-edit-remove" onClick={() => removeField(d.id)} title="Usuń pole">Usuń pole</button>
+          <Html position={bar(d.wall, d.center, d.center, d.yCenter + d.height / 2 + 0.14, d.yCenter + d.height / 2 + 0.14).position} center>
+            <div className="cassette-edit-tools">
+              {btn('rect', '▭', 'Pole prostokątne')}
+              {btn('wedge-left', '◣', canWedge ? 'Skos — wyżej z lewej' : 'Skos: lamele / deska na ścianie bez kasetonów')}
+              {btn('wedge-right', '◢', canWedge ? 'Skos — wyżej z prawej' : 'Skos: lamele / deska na ścianie bez kasetonów')}
+              <button type="button" className="cassette-edit-remove" onClick={() => removeField(d.id)} title="Usuń pole">Usuń pole</button>
+            </div>
           </Html>
         )
       })()}

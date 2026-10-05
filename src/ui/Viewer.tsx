@@ -74,7 +74,9 @@ export function Viewer({
   const [brush, setBrush] = useState<string | null>(null)
   // dodawanie pola okładziny: rodzaj albo null
   const [adding, setAdding] = useState<DecorKind | null>(null)
-  const mode = adding ? 'add' : brush ? 'paint' : 'move'
+  // rozciąganie kasetonu w pionie (łączenie pasów)
+  const [stretch, setStretch] = useState(false)
+  const mode = adding ? 'add' : brush ? 'paint' : stretch ? 'stretch' : 'move'
   const canEdit = !!onConfig
   const hasCassettes = (['front', 'back', 'left', 'right'] as const).some((s) => cassetteWallLayout(config, geometryOf(config), s))
   const edited = !!config.cassetteEdits && Object.keys(config.cassetteEdits).length > 0
@@ -156,7 +158,7 @@ export function Viewer({
 <Suspense fallback={<SceneLoading />}>
                     <Pavilion3D config={config} view={view} lighting={lighting} resetNonce={resetNonce} cameraApiRef={cameraApi} quality={quality} onTier={setTier}
             onEditCassettes={editing && canEdit ? onConfig : undefined} editBrush={editing && hasCassettes ? brush : null}
-            editAdding={editing ? adding : null} onEditAdded={() => setAdding(null)} />
+            editAdding={editing ? adding : null} onEditAdded={() => setAdding(null)} editStretch={editing && hasCassettes && stretch} />
           </Suspense>
         </div>
       )}
@@ -211,9 +213,10 @@ export function Viewer({
         <div className="cassette-edit-bar">
           <strong>Edycja w 3D</strong>
           <div className="edit-mode">
-            <button type="button" className={mode === 'move' ? 'on' : ''} onClick={() => { setBrush(null); setAdding(null) }}>Przesuń</button>
-            {hasCassettes && <button type="button" className={mode === 'paint' ? 'on' : ''} onClick={() => { setAdding(null); setBrush((b) => b ?? RAL_COLORS[0].value) }}>Maluj</button>}
-            <button type="button" className={mode === 'add' ? 'on' : ''} onClick={() => { setBrush(null); setAdding((a) => a ?? 'lamella-winchester') }}>Dodaj pole</button>
+            <button type="button" className={mode === 'move' ? 'on' : ''} onClick={() => { setBrush(null); setAdding(null); setStretch(false) }}>Przesuń</button>
+            {hasCassettes && <button type="button" className={mode === 'stretch' ? 'on' : ''} onClick={() => { setBrush(null); setAdding(null); setStretch(true) }}>Rozciągnij</button>}
+            {hasCassettes && <button type="button" className={mode === 'paint' ? 'on' : ''} onClick={() => { setAdding(null); setStretch(false); setBrush((b) => b ?? RAL_COLORS[0].value) }}>Maluj</button>}
+            <button type="button" className={mode === 'add' ? 'on' : ''} onClick={() => { setBrush(null); setStretch(false); setAdding((a) => a ?? 'lamella-winchester') }}>Dodaj pole</button>
           </div>
           {adding && (
             <select className="edit-kind" value={adding} onChange={(e) => setAdding(e.target.value as DecorKind)} aria-label="Rodzaj pola">
@@ -232,8 +235,9 @@ export function Viewer({
               ))}
             </div>
           )}
-          {mode === 'move' && <span>Przeciągnij okno lub drzwi, pole (środek — przesunięcie, krawędź — szerokość){hasCassettes ? ', fugę kasetonów albo linię attyki' : ''}. Elementy nie wchodzą na siebie; przy sąsiednim oknie rama się sprzęga.</span>}
+          {mode === 'move' && <span>Przeciągnij okno lub drzwi, pole (środek — przesunięcie, krawędzie — szerokość i wysokość; klik — kształt / skos){hasCassettes ? ', fugę kasetonów albo linię attyki' : ''}. Elementy nie wchodzą na siebie; przy sąsiednim oknie rama się sprzęga.</span>}
           {mode === 'paint' && <span>Kliknij kaseton, żeby nadać mu kolor.</span>}
+          {mode === 'stretch' && <span>Złap kaseton i ciągnij w górę — obejmie kolejne pasy (w dół — skróci).</span>}
           {mode === 'add' && <span>Kliknij wolne miejsce na ścianie — pole do 1 m szerokości (potem przeciągnij krawędź).</span>}
           {hasCassettes && <button type="button" disabled={!edited} onClick={() => onConfig?.({ ...config, cassetteEdits: undefined })}>Przywróć fugi</button>}
           <button type="button" className="done" onClick={() => setEditing(false)}>Gotowe</button>

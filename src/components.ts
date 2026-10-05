@@ -1209,21 +1209,38 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
       const ext = side === 'front' || side === 'back' ? th - fi : -fi + 0.004
       const extMinus = wrap(nMinus) ? ext : 0
       const extPlus = wrap(nPlus) ? ext : 0
+      // kasetony rozciągnięte w pionie (edycja w 3D): kaseton dolnego pasa obejmuje k pasów korpusu wyżej, kasetony nad nim pominięte
+      const bodyRows = rows.filter((r) => !r.attic)
+      const spanOf = new Map<string, number>()
+      const covered = new Set<string>()
+      for (const [id, k0] of Object.entries(c.cassetteEdits?.spans ?? {})) {
+        const m = new RegExp('^facade-cassette-' + side + '-body-(\\d+)-(\\d+)$').exec(id)
+        if (!m) continue
+        const r = Number(m[1])
+        const i = Number(m[2])
+        const k = Math.min(k0, bodyRows.length - 1 - r)
+        if (k < 1 || covered.has(r + '-' + i)) continue
+        spanOf.set(r + '-' + i, k)
+        for (let j = 1; j <= k; j++) covered.add(r + j + '-' + i)
+      }
       for (const row of rows) {
         const lines = row.attic ? atticLines : bodyLines
         for (let i = 0; i < lines.length - 1; i++) {
+          if (!row.attic && covered.has(row.index + '-' + i)) continue
           const a = lines[i]
           const b = lines[i + 1]
           const mid = (a + b) / 2
+          const k = row.attic ? 0 : spanOf.get(row.index + '-' + i) ?? 0
+          const rowTop = k ? bodyRows[row.index + k].y1 : row.y1
           // pole w tej kolumnie: kaseton docięty w pionie do ramy (fuga przy ramie), a nie wycięty cały rząd
           let y0 = row.y0 + gap / 2
-          let y1 = row.y1 - gap / 2
+          let y1 = rowTop - gap / 2
           let skip = false
           for (const f of fields) {
             const overlapX = row.attic ? Math.min(b, f.b) - Math.max(a, f.a) > 0.01 : f.a < mid && f.b > mid
-            if (!overlapX || Math.min(row.y1, f.y1) - Math.max(row.y0, f.y0) <= 0.01) continue
-            if (f.y0 <= row.y0 + 0.01 && f.y1 >= row.y1 - 0.01) { skip = true; break }
-            if (f.y1 < row.y1 && f.y1 - row.y0 < row.y1 - f.y0) y0 = Math.max(y0, f.y1 + gap / 2)
+            if (!overlapX || Math.min(rowTop, f.y1) - Math.max(row.y0, f.y0) <= 0.01) continue
+            if (f.y0 <= row.y0 + 0.01 && f.y1 >= rowTop - 0.01) { skip = true; break }
+            if (f.y1 < rowTop && f.y1 - row.y0 < rowTop - f.y0) y0 = Math.max(y0, f.y1 + gap / 2)
             else y1 = Math.min(y1, f.y0 - gap / 2)
           }
           if (skip || y1 - y0 < 0.04) continue
@@ -1234,7 +1251,7 @@ function addFacadeCladding(list: ModelComponent[], c: PavilionConfig, g: Project
             if (f.b > a2 && f.b <= mid) a2 = Math.max(a2, f.b + gap / 2)
             if (f.a < b2 && f.a >= mid) b2 = Math.min(b2, f.a - gap / 2)
           }
-          const rowMid = (row.y0 + row.y1) / 2
+          const rowMid = (row.y0 + rowTop) / 2
           const board = boards.find((f) => f.a < mid && f.b > mid && rowMid > f.y0 && rowMid < f.y1)
           const id = 'facade-cassette-' + side + (row.attic ? '-attic-' : '-body-') + row.index + '-' + i
           // kolor pojedynczego kasetonu (edycja w 3D) > deska > kolor elewacji

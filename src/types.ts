@@ -50,6 +50,8 @@ export type CassetteEdits = {
   bandPitch?: number
   /** początek attyki nad spodem ramy [m] — wspólny dla wszystkich ścian */
   atticStart?: number
+  /** kaseton rozciągnięty w pionie: id kasetonu (dolny pas) → liczba pasów korpusu powyżej włączonych w jeden kaseton */
+  spans?: Record<string, number>
   /** kolor / dekor pojedynczego kasetonu (klucz: id kasetonu w modelu komponentów; wartość: RAL hex albo 'wood-pine' | 'wood-winchester') */
   colors?: Record<string, string>
 }
