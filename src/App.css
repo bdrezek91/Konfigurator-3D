@@ -193,6 +193,10 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 .cassette-edit-bar .edit-brushes .swatch { width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.35); }
 .cassette-edit-bar .edit-brushes .swatch.on { border-color: #f0a43a; box-shadow: 0 0 0 2px #f0a43a; }
 .cassette-edit-bar .edit-brushes .swatch.reset { background: repeating-linear-gradient(45deg, #fff 0 3px, transparent 3px 6px) !important; }
+.cassette-edit-bar .edit-kind { flex: none; height: 28px; border-radius: 7px; border: 1px solid rgba(255, 255, 255, 0.25); background: #2a2e31; color: #fff; font: inherit; padding: 0 6px; }
+.cassette-edit-remove {
+  padding: 5px 10px; border-radius: 7px; border: 0; background: #c0392b; color: #fff; font: 600 12px/1.2 system-ui, sans-serif; cursor: pointer; white-space: nowrap;
+}
 .cassette-edit-label {
   padding: 4px 8px; border-radius: 6px; background: #1b1e20; color: #fff; font: 600 12px/1.2 system-ui, sans-serif; white-space: nowrap;
 }

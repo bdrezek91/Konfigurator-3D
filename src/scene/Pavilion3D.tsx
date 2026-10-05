@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState, type RefObject } from 'react'
 import { PerformanceMonitor } from '@react-three/drei'
 import { autoTier, QUALITY, QualityContext, TIERS, type QualityMode, type QualityTier } from '../render/quality'
 import { ACESFilmicToneMapping, PCFSoftShadowMap, PerspectiveCamera, SRGBColorSpace } from 'three'
-import type { PavilionConfig } from '../types'
+import type { DecorKind, PavilionConfig } from '../types'
 import { CameraRig, type CameraApi } from './camera/CameraRig'
 import { CassetteEditor } from './editor/CassetteEditor'
 import { cameraPose, type CameraPose } from './camera/presets'
@@ -115,9 +115,12 @@ type Props = {
   onEditCassettes?: (next: PavilionConfig) => void
   /** tryb malowania kasetonów: pędzel (kolor) albo null — przesuwanie */
   editBrush?: string | null
+  /** tryb dodawania pola okładziny (rodzaj) albo null */
+  editAdding?: DecorKind | null
+  onEditAdded?: () => void
 }
 
-export default function Pavilion3D({ config, view = 'perspective', lighting = 'day', resetNonce = 0, cameraApiRef, hq, quality = 'auto', onTier, onEditCassettes, editBrush }: Props) {
+export default function Pavilion3D({ config, view = 'perspective', lighting = 'day', resetNonce = 0, cameraApiRef, hq, quality = 'auto', onTier, onEditCassettes, editBrush, editAdding, onEditAdded }: Props) {
   // w trybie dopasowania kasetonów kamera zostaje (przejście na „Własna konfiguracja” nie zmienia kadru)
   const [heldProject, setHeldProject] = useState(config.project)
   const editing = !!onEditCassettes
@@ -155,7 +158,7 @@ export default function Pavilion3D({ config, view = 'perspective', lighting = 'd
           <SceneEnvironment config={config} lighting={preset} />
           <Ground config={config} />
           <ProjectPavilion config={config} />
-          {!hq && onEditCassettes && <CassetteEditor config={config} onChange={onEditCassettes} brush={editBrush} />}
+          {!hq && onEditCassettes && <CassetteEditor config={config} onChange={onEditCassettes} brush={editBrush} adding={editAdding} onAdded={onEditAdded} />}
           {hq ? (
             <>
               <FixedCamera pose={pose} />

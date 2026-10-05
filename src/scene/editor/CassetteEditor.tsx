@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Plane, Vector3, type Camera, type Group } from 'three'
 import { BOARD_KINDS, buildComponentModel, cassetteWallLayout, geometryOf, MIN_CASSETTE, wallNormal, wallPosition } from '../../components'
 import { m, PHYS } from '../../physical/spec'
-import { PANEL_THICKNESS_M, type CassetteEdits, type DecorPlacement, type PavilionConfig, type WallSide } from '../../types'
+import { PANEL_THICKNESS_M, type CassetteEdits, type DecorKind, type DecorPlacement, type PavilionConfig, type WallSide } from '../../types'
 import { CUSTOM_PROJECT, editableGeometry } from '../../ui/configState'
 import { envelope, openingSill } from '../geometry'
 
@@ -56,7 +56,14 @@ type Drag =
 /** Pędzel trybu malowania: kolor RAL (hex), 'wood-pine' / 'wood-winchester' albo 'default' (kolor elewacji). */
 export type Brush = string
 
-export function CassetteEditor({ config, onChange, brush }: { config: PavilionConfig; onChange: (next: PavilionConfig) => void; brush?: Brush | null }) {
+export function CassetteEditor({ config, onChange, brush, adding, onAdded }: {
+  config: PavilionConfig
+  onChange: (next: PavilionConfig) => void
+  brush?: Brush | null
+  /** tryb dodawania pola: rodzaj okładziny (deska, lamele) — klik w ścianę wstawia pole */
+  adding?: DecorKind | null
+  onAdded?: () => void
+}) {
   const geometry = geometryOf(config)
   const gapY = geometry.foundationGap ?? m(PHYS.base.groundGap)
   const get = useThree((s) => s.get)
@@ -66,6 +73,8 @@ export function CassetteEditor({ config, onChange, brush }: { config: PavilionCo
   }
   const [drag, setDrag] = useState<Drag | null>(null)
   const [hover, setHover] = useState<string | null>(null)
+  // zaznaczone pole (do usunięcia)
+  const [selected, setSelected] = useState<string | null>(null)
   // uchwyty tylko na ścianach zwróconych do kamery (ściana za bryłą nie łapie kursora i nie zaśmieca widoku)
   const groups = useRef<Partial<Record<WallSide, Group | null>>>({})
   const facing = (side: WallSide, cam: Camera) => {
@@ -132,6 +141,37 @@ export function CassetteEditor({ config, onChange, brush }: { config: PavilionCo
     if (brush === 'default') delete colors[id]
     else if (brush) colors[id] = brush
     onChange({ ...config, project: CUSTOM_PROJECT, geometry: editableGeometry(config), cassetteEdits: { ...config.cassetteEdits, colors } })
+  }
+
+  /** nowe pole w miejscu kliknięcia: szerokość do 1 m w wolnym miejscu między otworami / polami, wysokość jak pola konfiguratora */
+  const addField = (side: WallSide, x: number) => {
+    if (!adding) return
+    const span = spanOf(side)
+    const height = Math.min(2.4, envelope(config).outerFront - 0.18)
+    const y0 = 0.08
+    const y1 = y0 + height
+    const busy = [
+      ...geometry.openings.filter((o) => o.wall === side).map((o) => ({ a: o.center - o.width / 2, b: o.center + o.width / 2, y0: floorT + openingSill(o), y1: floorT + openingSill(o) + o.height })),
+      ...geometry.decor.filter((d) => d.wall === side && d.kind !== 'led-strip').map((d) => ({ a: d.center - d.width / 2, b: d.center + d.width / 2, y0: d.yCenter - d.height / 2, y1: d.yCenter + d.height / 2 })),
+    ].filter((o) => Math.min(o.y1, y1) - Math.max(o.y0, y0) > 0.01)
+    if (busy.some((o) => x > o.a && x < o.b)) return
+    const lo = Math.max(-span / 2 + 0.02, ...busy.filter((o) => o.b <= x).map((o) => o.b + 0.02))
+    const hi = Math.min(span / 2 - 0.02, ...busy.filter((o) => o.a >= x).map((o) => o.a - 0.02))
+    if (hi - lo < 0.3) return
+    const width = Math.min(1.0, hi - lo)
+    const center = clamp(snap(x), lo + width / 2, hi - width / 2)
+    const g = editableGeometry(config)
+    let n = 1
+    while (g.decor.some((d) => d.id === 'pole-' + n)) n++
+    const decor: DecorPlacement = { id: 'pole-' + n, wall: side, center, width, yCenter: (y0 + y1) / 2, height, kind: adding, sourceAccuracy: 'drawing-estimate' }
+    onChange({ ...config, project: CUSTOM_PROJECT, geometry: { ...g, decor: [...g.decor, decor] } })
+    setSelected(decor.id)
+    onAdded?.()
+  }
+  const removeField = (id: string) => {
+    const g = editableGeometry(config)
+    onChange({ ...config, project: CUSTOM_PROJECT, geometry: { ...g, decor: g.decor.filter((d) => d.id !== id) } })
+    setSelected(null)
   }
 
   /** punkt kursora na płaszczyźnie lica kasetonów ściany → lokalne (x wzdłuż ściany, y od spodu ramy) */
@@ -253,7 +293,32 @@ export function CassetteEditor({ config, onChange, brush }: { config: PavilionCo
   }
 
   const perWall: Array<[WallSide, React.ReactNode[]]> = []
-  if (brush) {
+  if (adding) {
+    // DODAWANIE POLA: klik w ścianę (obrót kamery działa — płaszczyzna nie zatrzymuje przeciągania)
+    for (const side of SIDES) {
+      const out: React.ReactNode[] = []
+      perWall.push([side, out])
+      const half = spanOf(side) / 2
+      const b = bar(side, -half, half, 0, Math.max(...walls.map((w) => w.L.maxHeight), 2.9))
+      out.push(
+        <mesh key={side + '-add'} position={b.position} rotation={[0, ROT_Y[side], 0]}
+          onPointerMove={(e) => { if (facing(side, e.camera)) setCursor('copy') }}
+          onPointerOut={() => setCursor('')}
+          onClick={(e) => {
+            if (e.delta > 4 || !facing(side, e.camera)) return
+            const p = toLocal(e as unknown as ThreeEvent<PointerEvent>, side)
+            if (!p) return
+            e.stopPropagation()
+            addField(side, p.x)
+          }}
+        >
+          <planeGeometry args={b.size} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>,
+      )
+    }
+  }
+  if (brush && !adding) {
     // MALOWANIE: klik w kaseton → kolor z pędzla (bez przeciągania; obrót kamery działa, bo plaszczyzna nie zatrzymuje zdarzeń)
     for (const { side, L } of walls) {
       const out: React.ReactNode[] = []
@@ -288,7 +353,7 @@ export function CassetteEditor({ config, onChange, brush }: { config: PavilionCo
       }
     }
   }
-  if (!brush) for (const side of SIDES) {
+  if (!brush && !adding) for (const side of SIDES) {
     const out: React.ReactNode[] = []
     perWall.push([side, out])
     const half = spanOf(side) / 2
@@ -347,6 +412,7 @@ export function CassetteEditor({ config, onChange, brush }: { config: PavilionCo
       const base = { type: 'field' as const, wall: side, id: d.id, a: a0, b: b0, y0, y1, lo: Math.min(lo, a0), hi: Math.max(hi, b0) }
       out.push(handle(side + '-field-' + d.id, side, a + 0.04, b - 0.04, y0 + 0.04, y1 - 0.04, (e) => {
         const p = toLocal(e, side)
+        setSelected(d.id)
         start(e, { ...base, edge: 'move', grab: (p?.x ?? a) - a })
       }, { fill: true }))
       out.push(handle(side + '-field-a-' + d.id, side, a - 0.03, a + 0.03, y0, y1, (e) => start(e, { ...base, edge: 'a', grab: 0 }), { line: 'v' }))
@@ -386,6 +452,15 @@ export function CassetteEditor({ config, onChange, brush }: { config: PavilionCo
   return (
     <group>
       {perWall.map(([side, items]) => <group key={side} ref={(g) => { groups.current[side] = g }}>{items}</group>)}
+      {!brush && !adding && selected && (() => {
+        const d = geometry.decor.find((x) => x.id === selected)
+        if (!d) return null
+        return (
+          <Html position={bar(d.wall, d.center, d.center, d.yCenter + d.height / 2 + 0.12, d.yCenter + d.height / 2 + 0.12).position} center>
+            <button type="button" className="cassette-edit-remove" onClick={() => removeField(d.id)} title="Usuń pole">Usuń pole</button>
+          </Html>
+        )
+      })()}
       {label && (
         <Html position={bar(label.side, label.x, label.x, label.y, label.y).position} center style={{ pointerEvents: 'none' }}>
           <div className="cassette-edit-label">{label.text}</div>
