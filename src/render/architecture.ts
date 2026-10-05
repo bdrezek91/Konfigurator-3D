@@ -2,7 +2,7 @@ import type { PavilionConfig } from '../types'
 
 /**
  * Cechy nowej architektury (E0–E5) włączone dla presetu — jedno miejsce zamiast osobnych bramek PoC.
- * Migracja kontrolowana: preset po presecie (E6-A: galeria-163, E6-B: galeria-207 — w pełni).
+ * Migracja: E6-A galeria-163, E6-B galeria-207, E6-C — wszystkie pawilony (zasada poniżej).
  * E5 (tryby jakości, LOD) działa globalnie i nie ma tu przełącznika.
  */
 export type ArchFeatures = {
@@ -22,24 +22,24 @@ export type ArchFeatures = {
   flashingMitre: boolean
 }
 
-const NONE: ArchFeatures = {
-  layerRenderer: false, sectionJoinery: false, cassetteTrays: false, boardTrays: false, foundationParts: false, lighting: false, flashingMitre: false,
-}
 const FULL: ArchFeatures = {
   layerRenderer: true, sectionJoinery: true, cassetteTrays: true, boardTrays: true, foundationParts: true, lighting: true, flashingMitre: true,
 }
 
-/** Presety na nowej architekturze (klucz: config.project). */
+/**
+ * Zasada (E6-C): nowa architektura dla wszystkich pawilonów — galerie, presety projektów i „Własna konfiguracja”.
+ * Wyjątek: światło E3 tylko tam, gdzie jest skalibrowane (163); na 207 oddalało render od zdjęcia (E6-B, rozdz. 3).
+ * Stolarka z przekrojów obejmuje otwory z biblioteki (`sectionJoinerySupports`), pozostałe zostają na OpeningFrame.
+ */
+const DEFAULT: ArchFeatures = { ...FULL, lighting: false }
+
+/** Wyjątki od zasady (klucz: config.project). */
 export const ARCH_PRESETS: Readonly<Record<string, ArchFeatures>> = {
   'GALERIA/163': FULL,
-  // kaseton-deska 207 leży na ścianach kasetonowych — to kasetony z dekorem drewna (tace z modelu komponentów), nie pasy
-  // na gołej płycie; `boardTrays` nie dotyczy (włączone dublowałoby deskę)
-  // E3 (światło) bez zmian: kalibracja E3 pod 163 rozjaśnia antracyt kasetonów 207 (porównanie e6-b-207) — do decyzji
-  'GALERIA/207': { ...FULL, boardTrays: false, lighting: false },
 }
 
 export function arch(config: Pick<PavilionConfig, 'project'>): ArchFeatures {
-  const f = ARCH_PRESETS[config.project] ?? NONE
+  const f = ARCH_PRESETS[config.project] ?? DEFAULT
   // `?e3=0` / `?e3=1` — diagnostyka: wyłącza / włącza światło E3 na presecie (porównanie w jednym buildzie, nie zmienia presetu)
   const e3 = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('e3') : null
   if (e3 === '0' || e3 === '1') return { ...f, lighting: e3 === '1' }

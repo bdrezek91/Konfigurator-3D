@@ -4,6 +4,7 @@ import { openingSill, wallTransform } from '../../scene/geometry'
 import { boardCassetteUvTransform } from '../../scene/materials/textures'
 import type { DecorPlacement, OpeningPlacement, PavilionConfig, ProjectGeometry, WallSide } from '../../types'
 import type { TraySource } from './tray'
+import { facadeKindForWall } from '../../scene/facade/facadeKind'
 
 /**
  * KASETON-DESKA (pasy dekoru na gołej płycie, zdjęcie 163): pola tacy = prostokąt okładziny minus otwory (pionowe pasy między
@@ -54,6 +55,8 @@ export function boardTraySources(config: PavilionConfig, geometry: ProjectGeomet
   for (const side of ['front', 'back', 'left', 'right'] as WallSide[]) {
     const t = wallTransform(side, config)
     const th = t.rotation[1]
+    // ściana z kasetonami poziomymi: deska to kasetony z dekorem drewna (tace z modelu komponentów) — tu bez pasów
+    if (facadeKindForWall(side, config, geometry) === 'cassette-horizontal') continue
     const openings = geometry.openings.filter((o) => o.wall === side)
     for (const d of geometry.decor.filter((x) => x.wall === side && BOARD_TRAY_KINDS.has(x.kind))) {
       const kind = d.kind === 'board-horizontal-winchester' ? 'winchesterBoards' : 'pineBoards'
@@ -87,6 +90,8 @@ export function boardTraySources(config: PavilionConfig, geometry: ProjectGeomet
  */
 export function foundationBlocks(components: ModelComponent[], geometry: ProjectGeometry) {
   const gap = geometry.foundationGap ?? m(PHYS.base.groundGap)
+  // jak dotychczasowy FoundationSupports: przy prześwicie < 15 mm podkładek nie widać (BOM bez zmian)
+  if (gap < 0.015) return []
   return components.filter((c) => c.id.startsWith('foundation-block-')).map((c) => ({
     id: c.id,
     center: [c.position[0], c.position[1], c.position[2]] as [number, number, number],

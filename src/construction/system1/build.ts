@@ -4,7 +4,8 @@ import { m, PHYS, RAL_7016_HEX, RAL_9010_HEX, RENDER, type Confidence } from '..
 import { ROOF_TRAPEZOIDS } from '../../scene/materials/profiles'
 import { PANEL_THICKNESS_M, type OpeningPlacement, type PavilionConfig, type WallSide } from '../../types'
 import { angle as angleSection, thickenPath as thicken } from '../../profiles/sections'
-import { buildOpeningJoinery, type WallPlane } from '../joinery/build'
+import { buildOpeningJoinery, sectionJoinerySupports, type WallPlane } from '../joinery/build'
+import { defaultHandle } from '../../scene/openings/openingDefaults'
 import { arch } from '../../render/architecture'
 import type { ConstructionModel, DerivedDimension, FinishVariant, Layer, MaterialKind, Part, Stage, Vec3 } from '../types'
 
@@ -270,10 +271,12 @@ export function buildSystem1(
     // obróbka ościeży: boki, nadproże i parapet otworu wyłożone blachą (rdzeń płyty w otworze niewidoczny; BOM: ościeża/nadproże/parapet)
     const rv = 0.0008
     // stolarka z przekrojów: sąsiednie ramy sprzężone (wspólny słupek) — między nimi bez blachy ościeża
+    // (sprzęgane tylko ramy z przekrojów — otwór na dotychczasowym renderze ma własną ramę i ościeże)
     const sj = arch(config).sectionJoinery
+    const e1 = new Set(openings.filter((x) => x.wall === wdef.side && sj && sectionJoinerySupports(x)).map((x) => x.id))
     const joinOf = (o: { a: number; b: number; id: string }) => ({
-      l: sj && ops.some((x) => x.id !== o.id && Math.abs(x.b - o.a) < JOIN_TOL),
-      r: sj && ops.some((x) => x.id !== o.id && Math.abs(x.a - o.b) < JOIN_TOL),
+      l: e1.has(o.id) && ops.some((x) => x.id !== o.id && e1.has(x.id) && Math.abs(x.b - o.a) < JOIN_TOL),
+      r: e1.has(o.id) && ops.some((x) => x.id !== o.id && e1.has(x.id) && Math.abs(x.a - o.b) < JOIN_TOL),
     })
     for (const o of ops) {
       const j = joinOf(o)
@@ -291,22 +294,23 @@ export function buildSystem1(
         })
       }
     }
-    // stolarka w otworach: presety z `sectionJoinery` — z przekrojów generic-aluminium-52; pozostałe — uproszczona rama + szyba
-    if (sj) {
-      const plane: WallPlane = { origin: wdef.origin, u: wdef.u, up: steelUp, out: mul(wdef.inward, -1), stage: wdef.stage, explode }
-      for (const op of openings.filter((x) => x.wall === wdef.side)) {
-        const o = toWallOpening(op, wdef)
-        const j = joinOf(o)
-        ctx.parts.push(...buildOpeningJoinery({
-          id: op.id, kind: op.kind.startsWith('door-') ? 'door' : 'fixed', a: o.a, b: o.b, y0: o.y0, y1: o.y1,
-          // rama przylega do blachy ościeża (0,8 mm); przy sprzężeniu — do sąsiedniej ramy; próg drzwi na posadzce
-          inset: { l: j.l ? 0 : rv, r: j.r ? 0 : rv, t: rv, b: o.y0 > 0.01 ? rv : 0 },
-          join: j,
-          color: op.frameColor ?? RAL_7016_HEX, hinge: op.hinge === 'right' ? 'right' : 'left', handle: op.handle,
-        }, plane))
+    // stolarka w otworach: `sectionJoinery` — z przekrojów generic-aluminium-52 (otwory, które biblioteka obsługuje);
+    // pozostałe — uproszczona rama + szyba (warstwa ścian; w głównym widoku rysuje je OpeningFrame)
+    const plane: WallPlane = { origin: wdef.origin, u: wdef.u, up: steelUp, out: mul(wdef.inward, -1), stage: wdef.stage, explode }
+    for (const op of openings.filter((x) => x.wall === wdef.side)) {
+      const o = toWallOpening(op, wdef)
+      if (!e1.has(op.id)) {
+        addJoinery(ctx, wdef, o, tw, explode)
+        continue
       }
-    } else {
-      for (const o of ops) addJoinery(ctx, wdef, o, tw, explode)
+      const j = joinOf(o)
+      ctx.parts.push(...buildOpeningJoinery({
+        id: op.id, kind: op.kind.startsWith('door-') ? 'door' : 'fixed', a: o.a, b: o.b, y0: o.y0, y1: o.y1,
+        // rama przylega do blachy ościeża (0,8 mm); przy sprzężeniu — do sąsiedniej ramy; próg drzwi na posadzce
+        inset: { l: j.l ? 0 : rv, r: j.r ? 0 : rv, t: rv, b: o.y0 > 0.01 ? rv : 0 },
+        join: j,
+        color: op.frameColor ?? RAL_7016_HEX, hinge: op.hinge === 'right' ? 'right' : 'left', handle: defaultHandle(op),
+      }, plane))
     }
   }
 

@@ -101,6 +101,8 @@ export const GENERIC_ALU_52 = {
   hardware: {
     hinge: { width: 18, height: 70, depth: 16, positions: [0.2, 1.0, 1.8] },
     handle: { height: 1050, roseWidth: 26, roseHeight: 200, roseDepth: 8, lever: 120, leverSection: 16, neck: 30, offsetFromEdge: 0.5 },
+    /** pochwyt drzwi przeszklonych (zdjęcia 03, 13): pręt 26 mm na dwóch wspornikach; długość = min(1200, 48 % wysokości) — jak dotychczasowy render */
+    bar: { section: 26, standoff: 16, standoffDepth: 50, maxLength: 1200, heightRatio: 0.48, standoffInset: 80, centerAbove: 20 },
   },
 
   /** osadzenie: lico ościeżnicy względem lica zewnętrznego płyty ściennej */

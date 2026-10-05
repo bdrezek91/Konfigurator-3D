@@ -4,7 +4,7 @@ import {
   threshold, toMeters, transom, type Section,
 } from '../../profiles/sections'
 import { insetRect, ProfileAssembler, type Profile, type Rect, type Side, type WallPlane } from '../assembly'
-import type { OpeningHandle } from '../../types'
+import type { OpeningHandle, OpeningPlacement } from '../../types'
 import type { Part } from '../types'
 
 /**
@@ -34,6 +34,15 @@ export type OpeningJoinerySpec = {
 }
 
 const mm = (x: number) => x / 1000
+
+/**
+ * Otwory, które biblioteka przekrojów (generic-aluminium-52) umie złożyć: witryna FIX i drzwi przeszklone jednoskrzydłowe,
+ * profil ALU standard, bez rolety. Pozostałe (drzwi dwuskrzydłowe / pełne, okna otwierane, PVC, ALU slim, rolety) — dotychczasowy
+ * render (OpeningFrame), aż biblioteka dostanie ich przekroje.
+ */
+export function sectionJoinerySupports(o: OpeningPlacement): boolean {
+  return (o.kind === 'fixed-glass' || o.kind === 'door-glazed') && !o.roller && (o.profile ?? 'alu-standard') === 'alu-standard'
+}
 
 class Builder extends ProfileAssembler {
   private readonly spec: OpeningJoinerySpec
@@ -161,6 +170,22 @@ export function buildOpeningJoinery(spec: OpeningJoinerySpec, wall: WallPlane): 
     bld.box('hinge-' + hy, 'Zawias', 'hardware', '#a3a9ac',
       { s0: sGap - mm(hw.hinge.width) / 2, s1: sGap + mm(hw.hinge.width) / 2, y0: yc - mm(hw.hinge.height) / 2, y1: yc + mm(hw.hinge.height) / 2 },
       frameFront, frameFront + mm(hw.hinge.depth))
+  }
+  if (spec.handle === 'bar') {
+    // pochwyt: pręt pionowy na dwóch wspornikach, na ramie skrzydła po stronie zamka
+    const B = hw.bar
+    const sc = hingeLeft ? sashRect.s1 - mm(G.sash.face) / 2 : sashRect.s0 + mm(G.sash.face) / 2
+    const len = Math.min(mm(B.maxLength), (spec.y1 - spec.y0) * B.heightRatio)
+    const yc = (spec.y0 + spec.y1) / 2 + mm(B.centerAbove)
+    const steel = '#aeb3b5'
+    const r = mm(B.section) / 2
+    const d0 = sashFront + mm(B.standoffDepth) - r
+    bld.box('handle-bar', 'Pochwyt', 'hardware', steel, { s0: sc - r, s1: sc + r, y0: yc - len / 2, y1: yc + len / 2 }, d0, d0 + 2 * r)
+    const so = mm(B.standoff) / 2
+    for (const k of [-1, 1]) {
+      const ys = yc + k * (len / 2 - mm(B.standoffInset))
+      bld.box('handle-standoff-' + (k < 0 ? 'b' : 't'), 'Pochwyt', 'hardware', steel, { s0: sc - so, s1: sc + so, y0: ys - so, y1: ys + so }, sashFront, d0)
+    }
   }
   if ((spec.handle ?? 'lever') === 'lever') {
     const H = hw.handle

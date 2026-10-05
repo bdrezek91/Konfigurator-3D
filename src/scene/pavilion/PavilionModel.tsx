@@ -16,6 +16,7 @@ import { frameDims } from '../../construction/frame'
 import { System1Body } from '../../construction/render'
 import { m, PHYS } from '../../physical/spec'
 import { Shape } from 'three'
+import { sectionJoinerySupports } from '../../construction/joinery/build'
 
 export type Props = { config: PavilionConfig; view?: PavilionView; hq?: boolean }
 
@@ -83,8 +84,9 @@ export function Wall({
         floorOffset={floorT}
       />
 
-      {/* presety z `sectionJoinery`: stolarka z przekrojów jest częścią modelu Systemu 1 (warstwa JOINERY w System1Body) */}
-      {!arch(config).sectionJoinery && openings.map((opening) => {
+      {/* `sectionJoinery` (System 1): stolarka z przekrojów jest częścią modelu Systemu 1 (warstwa JOINERY w System1Body);
+          tu tylko otwory spoza biblioteki przekrojów albo konstrukcje poza Systemem 1 */}
+      {openings.filter((o) => !(system1 && arch(config).sectionJoinery && sectionJoinerySupports(o))).map((opening) => {
         // sąsiadujące elementy stolarki (przylegające ramy) — wspólny słupek, jak na zdjęciach 11/207
         const adj = (dir: -1 | 1) => openings.some((o) => o !== opening && Math.abs((o.center - dir * o.width / 2) - (opening.center + dir * opening.width / 2)) < 0.012)
         return (

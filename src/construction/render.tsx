@@ -30,13 +30,12 @@ function PartMesh({ part, material }: { part: Part; material: Material }) {
 export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; opacity?: number }) {
   const finish = useMemo(() => finishForConfig(config), [config])
   const model = useMemo(() => buildSystem1(config, finish, { decor: false }), [config, finish])
-  // presety z `sectionJoinery` (render/architecture.ts): stolarka z przekrojów należy do modelu i renderuje się z nim (warstwa JOINERY);
-  // pozostałe presety: uproszczona rama modelu pomijana — stolarkę rysuje OpeningFrame
+  // stolarka z przekrojów (warstwa JOINERY) należy do modelu i renderuje się z nim; uproszczona rama modelu (warstwa ścian,
+  // otwory spoza biblioteki przekrojów albo bez `sectionJoinery`) pomijana — te otwory rysuje OpeningFrame
   const features = arch(config)
-  const sectionJoinery = features.sectionJoinery
   const parts = useMemo(
-    () => model.parts.filter((p) => p.layer !== 'fasteners' && (sectionJoinery || (!p.id.startsWith('joinery-') && !p.id.startsWith('glass-')))),
-    [model, sectionJoinery],
+    () => model.parts.filter((p) => p.layer !== 'fasteners' && (p.layer === 'joinery' || (!p.id.startsWith('joinery-') && !p.id.startsWith('glass-')))),
+    [model],
   )
   const materials = useMemo(() => createSystem1Materials(config, opacity),
     [config.panelManufacturer, config.wallProfile, config.exteriorColor, config.flashingColor, config.floorFinish, opacity]) // eslint-disable-line react-hooks/exhaustive-deps
