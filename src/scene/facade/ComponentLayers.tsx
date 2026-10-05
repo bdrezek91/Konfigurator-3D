@@ -7,7 +7,8 @@ import type { Part } from '../../construction/types'
 import { arch } from '../../render/architecture'
 import { LayerRenderer } from '../../render/LayerRenderer'
 import type { PartLook } from '../../render/layers'
-import { cassetteSteelMaterial, concreteBlockMaterial, cornerCavityMaterial, trayWoodMaterial } from '../../render/materials'
+import { cassetteSteelMaterial, concreteBlockMaterial, cornerCavityMaterial, lamellaMaterial, trayWoodMaterial } from '../../render/materials'
+import { lamellaParts } from '../../construction/facade/lamellas'
 import { PANEL_THICKNESS_M, type PavilionConfig, type ProjectGeometry } from '../../types'
 import { envelope } from '../geometry'
 import { useLighting } from '../environment/lighting'
@@ -31,6 +32,7 @@ export function ComponentLayers({ config, geometry, components }: { config: Pavi
           explode: [0, 0, 0], confidence: 'LOW' }, c.center, c.size))
       }
     }
+    if (features.lamellaParts) out.push(...lamellaParts(config, geometry, envelope(config).floorT, PANEL_THICKNESS_M[config.wallPanel], () => false))
     if (features.foundationParts) {
       for (const b of foundationBlocks(components, geometry)) {
         out.push(boxPart({ id: b.id, name: 'Bloczek betonowy posadowienia', layer: 'foundation', stage: 1, material: 'concrete', color: '#888983',
@@ -38,10 +40,11 @@ export function ComponentLayers({ config, geometry, components }: { config: Pavi
       }
     }
     return out
-  }, [components, config, geometry, features.cassetteTrays, features.boardTrays, features.foundationParts])
+  }, [components, config, geometry, features.cassetteTrays, features.boardTrays, features.lamellaParts, features.foundationParts])
 
   const woodTint = useLighting().woodTint
   const lookOf = useCallback((p: Part): PartLook => {
+    if (p.id.startsWith('lamella-')) return { material: lamellaMaterial(p.color, p.id.startsWith('lamella-base-')), castShadow: true }
     if (p.material === 'concrete') return { material: concreteBlockMaterial(), castShadow: true }
     if (p.material === 'flashing') return { material: cornerCavityMaterial(p.color), castShadow: true }
     const shaded = !!p.geometry.shade

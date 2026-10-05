@@ -17,6 +17,7 @@ import { System1Body } from '../../construction/render'
 import { m, PHYS } from '../../physical/spec'
 import { Shape } from 'three'
 import { sectionJoinerySupports } from '../../construction/joinery/build'
+import { isVerticalLamella } from '../../construction/facade/lamellas'
 
 export type Props = { config: PavilionConfig; view?: PavilionView; hq?: boolean }
 
@@ -38,7 +39,9 @@ export function Wall({
   // deska na ścianie z kasetonami poziomymi = kasetony z dekorem drewna (rysowane z elewacją, FacadeCladdingFromModel)
   // kaseton-deska w nowej ścieżce (tace w rendererze warstw, ComponentLayers) — tu bez pasów
   const boardTrays = arch(config).boardTrays
-  const decor = geometry.decor.filter((x) => x.wall === side && !(facadeKind !== 'none' && legacyFacadeKinds.has(x.kind)) && !(facadeKind === 'cassette-horizontal' && BOARD_KINDS.has(x.kind)) && !(boardTrays && BOARD_KINDS.has(x.kind)))
+  // lamele pionowe w rendererze warstw (ComponentLayers) — tu tylko ukośne, „wąż”, ornament
+  const lamellaParts = arch(config).lamellaParts
+  const decor = geometry.decor.filter((x) => x.wall === side && !(facadeKind !== 'none' && legacyFacadeKinds.has(x.kind)) && !(facadeKind === 'cassette-horizontal' && BOARD_KINDS.has(x.kind)) && !(boardTrays && BOARD_KINDS.has(x.kind)) && !(lamellaParts && isVerticalLamella(x.kind)))
   const lights = geometry.exteriorLights?.filter((x) => x.wall === side) ?? []
   const lampK = useLighting().lampIntensity
   const { floorT } = envelope(config)

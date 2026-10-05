@@ -16,6 +16,8 @@ export type ArchFeatures = {
   cassetteTrays: boolean
   /** E2: kaseton-deska (pasy dekoru na gołej płycie) jako tace w rendererze warstw (DecorLocal wyłączony) */
   boardTrays: boolean
+  /** P3: lamele pionowe w rendererze warstw (DecorLocal tylko dla lameli ukośnych, „węża”, ornamentu) */
+  lamellaParts: boolean
   /** podkładki fundamentowe z modelu komponentów w rendererze warstw (FoundationSupports wyłączony) */
   foundationParts: boolean
   /**
@@ -28,7 +30,7 @@ export type ArchFeatures = {
 }
 
 const FULL: ArchFeatures = {
-  layerRenderer: true, sectionJoinery: true, cassetteTrays: true, boardTrays: true, foundationParts: true, lighting: 'sun', flashingMitre: true,
+  layerRenderer: true, sectionJoinery: true, cassetteTrays: true, boardTrays: true, lamellaParts: true, foundationParts: true, lighting: 'sun', flashingMitre: true,
 }
 
 /**

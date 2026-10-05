@@ -12,6 +12,7 @@ import { arch } from '../../render/architecture'
 import { ComponentLayers } from './ComponentLayers'
 import { boardTraySpans } from '../../construction/facade/boards'
 import { CAVITY_SHADE, cornerCavitySheets } from '../../construction/facade/corners'
+import { lamellaSlats } from '../../construction/facade/lamellas'
 
 /** Przyciemnienie koloru (mnożnik jasności) — parametr renderingu, nie fizyczny kolor. */
 function shade(hex: string, k: number) {
@@ -275,7 +276,6 @@ export function DecorLocal({
         segment.kind === 'lamella-winchester' || diagonal ? woodTexture('winchester') : undefined
       // nadruk winchester w skali rzeczywistej (włókna wzdłuż lameli) — tekstura drewna z generatora, nie płaski gradient
       const slatWood = (len: number) => (segment.kind === 'lamella-winchester' || diagonal ? woodMaps('winchester', slatWidth, len) : null)
-      let slatIndex = 0
 
       if (!segment.shape || segment.shape === 'rect') {
         out.push(
@@ -352,49 +352,23 @@ export function DecorLocal({
         return
       }
 
-      const slatCount = Math.floor((segment.width - slatWidth / 2) / step) + 1
-      for (let i = 0; i < slatCount; i++) {
-        const x = x0 + slatWidth / 2 + i * step
-        const t = Math.max(0, Math.min(1, (x - x0) / Math.max(segment.width, 0.001)))
-        const fraction =
-          segment.shape === 'wedge-left' ? Math.max(0.04, 1 - t) :
-          segment.shape === 'wedge-right' ? Math.max(0.04, t) : 1
-        const localH = effectiveHeight * fraction
-        // lamela docinana wokół otworów (pionowe odcinki poza otworem), a nie pomijana w całości
-        const spans: Array<[number, number]> = []
-        if (diagonal) {
-          if (!overlapsOpening(x, y0 + localH / 2, slatWidth, localH, openings, floorOffset)) spans.push([y0, y0 + localH])
-        } else {
-          const cuts = openings
-            .filter((o) => Math.abs(x - o.center) < (slatWidth + o.width) / 2)
-            .map((o) => [floorOffset + openingSill(o), floorOffset + openingSill(o) + o.height] as [number, number])
-            .sort((p, q) => p[0] - q[0])
-          let cursor = y0
-          for (const [c0, c1] of cuts) {
-            if (c0 - cursor > 0.02) spans.push([cursor, Math.min(c0, y0 + localH)])
-            cursor = Math.max(cursor, c1)
-          }
-          if (y0 + localH - cursor > 0.02) spans.push([cursor, y0 + localH])
-        }
+      // podział na lamele — wspólna funkcja z rendererem warstw (construction/facade/lamellas.ts)
+      for (const sl of lamellaSlats(segment, openings, floorOffset)) {
         const slatColor =
           segment.kind === 'lamella-black' || segment.kind === 'lamella-graphite'
             ? color
-            : woodPalette[slatIndex % woodPalette.length]
-        for (const [sa, sb] of spans) {
-          out.push(
-            <RoundedPiece
-              key={segment.id + '-l-' + x.toFixed(3) + '-' + sa.toFixed(2)}
-              size={[slatWidth, sb - sa, slatDepth]}
-              position={[x, (sa + sb) / 2, z + slatDepth / 2]}
-              rotation={[0, 0, diagonal ? -0.35 : 0]}
-              color={gallery03Lamella ? '#826f66' : (slatMap ? '#ffffff' : slatColor)}
-              {...(gallery03Lamella ? {} : (slatWood(sb - sa) ?? { map: slatMap }))}
-              roughness={0.68}
-              radius={0.005}
-            />,
-          )
-        }
-        if (spans.length) slatIndex++
+            : woodPalette[sl.index % woodPalette.length]
+        out.push(
+          <RoundedPiece
+            key={segment.id + '-l-' + sl.x.toFixed(3) + '-' + sl.y0.toFixed(2)}
+            size={[slatWidth, sl.y1 - sl.y0, slatDepth]}
+            position={[sl.x, (sl.y0 + sl.y1) / 2, z + slatDepth / 2]}
+            color={gallery03Lamella ? '#826f66' : (slatMap ? '#ffffff' : slatColor)}
+            {...(gallery03Lamella ? {} : (slatWood(sl.y1 - sl.y0) ?? { map: slatMap }))}
+            roughness={0.68}
+            radius={0.005}
+          />,
+        )
       }
       return
     }

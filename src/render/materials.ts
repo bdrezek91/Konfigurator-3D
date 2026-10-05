@@ -119,6 +119,20 @@ export function trayWoodMaterial(kind: WoodKind, shaded: boolean, tint = '#fffff
 export const cornerCavityMaterial = (exterior: string) => shared('cavity|' + exterior, () =>
   new MeshStandardMaterial({ color: new Color(exterior).multiplyScalar(CAVITY_SHADE), metalness: 0, roughness: 0.9 }))
 
+/**
+ * Lamela (P3) — jak dotychczasowy RoundedPiece lameli (metal 0,10, roughness 0,68) i podkład (BaseBoard: metal 0,08,
+ * roughness 0,62). 'wood-lamella-winchester' / 'wood-lamella-groove' — nadruk winchester (rysunek w UV geometrii).
+ */
+export function lamellaMaterial(color: string, groove: boolean) {
+  return shared('lamella|' + color + '|' + groove, () => {
+    if (color === 'wood-lamella-winchester' || color === 'wood-lamella-groove') {
+      const mat = new MeshStandardMaterial({ color: color === 'wood-lamella-groove' ? '#595959' : '#ffffff', metalness: groove ? 0.08 : 0.1, roughness: groove ? 0.62 : 0.68, ...woodSharedMaps('winchester') })
+      return mat
+    }
+    return new MeshStandardMaterial({ color, metalness: groove ? 0.08 : 0.1, roughness: groove ? 0.62 : 0.68 })
+  })
+}
+
 // ---- posadowienie
 /** Bloczek betonowy — jak dotychczasowy RoundedPiece podkładki (#888983, roughness 0,92, metal 0,10). */
 export const concreteBlockMaterial = () => shared('concrete-block', () => new MeshStandardMaterial({ color: '#888983', roughness: 0.92, metalness: 0.1 }))
