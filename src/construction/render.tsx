@@ -7,9 +7,15 @@ import type { PavilionConfig } from '../types'
 import { buildRunGeometry, finishForConfig } from './geometry'
 import { buildSystem1 } from './system1/build'
 import type { Part } from './types'
-import { isLayerPoc } from '../render/poc'
+import { isE3Poc, isLayerPoc } from '../render/poc'
+import { useEnvironment } from '@react-three/drei'
+import { useLighting } from '../scene/environment/lighting'
 import { LayerRenderer } from '../render/LayerRenderer'
 import type { PartLook } from '../render/layers'
+
+/** E3: natężenie mapy otoczenia wnętrza (ASSUMPTION) i szkło [odbicie (specularIntensity), LT] — patrz System1Body. */
+const E3_INTERIOR_ENV = 0.2
+const E3_GLASS: [number, number] = [2.5, 0.78]
 
 function PartMesh({ part, material }: { part: Part; material: Material }) {
   const geo = useMemo(() => buildRunGeometry(part.geometry), [part.geometry])
@@ -73,6 +79,24 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
   }, [config.panelManufacturer, config.wallProfile, config.exteriorColor, config.flashingColor, config.floorFinish, transparent, opacity])
   useEffect(() => () => Object.values(materials).forEach((mat) => mat.dispose()), [materials])
 
+  // E3 (PoC galeria-163): wnętrze z jawną mapą otoczenia o niskim natężeniu — przy scene.environment three ignoruje
+  // envMapIntensity materiału, a IBL nie zna zasłonięcia (wnętrze oświetlone jak plener → szyba „mleczna”).
+  // Natężenie ≈ udział światła dziennego przy dużym przeszkleniu (ASSUMPTION, kalibracja: łata szyby na zdjęciu 163).
+  const e3 = isE3Poc(config)
+  const lighting = useLighting()
+  const env = useEnvironment({ files: lighting.hdri })
+  useEffect(() => {
+    if (!e3) return
+    const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    const k = Number(q?.get('int') ?? E3_INTERIOR_ENV)
+    for (const mat of [materials.inner, materials.floorTop]) {
+      mat.envMap = env
+      mat.envMapRotation.set(0, lighting.rotationY, 0)
+      mat.envMapIntensity = k
+      mat.needsUpdate = true
+    }
+  }, [e3, env, lighting.rotationY, materials])
+
   // stolarka (PoC): parametry 1:1 z dotychczasowego OpeningFrame (rama, uszczelka, okucia, szkło) — bez strojenia materiałów
   const joineryMats = useMemo(() => {
     const cache = new Map<string, Material>()
@@ -87,12 +111,24 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
       gasket: () => get('gasket', () => new MeshStandardMaterial({ color: '#0c0d0e', metalness: 0, roughness: 0.8 })),
       hardware: (color: string) => get('hw' + color, () => new MeshStandardMaterial({ color, metalness: color === '#2a2d2f' ? 0.6 : 0.85, roughness: color === '#2a2d2f' ? 0.35 : 0.28 })),
       // szyba zespolona 4/16/4 low-E — jak GlassPane (OpeningFrame.tsx); pakiet ma tu rzeczywistą grubość 24 mm
-      glass: () => get('glass', () => new MeshPhysicalMaterial({
-        color: '#ffffff', metalness: 0, roughness: 0, transmission: 1, thickness: 0.024, ior: 1.52, specularIntensity: 3.4,
-        attenuationColor: '#9fb0a8', attenuationDistance: 0.024,
-      })),
+      glass: () => get('glass', () => {
+        if (!e3) {
+          return new MeshPhysicalMaterial({
+            color: '#ffffff', metalness: 0, roughness: 0, transmission: 1, thickness: 0.024, ior: 1.52, specularIntensity: 3.4,
+            attenuationColor: '#9fb0a8', attenuationDistance: 0.024,
+          })
+        }
+        // E3: wnętrze ma już realistyczną jasność — szkło bliżej fizyki: LT pakietu low-E ≈ 0,78, odbicie ≈ 2 × F0 jednej tafli
+        // (?gls=odbicie,LT — kalibracja)
+        const q = new URLSearchParams(window.location.search).get('gls')?.split(',').map(Number)
+        const [spec, lt] = q && q.length === 2 && q.every(Number.isFinite) ? q : E3_GLASS
+        return new MeshPhysicalMaterial({
+          color: '#ffffff', metalness: 0, roughness: 0, transmission: 1, thickness: 0.024, ior: 1.52, specularIntensity: spec,
+          attenuationColor: new Color().setRGB(lt * 0.97, lt, lt * 0.98), attenuationDistance: 0.024,
+        })
+      }),
     }
-  }, [])
+  }, [e3])
   useEffect(() => () => joineryMats.cache.forEach((mat) => mat.dispose()), [joineryMats])
 
   const materialOf = useCallback((p: Part): Material => {

@@ -1,7 +1,7 @@
 import { Environment } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { useEffect, useMemo } from 'react'
-import { Object3D } from 'three'
+import { ACESFilmicToneMapping, AgXToneMapping, NeutralToneMapping, Object3D } from 'three'
 import type { PavilionConfig } from '../../types'
 import type { LightingPreset } from './lighting'
 
@@ -24,8 +24,10 @@ export function SceneEnvironment({ config, lighting }: { config: PavilionConfig;
   }, [])
 
   useEffect(() => {
-    get().gl.toneMappingExposure = lighting.exposure
-  }, [get, lighting.exposure])
+    const gl = get().gl
+    gl.toneMappingExposure = lighting.exposure
+    gl.toneMapping = lighting.toneMapping === 'agx' ? AgXToneMapping : lighting.toneMapping === 'neutral' ? NeutralToneMapping : ACESFilmicToneMapping
+  }, [get, lighting.exposure, lighting.toneMapping])
 
   return (
     <>

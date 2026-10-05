@@ -1,16 +1,20 @@
 import { Canvas, useThree } from '@react-three/fiber'
-import { EffectComposer, N8AO, SMAA } from '@react-three/postprocessing'
+import { EffectComposer, N8AO, SMAA, ToneMapping } from '@react-three/postprocessing'
+import { ToneMappingMode } from 'postprocessing'
 import { Suspense, useEffect, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFSoftShadowMap, PerspectiveCamera, SRGBColorSpace } from 'three'
 import type { PavilionConfig } from '../types'
 import { CameraRig, type CameraApi } from './camera/CameraRig'
 import { cameraPose, type CameraPose } from './camera/presets'
 import type { PavilionView } from './camera/views'
-import { LIGHTING, LightingContext, type LightingMode } from './environment/lighting'
+import { LightingContext, resolveLighting, type LightingMode } from './environment/lighting'
+import { isE3Poc } from '../render/poc'
 import { SceneEnvironment } from './environment/SceneEnvironment'
 import { Ground } from './ground/Ground'
 import { HQPathTracer, type HQState } from './hq-render/HQPathTracer'
 import { ProjectPavilion } from './pavilion/PavilionModel'
+
+const TONE_MODE = { aces: ToneMappingMode.ACES_FILMIC, agx: ToneMappingMode.AGX, neutral: ToneMappingMode.NEUTRAL } as const
 
 export type { PavilionView } from './camera/views'
 export type { CameraApi } from './camera/CameraRig'
@@ -103,7 +107,7 @@ type Props = {
 }
 
 export default function Pavilion3D({ config, view = 'perspective', lighting = 'day', resetNonce = 0, cameraApiRef, hq }: Props) {
-  const preset = LIGHTING[lighting]
+  const preset = resolveLighting(lighting, isE3Poc(config))
   const pose = hq?.pose ?? cameraPose(config, view)
 
   return (
@@ -135,6 +139,7 @@ export default function Pavilion3D({ config, view = 'perspective', lighting = 'd
             <>
               <RealExportBridge />
               <EffectComposer multisampling={4}>
+                {/* mapowanie tonów musi być efektem: EffectComposer wymusza NoToneMapping na rendererze */}
                 <N8AO
                   aoRadius={0.3}
                   distanceFalloff={0.6}
@@ -144,6 +149,8 @@ export default function Pavilion3D({ config, view = 'perspective', lighting = 'd
                   screenSpaceRadius={false}
                   color="#000000"
                 />
+                {/* ToneMapping po AO, przed SMAA (antyaliasing na obrazie LDR); bez presetu.toneMapping — bez efektu, jak dotąd */}
+                {preset.toneMapping ? <ToneMapping mode={TONE_MODE[preset.toneMapping]} /> : <></>}
                 <SMAA />
               </EffectComposer>
             </>
