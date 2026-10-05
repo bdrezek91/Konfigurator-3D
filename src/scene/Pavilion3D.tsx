@@ -8,6 +8,7 @@ import { ACESFilmicToneMapping, PCFSoftShadowMap, PerspectiveCamera, SRGBColorSp
 import type { DecorKind, PavilionConfig } from '../types'
 import { CameraRig, type CameraApi } from './camera/CameraRig'
 import { CassetteEditor } from './editor/CassetteEditor'
+import { PerfProbe, type PerfStats } from './PerfProbe'
 import { cameraPose, type CameraPose } from './camera/presets'
 import type { PavilionView } from './camera/views'
 import { LightingContext, resolveLighting, type LightingMode } from './environment/lighting'
@@ -140,7 +141,25 @@ export default function Pavilion3D({ config, view = 'perspective', lighting = 'd
     ? { ...base, hdri: base.hdri.replace('_2k.hdr', '_1k.hdr') } : base, [base, tier])
   useEffect(() => { onTier?.(tier) }, [tier, onTier])
 
+  // P14: ?perf=1 — nakładka pomiaru wydajności (FPS, czas klatki, draw calls) do testów na telefonie / laptopie
+  const [perf, setPerf] = useState<PerfStats | null>(null)
+  const perfOn = !hq && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('perf') === '1'
+  const copyPerf = () => {
+    const report = { ...perf, tier, project: config.project, ua: navigator.userAgent, cores: navigator.hardwareConcurrency, memoryGB: (navigator as Navigator & { deviceMemory?: number }).deviceMemory, screen: window.screen.width + '×' + window.screen.height, at: new Date().toISOString() }
+    void navigator.clipboard?.writeText(JSON.stringify(report)).catch(() => window.prompt('Wynik pomiaru:', JSON.stringify(report)))
+  }
+
   return (
+    <>
+    {perfOn && perf && (
+      <div className="perf-overlay">
+        <b>{perf.fps} FPS</b> · klatka {perf.frameP50} ms (p95 {perf.frameP95})<br />
+        {perf.calls} draw calls · {(perf.triangles / 1000).toFixed(1)} tys. trójkątów<br />
+        jakość: {tier} · DPR {perf.dpr} · tekstury {perf.textures}<br />
+        <small>{perf.gpu}</small><br />
+        <button type="button" onClick={copyPerf}>Kopiuj wynik</button>
+      </div>
+    )}
     <Canvas
       shadows
       frameloop={hq ? 'never' : 'always'}
@@ -173,6 +192,7 @@ export default function Pavilion3D({ config, view = 'perspective', lighting = 'd
           ) : (
             <>
               <RealExportBridge />
+              {perfOn && <PerfProbe onStats={setPerf} />}
               <EffectComposer multisampling={q.msaa} key={'fx-' + tier}>
                 {/* mapowanie tonów musi być efektem: EffectComposer wymusza NoToneMapping na rendererze */}
                 {q.ao !== 'off' ? (
@@ -197,5 +217,6 @@ export default function Pavilion3D({ config, view = 'perspective', lighting = 'd
       </LightingContext.Provider>
       </QualityContext.Provider>
     </Canvas>
+    </>
   )
 }
