@@ -10,6 +10,8 @@ export const LAYER_POC_PROJECTS: ReadonlySet<string> = new Set(['GALERIA/163'])
 export const TRAY_POC_PROJECTS: ReadonlySet<string> = new Set(['GALERIA/207'])
 /** E3 (materiały + światło: HDRI z otoczeniem, słońce zgrane z mapą, tone mapping): galeria-163 (wzorzec zdjęcia 163). */
 export const E3_POC_PROJECTS: ReadonlySet<string> = new Set(['GALERIA/163'])
+/** E4 (obróbki: korona i cokół z uciosem przez narożnik): galeria-163 (typ A — goła płyta, obróbki widoczne). */
+export const E4_POC_PROJECTS: ReadonlySet<string> = new Set(['GALERIA/163'])
 
 export function isLayerPoc(config: Pick<PavilionConfig, 'project'>) {
   return LAYER_POC_PROJECTS.has(config.project)
@@ -23,4 +25,8 @@ export function isTrayPoc(config: Pick<PavilionConfig, 'project'>) {
 export function isE3Poc(config: Pick<PavilionConfig, 'project'>) {
   const off = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('e3') === '0'
   return !off && E3_POC_PROJECTS.has(config.project)
+}
+
+export function isE4Poc(config: Pick<PavilionConfig, 'project'>) {
+  return E4_POC_PROJECTS.has(config.project)
 }

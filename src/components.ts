@@ -10,7 +10,7 @@ import { CONSTRUCTION_LABELS, PANEL_LABELS, PANEL_THICKNESS_M } from './types'
 import { m, PHYS, RAL_7016_HEX, RENDER } from './physical/spec'
 import { frameDims, wallField } from './construction/frame'
 import { buildSystem1 } from './construction/system1/build'
-import { finishForConfig } from './construction/geometry'
+import { finishForConfig, runCutLength } from './construction/geometry'
 import type { Part } from './construction/types'
 
 export type ComponentCategory =
@@ -852,7 +852,8 @@ function addSystem1Structure(list: ModelComponent[], c: PavilionConfig) {
     const vMin = Math.min(...sec.map((q) => q[1]))
     const isSideCrown = p.id.startsWith('flash-crown-') && (side === 'left' || side === 'right')
     addFlashing(list, c, {
-      id: p.id.replace('flash-', 'fl-'), name: p.name, lengthM: p.geometry.length, developedWidthM: developed,
+      // długość cięcia: przy uciosie na narożniku (E4) najdłuższa krawędź, bez uciosu = długość przebiegu
+      id: p.id.replace('flash-', 'fl-'), name: p.name, lengthM: runCutLength(p.geometry), developedWidthM: developed,
       // obróbka narożna biegnie pionowo (profil wyciągany wzdłuż lokalnej osi x → obrót o 90° wokół z)
       position: boxCenter(partBox([p])), rotation: side ? (isSideCrown ? [-roofSlope, wallRotation(side)[1], 0] : wallRotation(side)) : [0, 0, Math.PI / 2],
       direction: p.explode, wall: side,

@@ -5,7 +5,7 @@ import { ROOF_TRAPEZOIDS } from '../../scene/materials/profiles'
 import { PANEL_THICKNESS_M, type OpeningPlacement, type PavilionConfig, type WallSide } from '../../types'
 import { angle as angleSection, thickenPath as thicken } from '../../profiles/sections'
 import { buildOpeningJoinery, type WallPlane } from '../joinery/build'
-import { isLayerPoc } from '../../render/poc'
+import { isE4Poc, isLayerPoc } from '../../render/poc'
 import type { ConstructionModel, DerivedDimension, FinishVariant, Layer, MaterialKind, Part, Stage, Vec3 } from '../types'
 
 /**
@@ -406,7 +406,7 @@ export function buildSystem1(
   }
 
   // ---- 9. obróbki
-  addFlashings(ctx, { L, W, y0, yTopF, yTopB, a, t, tw, sideAxis, sideLen, sideUp, color: config.flashingColor || outer, slope: (hF - hB) / (zFrontFace - zBackFace), roofEdge: ribH + tr }, finishBySide)
+  addFlashings(ctx, { L, W, y0, yTopF, yTopB, a, t, tw, sideAxis, sideLen, sideUp, color: config.flashingColor || outer, slope: (hF - hB) / (zFrontFace - zBackFace), roofEdge: ribH + tr, mitre: isE4Poc(config) }, finishBySide)
 
   // ---- 10. elewacja (tylko wariant pod kasetony) — osobna warstwa, nie zmienia konstrukcji
   if (opts.decor !== false && finish === 'cassette') addCassettes(ctx, { L, W, y0, yFloorTop, yTopF, yTopB, t, walls, openings: geo.openings, color: outer })
@@ -511,7 +511,12 @@ function addJoinery(ctx: Ctx, w: WallDef, o: ReturnType<typeof toWallOpening>, t
   })
 }
 
-type FlashCtx = { L: number; W: number; y0: number; yTopF: number; yTopB: number; a: number; t: number; tw: number; sideAxis: Vec3; sideLen: number; sideUp: Vec3; color: string; slope: number; roofEdge: number }
+type FlashCtx = {
+  L: number; W: number; y0: number; yTopF: number; yTopB: number; a: number; t: number; tw: number; sideAxis: Vec3; sideLen: number; sideUp: Vec3
+  color: string; slope: number; roofEdge: number
+  /** E4 (PoC): korona i cokół łączone na narożniku uciosem 45° (zamiast wydłużenia i cięcia prostego — wystające kapinosy) */
+  mitre: boolean
+}
 
 /** u lica obróbki cokołowej (od płaszczyzny kątownika na zewnątrz). */
 function baseFlashingFaceU(f: FlashCtx) {
@@ -581,13 +586,21 @@ function addFlashings(ctx: Ctx, f: FlashCtx, finishBySide: FinishBySide) {
     const w = wrap(tag)
     // korona owija narożnik: wydłużona o wysięg lica, styka się z koroną boczną (bez prześwitu w rogu)
     const cw = Math.max(0, crownU)
+    // ucios (E4): przebieg od narożnika do narożnika, u przekroju na zewnątrz → k = −1 wydłuża część zewnętrzną dokładnie
+    // do płaszczyzny 45° przez narożnik (zagięcia i kapinosy obu ścian schodzą się w jednej linii)
+    const crownGeo = f.mitre
+      ? { start: [st[0], yTop + f.a, st[2]] as Vec3, axis, u: out, v: up, length: len, section: crownSec, mitre: [-1, -1] as [number, number] }
+      : { start: [st[0] - axis[0] * cw, yTop + f.a, st[2]] as Vec3, axis, u: out, v: up, length: len + 2 * cw, section: crownSec }
+    const baseGeo = f.mitre
+      ? { start: [st[0], f.y0, st[2]] as Vec3, axis, u: out, v: up, length: len, section: baseSec, mitre: [-1, -1] as [number, number] }
+      : { start: [st[0] - axis[0] * w, f.y0, st[2]] as Vec3, axis, u: out, v: up, length: len + 2 * w, section: baseSec }
     push(ctx, {
       id: 'flash-crown-' + tag, name: label + ' — korona ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
-      explode: mul(out, 1.0), confidence: conf, geometry: { start: [st[0] - axis[0] * cw, yTop + f.a, st[2]], axis, u: out, v: up, length: len + 2 * cw, section: crownSec },
+      explode: mul(out, 1.0), confidence: conf, geometry: crownGeo,
     })
     push(ctx, {
       id: 'flash-base-' + tag, name: label + ' — cokół ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
-      explode: mul(out, 1.0), confidence: conf, geometry: { start: [st[0] - axis[0] * w, f.y0, st[2]], axis, u: out, v: up, length: len + 2 * w, section: baseSec },
+      explode: mul(out, 1.0), confidence: conf, geometry: baseGeo,
     })
   }
   // narożniki: L zakrywające słup i czoło ściany przedniej/tylnej (ramię boczne wyliczone z grubości ściany)
@@ -618,15 +631,21 @@ function addFlashings(ctx: Ctx, f: FlashCtx, finishBySide: FinishBySide) {
     const { crownSec, baseSec, label, conf } = prof(tag)
     // korona boczna zachodzi na narożu za lico korony przedniej/tylnej — róg zamknięty, rdzeń płyty niewidoczny
     const ext = Math.max(0, prof('front').crownU, prof('back').crownU) + FLASH_T
+    // ucios po skosie dachu: przesunięcie wzdłuż osi k·u, w rzucie −u → k = −(długość po skosie / rzut)
+    const kSide = -f.sideLen / f.W
     push(ctx, {
       id: 'flash-crown-' + tag, name: label + ' — korona ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
       explode: mul(out as Vec3, 1.0), confidence: conf,
-      geometry: { start: add([x, f.yTopB + f.a, -f.W / 2], mul(f.sideAxis, -ext)), axis: f.sideAxis, u: out as Vec3, v: f.sideUp, length: f.sideLen + 2 * ext, section: crownSec },
+      geometry: f.mitre
+        ? { start: [x, f.yTopB + f.a, -f.W / 2], axis: f.sideAxis, u: out as Vec3, v: f.sideUp, length: f.sideLen, section: crownSec, mitre: [kSide, kSide] }
+        : { start: add([x, f.yTopB + f.a, -f.W / 2], mul(f.sideAxis, -ext)), axis: f.sideAxis, u: out as Vec3, v: f.sideUp, length: f.sideLen + 2 * ext, section: crownSec },
     })
     push(ctx, {
       id: 'flash-base-' + tag, name: label + ' — cokół ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
       explode: mul(out as Vec3, 1.0), confidence: conf,
-      geometry: { start: [x, f.y0, -f.W / 2 - wrap(tag)], axis: [0, 0, 1], u: out as Vec3, v: [0, 1, 0], length: f.W + 2 * wrap(tag), section: baseSec },
+      geometry: f.mitre
+        ? { start: [x, f.y0, -f.W / 2], axis: [0, 0, 1], u: out as Vec3, v: [0, 1, 0], length: f.W, section: baseSec, mitre: [-1, -1] }
+        : { start: [x, f.y0, -f.W / 2 - wrap(tag)], axis: [0, 0, 1], u: out as Vec3, v: [0, 1, 0], length: f.W + 2 * wrap(tag), section: baseSec },
     })
   }
 }

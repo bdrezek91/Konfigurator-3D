@@ -57,6 +57,16 @@ export function runLocalGeometry(g: RunGeometry, flip: boolean, du = 0, dv = 0) 
   return geo
 }
 
+/**
+ * Długość cięcia elementu z uciosem (najdłuższa krawędź wzdłuż osi) — do BOM. Bez uciosu = `length`.
+ * Koniec z uciosem k przesuwa krawędź o k · u: ujemne k wydłuża część o dodatnim u (obróbki — u na zewnątrz).
+ */
+export function runCutLength(g: RunGeometry) {
+  const [k0, k1] = g.mitre ?? [0, 0]
+  if (!k0 && !k1) return g.length
+  return Math.max(...g.section.map(([u]) => g.length - (k0 + k1) * u))
+}
+
 /** Bryła elementu: przekrój (u, v) wyciągnięty wzdłuż osi; baza zawsze prawoskrętna. */
 export function buildRunGeometry(g: RunGeometry) {
   const { matrix, flip } = runBasis(g)
