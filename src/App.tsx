@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildComponentModel, componentModelToCsv, geometryOf } from './components'
 import { buildBom, validateConfig } from './logic'
 import { UI_PRESETS as PRESETS } from './presets'
@@ -12,6 +12,8 @@ import { Icon } from './ui/icons'
 import { MetricGrid, TechnicalTab } from './ui/MetricsPanel'
 import { useMetrics } from './ui/metrics'
 import { Viewer } from './ui/Viewer'
+import { useHistory } from './ui/history'
+import { configFromUrl, shareUrl } from './ui/share'
 import './App.css'
 
 // tryb techniczny ładowany na żądanie — nie obciąża pierwszego wczytania konfiguratora
@@ -65,7 +67,27 @@ function download(blob: Blob, filename: string) {
 
 export default function App() {
   const query = new URLSearchParams(window.location.search)
-  const [config, setConfig] = useState<PavilionConfig>(initialConfig)
+  // historia zmian: cofnij / ponów (Ctrl+Z, Ctrl+Shift+Z)
+  const history = useHistory<PavilionConfig>(initialConfig)
+  const config = history.value
+  const setConfig = history.set
+  // konfiguracja z linku (#k=…) — wczytana raz przy starcie
+  const reset = history.reset
+  useEffect(() => {
+    void configFromUrl().then((c) => { if (c) reset(c) })
+  }, [reset])
+  const [shared, setShared] = useState(false)
+  const share = async () => {
+    const url = await shareUrl(config)
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      window.prompt('Skopiuj link do konfiguracji:', url)
+    }
+    window.history.replaceState(null, '', url)
+    setShared(true)
+    window.setTimeout(() => setShared(false), 2000)
+  }
   const [tab, setTab] = useState<TabId>('dims')
   const [mode, setMode] = useState<SceneMode>(() => (query.get('mode') === 'technical' ? 'technical' : 'visual'))
   const [lighting, setLighting] = useState<LightingMode>(() => (query.get('light') === 'evening' ? 'evening' : 'day'))
@@ -158,6 +180,9 @@ export default function App() {
               <Icon.layers /> Konstrukcja
             </button>
           )}
+          <button type="button" className="btn ghost icon-only keep" onClick={history.undo} disabled={!history.canUndo} title="Cofnij (Ctrl+Z)" aria-label="Cofnij"><Icon.undo /></button>
+          <button type="button" className="btn ghost icon-only keep" onClick={history.redo} disabled={!history.canRedo} title="Ponów (Ctrl+Shift+Z)" aria-label="Ponów"><Icon.redo /></button>
+          <button type="button" className="btn ghost keep" onClick={() => void share()} title="Kopiuj link do tej konfiguracji"><Icon.link /> {shared ? 'Skopiowano' : 'Udostępnij'}</button>
           <button type="button" className="btn ghost" onClick={exportPng} title="Zrzut widoku"><Icon.camera /> PNG</button>
           <button type="button" className="btn ghost" onClick={exportCsv} title="Zestawienie materiałów"><Icon.download /> BOM</button>
           <button type="button" className="btn" onClick={exportJson}><Icon.download /> Zapisz konfigurację</button>

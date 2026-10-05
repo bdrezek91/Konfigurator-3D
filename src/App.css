@@ -102,6 +102,8 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 .btn.ghost { border-color: transparent; background: transparent; color: var(--text-2); }
 .btn.ghost:hover:not(:disabled) { background: var(--surface-3); color: var(--text); }
 .btn.danger { color: var(--err); }
+.btn.icon-only { width: 36px; padding: 0; }
+.btn:disabled { opacity: 0.4; cursor: default; }
 .btn.sm { height: 30px; padding: 0 10px; font-size: 12px; }
 .btn.toggle.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
@@ -554,7 +556,7 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 /* ---------- responsive ---------- */
 @media (max-width: 1280px) {
   :root { --panel-w: 392px; }
-  .topbar-actions .btn.ghost { display: none; }
+  .topbar-actions .btn.ghost:not(.keep) { display: none; }
   .tech-body { grid-template-columns: 210px minmax(0, 1fr) 220px; }
 }
 
@@ -564,7 +566,7 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   .brand { min-width: 0; }
   .project-picker { order: 3; flex: 1 1 100%; }
   .mode-switch { margin-left: auto; }
-  .topbar-actions { display: none; }
+  .topbar-actions .btn:not(.keep) { display: none; }
   .workspace { display: flex; flex-direction: column; }
   .stage { height: 62vh; min-height: 380px; flex: none; }
   .panel { border-left: 0; border-top: 1px solid var(--line); }
