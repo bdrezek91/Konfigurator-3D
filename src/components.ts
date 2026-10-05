@@ -1795,6 +1795,12 @@ function fastenerComponent(
   }
 }
 
+/** Lokalna oś X elementu po obrocie Euler XYZ (jak three.js): R = Rx·Ry·Rz. */
+function localXAxis([x, y, z]: Vec3): Vec3 {
+  const cx = Math.cos(x), sx = Math.sin(x), cy = Math.cos(y), sy = Math.sin(y), cz = Math.cos(z), sz = Math.sin(z)
+  return [cz * cy, sz * cx + cz * sy * sx, sz * sx - cz * sy * cx]
+}
+
 function addFasteners(list: ModelComponent[], c: PavilionConfig) {
   const wallPanels = list.filter((x) => x.category === 'wall-panels')
   for (const panel of wallPanels) {
@@ -1860,10 +1866,9 @@ function addFasteners(list: ModelComponent[], c: PavilionConfig) {
     for (let i = 0; i < count; i++) {
       const t = count === 1 ? 0.5 : i / (count - 1)
       const delta = (t - 0.5) * lengthM
-      const pos: Vec3 = [...fl.position] as Vec3
-      const longAlongX = Math.abs(Math.cos(fl.rotation[1])) > 0.7
-      if (longAlongX) pos[0] += delta
-      else pos[2] += delta
+      // oś długości obróbki = lokalne X po obrocie (Euler XYZ) — także obróbki pionowe (narożniki, ościeża)
+      const [ax, ay, az] = localXAxis(fl.rotation)
+      const pos: Vec3 = [fl.position[0] + ax * delta, fl.position[1] + ay * delta, fl.position[2] + az * delta]
       list.push(fastenerComponent(
         'screw-fl-' + fl.id + '-' + i,
         'Wkręt/nit do obróbki ' + fl.namePL,
