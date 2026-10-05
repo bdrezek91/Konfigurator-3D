@@ -30,6 +30,10 @@ function dragKey(d: Drag) {
   if (d.type === 'opening') return d.wall + '-opening-' + d.id
   return d.wall + '-' + d.row + '-@' + d.auto
 }
+/** kursor nad uchwytem (poza komponentem — zmiana stylu dokumentu, nie stanu Reacta) */
+function setCursor(c: string) {
+  document.body.style.cursor = c
+}
 const snap = (x: number) => Math.round(x / SNAP) * SNAP
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x))
 
@@ -154,7 +158,7 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
     setDrag(null)
     // uchwyt przesunął się spod kursora — pointerOut nie przyjdzie
     setHover(null)
-    document.body.style.cursor = ''
+    setCursor('')
   }
 
   const commit = (d: Drag) => {
@@ -199,8 +203,8 @@ export function CassetteEditor({ config, onChange }: { config: PavilionConfig; o
     return (
       <group key={key} name={key} position={b.position} rotation={[0, ROT_Y[side], 0]}>
         <mesh
-          onPointerOver={(e) => { if (!facing(side, e.camera)) return; e.stopPropagation(); setHover(key); document.body.style.cursor = opts.line === 'h' ? 'ns-resize' : opts.line === 'v' ? 'ew-resize' : 'grab' }}
-          onPointerOut={() => { setHover((k) => (k === key ? null : k)); if (!drag) document.body.style.cursor = '' }}
+          onPointerOver={(e) => { if (!facing(side, e.camera)) return; e.stopPropagation(); setHover(key); setCursor(opts.line === 'h' ? 'ns-resize' : opts.line === 'v' ? 'ew-resize' : 'grab') }}
+          onPointerOut={() => { setHover((k) => (k === key ? null : k)); if (!drag) setCursor('') }}
           onPointerDown={onDown}
           onPointerMove={move}
           onPointerUp={end}
