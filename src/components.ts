@@ -49,6 +49,11 @@ export type ComponentDimensions = {
   thicknessMm: number
   netAreaM2?: number
   developedWidthMm?: number
+  /**
+   * Długość cięcia elementu z uciosem (najdłuższa krawędź) — tylko gdy różni się od `lengthMm`. `lengthMm` zachowuje
+   * dotychczasowe znaczenie (długość nominalna); pole informacyjne, nie trafia do CSV.
+   */
+  cutLengthMm?: number
 }
 
 export type ComponentAssumption = {
@@ -852,8 +857,9 @@ function addSystem1Structure(list: ModelComponent[], c: PavilionConfig) {
     const vMin = Math.min(...sec.map((q) => q[1]))
     const isSideCrown = p.id.startsWith('flash-crown-') && (side === 'left' || side === 'right')
     addFlashing(list, c, {
-      // długość cięcia: przy uciosie na narożniku (E4) najdłuższa krawędź, bez uciosu = długość przebiegu
-      id: p.id.replace('flash-', 'fl-'), name: p.name, lengthM: runCutLength(p.geometry), developedWidthM: developed,
+      // lengthM — długość nominalna (jak przed E4); przy uciosie długość cięcia osobno (cutLengthMm)
+      id: p.id.replace('flash-', 'fl-'), name: p.name, lengthM: p.bom?.lengthM ?? p.geometry.length, developedWidthM: developed,
+      cutLengthM: p.geometry.mitre ? runCutLength(p.geometry) : undefined,
       // obróbka narożna biegnie pionowo (profil wyciągany wzdłuż lokalnej osi x → obrót o 90° wokół z)
       position: boxCenter(partBox([p])), rotation: side ? (isSideCrown ? [-roofSlope, wallRotation(side)[1], 0] : wallRotation(side)) : [0, 0, Math.PI / 2],
       direction: p.explode, wall: side,
@@ -1372,6 +1378,8 @@ type FlashingInput = {
   id: string
   name: string
   lengthM: number
+  /** długość cięcia z uciosem (gdy element ma ucios) */
+  cutLengthM?: number
   developedWidthM: number
   position: Vec3
   rotation?: Vec3
@@ -1397,6 +1405,7 @@ function addFlashing(list: ModelComponent[], c: PavilionConfig, f: FlashingInput
       widthMm: Math.round(f.developedWidthM * 1000),
       thicknessMm: 0.5,
       developedWidthMm: Math.round(f.developedWidthM * 1000),
+      ...(f.cutLengthM !== undefined ? { cutLengthMm: Math.round(f.cutLengthM * 1000) } : {}),
     },
     quantity: 1,
     massKg: round(area * SHEET_THICKNESS_M * STEEL_DENSITY, 2),

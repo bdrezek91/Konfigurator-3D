@@ -14,20 +14,46 @@ const mm = (x: number) => x / 1000
 
 export const isTrayCassette = (c: ModelComponent) => c.id.startsWith('facade-cassette-')
 
-/** Kolor kasetonu → rodzaj drewna (kaseton-deska) albo blacha. */
-export function trayWood(c: ModelComponent) {
-  return c.color.startsWith('wood-') ? (c.color === 'wood-winchester' ? 'winchester' : 'pine') as 'winchester' | 'pine' : null
+/** Źródło tacy: obrys (środek, obrót wokół Y, wymiary w, h, głębokość) + kolor i rysunek drewna. */
+export type TraySource = {
+  id: string
+  position: Vec3
+  rotation: Vec3
+  sizeM: [number, number, number]
+  explodeDirection: Vec3
+  wall?: string
+  /** RAL blachy albo 'wood-pine' | 'wood-winchester' | 'wood-pineBoards' | 'wood-winchesterBoards' */
+  color: string
+  uvTransform?: [number, number, number, number, number, number]
 }
 
-export function trayParts(cassettes: ModelComponent[], halfSpan: (wall: string) => number): Part[] {
+export type TrayWood = 'pine' | 'winchester' | 'pineBoards' | 'winchesterBoards'
+
+/** Kolor tacy → rodzaj drewna albo blacha. */
+export function trayWood(color: string): TrayWood | null {
+  if (!color.startsWith('wood-')) return null
+  const k = color.slice(5)
+  return k === 'winchester' || k === 'pineBoards' || k === 'winchesterBoards' ? k : 'pine'
+}
+
+/** Kaseton z modelu komponentów (układ KASETONY FINAL) → źródło tacy; rysunek drewna jak dotychczasowy box. */
+export function traySourceFromComponent(c: ModelComponent): TraySource {
+  const w = c.dimensions.widthMm / 1000
+  const h = c.dimensions.lengthMm / 1000
+  const wood = trayWood(c.color)
+  return {
+    id: c.id, position: c.position, rotation: c.rotation, sizeM: [w, h, c.dimensions.thicknessMm / 1000], explodeDirection: c.explodeDirection,
+    wall: c.wall, color: c.color, uvTransform: wood === 'pine' || wood === 'winchester' ? woodUvTransform(wood, w, h) : undefined,
+  }
+}
+
+export function trayParts(cassettes: TraySource[], halfSpan: (wall: string) => number): Part[] {
   const out: Part[] = []
   const D = mm(T.depth)
   const t = mm(T.sheet)
   const R = mm(T.bendRadius)
   for (const c of cassettes) {
-    const w = c.dimensions.widthMm / 1000
-    const h = c.dimensions.lengthMm / 1000
-    const depth = c.dimensions.thicknessMm / 1000
+    const [w, h, depth] = c.sizeM
     const th = c.rotation[1]
     const u: Vec3 = [Math.cos(th), 0, -Math.sin(th)]
     const outN: Vec3 = [Math.sin(th), 0, Math.cos(th)]
@@ -42,8 +68,7 @@ export function trayParts(cassettes: ModelComponent[], halfSpan: (wall: string) 
     const along = u[0] * px + u[2] * pz
     const cornerEnd = c.wall ? Math.abs(along) + w / 2 > halfSpan(c.wall) - 0.03 : true
     const flangeOut = T.flangeOut && !cornerEnd
-    const wood = trayWood(c)
-    const uv = wood ? woodUvTransform(wood, w, h) : undefined
+    const uv = c.uvTransform
     const sec = cassetteReturn(T, flangeOut)
     const profile = { name: 'Bok tacy kasetonu', poly: toMeters(sec.poly), material: 'cassette' as const, color: c.color }
     const r: Rect = { s0: 0, s1: w, y0: 0, y1: h }

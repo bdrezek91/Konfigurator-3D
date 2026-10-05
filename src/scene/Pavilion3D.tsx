@@ -10,7 +10,7 @@ import { CameraRig, type CameraApi } from './camera/CameraRig'
 import { cameraPose, type CameraPose } from './camera/presets'
 import type { PavilionView } from './camera/views'
 import { LightingContext, resolveLighting, type LightingMode } from './environment/lighting'
-import { isE3Poc } from '../render/poc'
+import { arch } from '../render/architecture'
 import { SceneEnvironment } from './environment/SceneEnvironment'
 import { Ground } from './ground/Ground'
 import { HQPathTracer, type HQState } from './hq-render/HQPathTracer'
@@ -113,7 +113,7 @@ type Props = {
 }
 
 export default function Pavilion3D({ config, view = 'perspective', lighting = 'day', resetNonce = 0, cameraApiRef, hq, quality = 'auto', onTier }: Props) {
-  const preset = resolveLighting(lighting, isE3Poc(config))
+  const preset = resolveLighting(lighting, arch(config).lighting)
   const pose = hq?.pose ?? cameraPose(config, view)
   // tryb auto: start z parametrów urządzenia, PerformanceMonitor obniża o jeden poziom przy spadku FPS
   const [autoT, setAutoT] = useState<QualityTier>(autoTier)

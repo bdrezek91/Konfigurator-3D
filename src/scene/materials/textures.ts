@@ -205,23 +205,38 @@ export function woodUvTransform(kind: WoodKind, w: number, h: number): [number, 
  * (deski i włókna już poziomo), skala rzeczywista; fugi liczone od dołu tacy.
  */
 /** `centerAbove` — wysokość środka kawałka tacy nad dołem pola okładziny [m]: fugi ciągłe między kawałkami (nad/pod oknem). */
-export function boardCassetteMaps(kind: 'pineBoards' | 'winchesterBoards', w: number, h: number, centerAbove = h / 2): WoodMaps {
+function boardUvParams(kind: 'pineBoards' | 'winchesterBoards', w: number, h: number, centerAbove: number) {
   const tile = WOOD_TILE_M[kind]
   const key = 'cass|' + kind + '|' + Math.round(w * 1000) + '|' + Math.round(h * 1000) + '|' + Math.round(centerAbove * 1000)
-  const hit = woodClones.get(key)
-  if (hit) return hit
   let hsh = 0
   for (const ch of key) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0
+  return { key, tile, offset: [(hsh % 97) / 97, (centerAbove / tile) % 1] as const }
+}
+
+export function boardCassetteMaps(kind: 'pineBoards' | 'winchesterBoards', w: number, h: number, centerAbove = h / 2): WoodMaps {
+  const pr = boardUvParams(kind, w, h, centerAbove)
+  const hit = woodClones.get(pr.key)
+  if (hit) return hit
   const make = (channel: 'diff' | 'nor' | 'rough') => {
     const t = woodFile(kind, channel).clone()
     woodPending.get(kind + '-' + channel)?.push(t)
-    // UV w metrach, środek lica = 0 (RoundedBox wyśrodkowany): rysunek liczony od dołu pola okładziny
-    t.repeat.set(1 / tile, 1 / tile)
-    t.offset.set((hsh % 97) / 97, (centerAbove / tile) % 1)
+    // UV w metrach (współrzędne kształtu RoundedBox): rysunek liczony od dołu pola okładziny
+    t.repeat.set(1 / pr.tile, 1 / pr.tile)
+    t.offset.set(pr.offset[0], pr.offset[1])
     t.needsUpdate = true
     return t
   }
   const maps = { map: make('diff'), normalMap: make('nor'), roughnessMap: make('rough') }
-  woodClones.set(key, maps)
+  woodClones.set(pr.key, maps)
   return maps
+}
+
+/**
+ * Przekształcenie UV lica tacy w × h (s, y od lewego dolnego narożnika, m) identyczne z boardCassetteMaps na RoundedBox
+ * o promieniu `r` (UV lica RoundedBox = s − r, y − r). Wynik dla RunGeometry.uvTransform.
+ */
+export function boardCassetteUvTransform(kind: 'pineBoards' | 'winchesterBoards', w: number, h: number, centerAbove: number, r: number): [number, number, number, number, number, number] {
+  const pr = boardUvParams(kind, w, h, centerAbove)
+  const k = 1 / pr.tile
+  return [k, 0, pr.offset[0] - r * k, 0, k, pr.offset[1] - r * k]
 }

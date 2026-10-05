@@ -1,4 +1,4 @@
-import { isLayerPoc } from '../../render/poc'
+import { arch } from '../../render/architecture'
 import { PANEL_THICKNESS_M, type PavilionConfig, type ProjectGeometry, type WallSide } from '../../types'
 import type { PavilionView } from '../camera/views'
 import { DampolFrameLocal, DecorLocal, FacadeCladdingFromModel, FoundationSupports, PanelProfileLocal } from '../facade/Facade'
@@ -35,7 +35,9 @@ export function Wall({
   const facadeKind = facadeKindForWall(side, config, geometry)
   const legacyFacadeKinds = new Set(['cassette-black', 'cassette-square-graphite', 'cassette-rect-graphite', 'cassette-white'])
   // deska na ścianie z kasetonami poziomymi = kasetony z dekorem drewna (rysowane z elewacją, FacadeCladdingFromModel)
-  const decor = geometry.decor.filter((x) => x.wall === side && !(facadeKind !== 'none' && legacyFacadeKinds.has(x.kind)) && !(facadeKind === 'cassette-horizontal' && BOARD_KINDS.has(x.kind)))
+  // kaseton-deska w nowej ścieżce (tace w rendererze warstw, ComponentLayers) — tu bez pasów
+  const boardTrays = arch(config).boardTrays
+  const decor = geometry.decor.filter((x) => x.wall === side && !(facadeKind !== 'none' && legacyFacadeKinds.has(x.kind)) && !(facadeKind === 'cassette-horizontal' && BOARD_KINDS.has(x.kind)) && !(boardTrays && BOARD_KINDS.has(x.kind)))
   const lights = geometry.exteriorLights?.filter((x) => x.wall === side) ?? []
   const lampK = useLighting().lampIntensity
   const { floorT } = envelope(config)
@@ -82,7 +84,7 @@ export function Wall({
       />
 
       {/* PoC (galeria-163): stolarka z przekrojów jest częścią modelu Systemu 1 (warstwa JOINERY w System1Body) */}
-      {!isLayerPoc(config) && openings.map((opening) => {
+      {!arch(config).sectionJoinery && openings.map((opening) => {
         // sąsiadujące elementy stolarki (przylegające ramy) — wspólny słupek, jak na zdjęciach 11/207
         const adj = (dir: -1 | 1) => openings.some((o) => o !== opening && Math.abs((o.center - dir * o.width / 2) - (opening.center + dir * opening.width / 2)) < 0.012)
         return (

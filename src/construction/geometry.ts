@@ -36,14 +36,17 @@ export function runLocalGeometry(g: RunGeometry, flip: boolean, du = 0, dv = 0) 
     // v przekroju z lokalnego y (przed odbiciem bazy i przesunięciem instancji)
     const { v0, v1, min } = g.shade
     const pos = geo.attributes.position
-    const col = new Float32Array(pos.count * 3)
+    // RGBA (alfa = 1): three-gpu-pathtracer przy scalaniu geometrii gubi kolor o 3 składowych (kopiuje „wyrównanie do 4”
+    // w złą stronę) — w HQ tace wychodziły czarne. Podgląd: alfa nieużywana przy materiale nieprzezroczystym.
+    const col = new Float32Array(pos.count * 4)
     for (let i = 0; i < pos.count; i++) {
       const v = flip ? -(pos.getY(i) + dv) : pos.getY(i) + dv
       const t = Math.min(1, Math.max(0, (v - v0) / (v1 - v0)))
       const k = min + (1 - min) * t * t * (3 - 2 * t)
-      col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = k
+      col[i * 4] = col[i * 4 + 1] = col[i * 4 + 2] = k
+      col[i * 4 + 3] = 1
     }
-    geo.setAttribute('color', new BufferAttribute(col, 3))
+    geo.setAttribute('color', new BufferAttribute(col, 4))
   }
   if (g.uvTransform) {
     const [a, b, c, d, e, f] = g.uvTransform

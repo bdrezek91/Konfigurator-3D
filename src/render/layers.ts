@@ -11,7 +11,7 @@ export type RenderLayer = 'STRUCTURE' | 'PIR' | 'FACADE' | 'JOINERY' | 'TRIMS' |
 
 export function renderLayerOf(p: Part): RenderLayer {
   switch (p.layer) {
-    case 'steel': case 'topFrame': return 'STRUCTURE'
+    case 'foundation': case 'steel': case 'topFrame': return 'STRUCTURE'
     case 'walls': return 'PIR'
     case 'joinery': return 'JOINERY'
     case 'flashings': return 'TRIMS'

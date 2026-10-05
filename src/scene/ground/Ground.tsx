@@ -1,3 +1,4 @@
+import { useLighting } from '../environment/lighting'
 import { useTexture } from '@react-three/drei'
 import { useEffect, useMemo } from 'react'
 import { RepeatWrapping, SRGBColorSpace, Shape, type Texture } from 'three'
@@ -9,6 +10,7 @@ import type { PavilionConfig } from '../../types'
  * jest liczony z gabarytu pawilonu.
  */
 export function Ground({ config }: { config: PavilionConfig }) {
+  const groundTint = useLighting().groundTint ?? '#c9c070'
   const gallery03 = config.project === 'GALERIA/03'
   const [
     grassDiffuse,
@@ -88,7 +90,7 @@ export function Ground({ config }: { config: PavilionConfig }) {
           // trawa matowa (roughness 1, bez mapy chropowatości) — pod ostrym kątem nie „prała się” na niebiesko od nieba
           // trawa: zieleń jak na zdjęciach realizacji (163, 054, 090) — wcześniej szaro-brązowa, wyglądała jak asfalt;
           // przyciemnienie dobrane do zdjęcia 163 (trawa 127/141/59 sRGB)
-          color="#c9c070"
+          color={groundTint}
           normalScale={[0.55, 0.55]}
           roughness={1}
           metalness={0}

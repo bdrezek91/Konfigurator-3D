@@ -5,7 +5,7 @@ import { ROOF_TRAPEZOIDS } from '../../scene/materials/profiles'
 import { PANEL_THICKNESS_M, type OpeningPlacement, type PavilionConfig, type WallSide } from '../../types'
 import { angle as angleSection, thickenPath as thicken } from '../../profiles/sections'
 import { buildOpeningJoinery, type WallPlane } from '../joinery/build'
-import { isE4Poc, isLayerPoc } from '../../render/poc'
+import { arch } from '../../render/architecture'
 import type { ConstructionModel, DerivedDimension, FinishVariant, Layer, MaterialKind, Part, Stage, Vec3 } from '../types'
 
 /**
@@ -285,7 +285,7 @@ export function buildSystem1(
       }
     }
     // stolarka w otworach: PoC (galeria-163) — z przekrojów generic-aluminium-52; pozostałe — uproszczona rama + szyba
-    if (isLayerPoc(config)) {
+    if (arch(config).sectionJoinery) {
       const plane: WallPlane = { origin: wdef.origin, u: wdef.u, up: steelUp, out: mul(wdef.inward, -1), stage: wdef.stage, explode }
       for (const op of openings.filter((x) => x.wall === wdef.side)) {
         const o = toWallOpening(op, wdef)
@@ -406,7 +406,7 @@ export function buildSystem1(
   }
 
   // ---- 9. obróbki
-  addFlashings(ctx, { L, W, y0, yTopF, yTopB, a, t, tw, sideAxis, sideLen, sideUp, color: config.flashingColor || outer, slope: (hF - hB) / (zFrontFace - zBackFace), roofEdge: ribH + tr, mitre: isE4Poc(config) }, finishBySide)
+  addFlashings(ctx, { L, W, y0, yTopF, yTopB, a, t, tw, sideAxis, sideLen, sideUp, color: config.flashingColor || outer, slope: (hF - hB) / (zFrontFace - zBackFace), roofEdge: ribH + tr, mitre: arch(config).flashingMitre }, finishBySide)
 
   // ---- 10. elewacja (tylko wariant pod kasetony) — osobna warstwa, nie zmienia konstrukcji
   if (opts.decor !== false && finish === 'cassette') addCassettes(ctx, { L, W, y0, yFloorTop, yTopF, yTopB, t, walls, openings: geo.openings, color: outer })
@@ -594,13 +594,14 @@ function addFlashings(ctx: Ctx, f: FlashCtx, finishBySide: FinishBySide) {
     const baseGeo = f.mitre
       ? { start: [st[0], f.y0, st[2]] as Vec3, axis, u: out, v: up, length: len, section: baseSec, mitre: [-1, -1] as [number, number] }
       : { start: [st[0] - axis[0] * w, f.y0, st[2]] as Vec3, axis, u: out, v: up, length: len + 2 * w, section: baseSec }
+    // BOM: długość nominalna jak przed uciosem (przebieg z wydłużeniem za narożnik) — znaczenie pola bez zmian
     push(ctx, {
       id: 'flash-crown-' + tag, name: label + ' — korona ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
-      explode: mul(out, 1.0), confidence: conf, geometry: crownGeo,
+      explode: mul(out, 1.0), confidence: conf, geometry: crownGeo, bom: { lengthM: len + 2 * cw },
     })
     push(ctx, {
       id: 'flash-base-' + tag, name: label + ' — cokół ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
-      explode: mul(out, 1.0), confidence: conf, geometry: baseGeo,
+      explode: mul(out, 1.0), confidence: conf, geometry: baseGeo, bom: { lengthM: len + 2 * w },
     })
   }
   // narożniki: L zakrywające słup i czoło ściany przedniej/tylnej (ramię boczne wyliczone z grubości ściany)
@@ -635,14 +636,14 @@ function addFlashings(ctx: Ctx, f: FlashCtx, finishBySide: FinishBySide) {
     const kSide = -f.sideLen / f.W
     push(ctx, {
       id: 'flash-crown-' + tag, name: label + ' — korona ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
-      explode: mul(out as Vec3, 1.0), confidence: conf,
+      explode: mul(out as Vec3, 1.0), confidence: conf, bom: { lengthM: f.sideLen + 2 * ext },
       geometry: f.mitre
         ? { start: [x, f.yTopB + f.a, -f.W / 2], axis: f.sideAxis, u: out as Vec3, v: f.sideUp, length: f.sideLen, section: crownSec, mitre: [kSide, kSide] }
         : { start: add([x, f.yTopB + f.a, -f.W / 2], mul(f.sideAxis, -ext)), axis: f.sideAxis, u: out as Vec3, v: f.sideUp, length: f.sideLen + 2 * ext, section: crownSec },
     })
     push(ctx, {
       id: 'flash-base-' + tag, name: label + ' — cokół ' + tag, layer: 'flashings', stage: 9, material: 'flashing', color: f.color,
-      explode: mul(out as Vec3, 1.0), confidence: conf,
+      explode: mul(out as Vec3, 1.0), confidence: conf, bom: { lengthM: f.W + 2 * wrap(tag) },
       geometry: f.mitre
         ? { start: [x, f.y0, -f.W / 2], axis: [0, 0, 1], u: out as Vec3, v: [0, 1, 0], length: f.W, section: baseSec, mitre: [-1, -1] }
         : { start: [x, f.y0, -f.W / 2 - wrap(tag)], axis: [0, 0, 1], u: out as Vec3, v: [0, 1, 0], length: f.W + 2 * wrap(tag), section: baseSec },

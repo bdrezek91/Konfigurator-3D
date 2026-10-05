@@ -6,7 +6,7 @@ export type ConstructionSystemId = 'angle_50x50x4' | 'system_2' | 'system_3'
 export type Vec3 = [number, number, number]
 
 /** Warstwy modelu — każda jest osobnym systemem, konstrukcja nie zależy od elewacji. */
-export type Layer = 'steel' | 'floor' | 'walls' | 'joinery' | 'roof' | 'topFrame' | 'flashings' | 'decor' | 'fasteners'
+export type Layer = 'foundation' | 'steel' | 'floor' | 'walls' | 'joinery' | 'roof' | 'topFrame' | 'flashings' | 'decor' | 'fasteners'
 
 /** Kolejność montażu (exploded view). */
 export const STAGES = [
@@ -51,7 +51,7 @@ export type RunGeometry = {
   uvTransform?: [number, number, number, number, number, number]
 }
 
-export type MaterialKind = 'steel' | 'sheetOuter' | 'sheetInner' | 'pirCore' | 'flashing' | 'cassette' | 'glass' | 'frame' | 'gasket' | 'hardware' | 'screw' | 'floorFinish'
+export type MaterialKind = 'steel' | 'sheetOuter' | 'sheetInner' | 'pirCore' | 'flashing' | 'cassette' | 'glass' | 'frame' | 'gasket' | 'hardware' | 'screw' | 'floorFinish' | 'concrete'
 
 export type Part = {
   id: string
@@ -66,6 +66,11 @@ export type Part = {
   confidence: Confidence
   /** poziom detalu (E5): 0 — zawsze, 1 — okucia (normalny kadr), 2 — uszczelki, listwy, wkręty (zbliżenie / HIGH+) */
   lod?: 0 | 1 | 2
+  /**
+   * Dane BOM niezależne od kształtu bryły. `lengthM` — długość nominalna pozycji (gdy bryła ma ucios, a znaczenie pola
+   * BOM ma pozostać jak dotąd: długość prostego elementu z wydłużeniem za narożnik).
+   */
+  bom?: { lengthM?: number }
 }
 
 /** Wymiar wyliczony z konstrukcji (nie wpisany ręcznie). */

@@ -21,6 +21,8 @@ export type LightingPreset = {
    * NoToneMapping na rendererze, więc ACES z onCreated i `exposure` nie działały w podglądzie — działały tylko w HQ).
    */
   toneMapping?: ToneMappingId
+  /** Mnożnik koloru trawy podłoża (domyślnie #c9c070) — E3: kalibracja łatą trawy zdjęcia 163 (mniej zielonego odblasku w HQ) */
+  groundTint?: string
 }
 
 export type ToneMappingId = 'aces' | 'agx' | 'neutral'
@@ -78,6 +80,9 @@ export const LIGHTING: Record<LightingMode, LightingPreset> = {
   },
 }
 
+/** E3: kolor trawy (sztuczna trawa na zdjęciu 163: 124/139/64) — ?grass=rrggbb do kalibracji */
+const GROUND_TINT_E3 = '#8f7a3a'
+
 /** Azymut światła dziennego dotychczasowej sceny (front oświetlony z lewej z przodu — jak zdjęcie 163), atan2(z, x) [°]. */
 export const DAY_WORLD_AZIMUTH_DEG = 125.1
 
@@ -90,6 +95,7 @@ export const LIGHTING_E3: Record<LightingMode, LightingPreset> = {
   // ekspozycja działa dopiero z mapowaniem tonów (EffectComposer)
   day: sunAlignedDay(LIGHTING.day, 'pretoria_gardens_2k', DAY_WORLD_AZIMUTH_DEG, {
     toneMapping: 'neutral', exposure: 1.25, environmentIntensity: 2.2, backgroundIntensity: 0.62, sunIntensity: 1.6,
+    groundTint: GROUND_TINT_E3,
   }),
   evening: LIGHTING.evening,
 }
@@ -110,6 +116,8 @@ export function resolveLighting(mode: LightingMode, e3: boolean): LightingPreset
   const q = new URLSearchParams(window.location.search)
   const env = q.get('env')
   if (env && env in HDRI_SUN) preset = sunAlignedDay(preset, env, DAY_WORLD_AZIMUTH_DEG)
+  const grass = q.get('grass')
+  if (grass && /^[0-9a-f]{6}$/i.test(grass)) preset = { ...preset, groundTint: '#' + grass }
   const tm = q.get('tm')
   if (tm === 'aces' || tm === 'agx' || tm === 'neutral') preset = { ...preset, toneMapping: tm }
   // ?light=ekspozycja,env,tło,słońce — kalibracja względem zdjęcia (pomiar sRGB łat)

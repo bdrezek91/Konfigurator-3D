@@ -9,8 +9,9 @@ import { boardCassetteMaps, renderMetalColor, woodMaps, woodTexture } from '../m
 import { type ReactNode, useMemo } from 'react'
 import { m, PHYS, RENDER } from '../../physical/spec'
 import { isTrayCassette } from '../../construction/facade/tray'
-import { isTrayPoc } from '../../render/poc'
-import { CassetteTrays } from './CassetteTrays'
+import { arch } from '../../render/architecture'
+import { ComponentLayers } from './ComponentLayers'
+import { boardTraySpans } from '../../construction/facade/boards'
 
 /** Przyciemnienie koloru (mnożnik jasności) — parametr renderingu, nie fizyczny kolor. */
 function shade(hex: string, k: number) {
@@ -77,8 +78,7 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
   const corners = ([['front', 'left', -1, 1], ['front', 'right', 1, 1], ['back', 'left', -1, -1], ['back', 'right', 1, -1]] as const)
     .filter(([a, b]) => isCH(a) && isCH(b))
   const hCorner = envelope(config).outerFront
-  const trays = isTrayPoc(config)
-  const trayPieces = useMemo(() => pieces.filter(isTrayCassette), [pieces])
+  const trays = arch(config).cassetteTrays
 
   return (
     <>
@@ -98,8 +98,8 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
           <Box key={'cavity-f-' + a + b} size={[frontLen, hCorner, 0.0015]} position={[sx * (config.length / 2 + reach - frontLen / 2), hCorner / 2, zPlane]} color={cav} metalness={0} roughness={0.9} />,
         ]
       })}
-      {/* E2 (PoC galeria-207): kasetony jako tace z przekroju, przez renderer warstw */}
-      {trays && <CassetteTrays config={config} cassettes={trayPieces} />}
+      {/* nowa ścieżka: tace kasetonów (E2), kaseton-deska, podkładki — renderer warstw (cechy z render/architecture.ts) */}
+      <ComponentLayers config={config} geometry={geometry} components={model.components} />
       {pieces.filter((item) => !(trays && isTrayCassette(item))).map((item) => {
         const h = item.dimensions.lengthMm / 1000
         const w = item.dimensions.widthMm / 1000
@@ -176,6 +176,8 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
 }
 
 export function FoundationSupports({ config, geometry }: { config: PavilionConfig; geometry: ProjectGeometry }) {
+  // nowa ścieżka: podkładki z modelu komponentów w rendererze warstw (ComponentLayers)
+  if (arch(config).foundationParts) return null
   // prześwit pod ramą wg zdjęć realizacji (03/11 ≈ 30 mm, film WA0019 50–100 mm) — podkłady mają wysokość prześwitu
   const gap = geometry.foundationGap ?? m(PHYS.base.groundGap)
   if (gap < 0.015) return null
@@ -456,42 +458,21 @@ export function DecorLocal({
       // kaseton-deska (produkcja Dampol, zdjęcie 163): blaszana taca 25 mm przykręcona do płyty, na licu dekor desek
       // poziomych z fugami — jedno ciągłe lico, nie osobne klocki; taca przerwana tylko otworami
       const tray = m(PHYS.cassette.thickness)
-      const x1 = x0 + segment.width
-      const yTop = y0 + effectiveHeight
-      // pola tacy = prostokąty okładziny minus otwory (pionowe pasy między krawędziami otworów, jak cięcie płyt)
-      const ops = openings
-        .map((o) => ({ a: o.center - o.width / 2, b: o.center + o.width / 2, y0: floorOffset + openingSill(o), y1: floorOffset + openingSill(o) + o.height }))
-        .filter((o) => o.b > x0 && o.a < x1)
-      const xs = [...new Set([x0, x1, ...ops.flatMap((o) => [Math.max(x0, o.a), Math.min(x1, o.b)])])].sort((p, q) => p - q)
       const kind = segment.kind === 'board-horizontal-winchester' ? 'winchesterBoards' : 'pineBoards'
-      let k = 0
-      for (let i = 0; i < xs.length - 1; i++) {
-        const a = xs[i]
-        const b = xs[i + 1]
-        if (b - a < 0.03) continue
-        const mid = (a + b) / 2
-        const blocked = ops.filter((o) => o.a < mid && o.b > mid).sort((p, q) => p.y0 - q.y0)
-        let cursor = y0
-        const spans: Array<[number, number]> = []
-        for (const o of blocked) {
-          if (o.y0 - cursor > 0.04) spans.push([cursor, Math.min(o.y0, yTop)])
-          cursor = Math.max(cursor, o.y1)
-        }
-        if (yTop - cursor > 0.04) spans.push([cursor, yTop])
-        for (const [sa, sb] of spans) {
-          out.push(
-            <RoundedPiece
-              key={segment.id + '-tray-' + k++}
-              size={[b - a, sb - sa, tray]}
-              position={[(a + b) / 2, (sa + sb) / 2, z + tray / 2]}
-              color="#ffffff"
-              {...boardCassetteMaps(kind, b - a, sb - sa, (sa + sb) / 2 - y0)}
-              roughness={0.62}
-              radius={0.003}
-            />,
-          )
-        }
-      }
+      // pola tacy — wspólna funkcja z nową ścieżką (construction/facade/boards.ts)
+      boardTraySpans(segment, openings, floorOffset).forEach(({ a, b, sa, sb }, k) => {
+        out.push(
+          <RoundedPiece
+            key={segment.id + '-tray-' + k}
+            size={[b - a, sb - sa, tray]}
+            position={[(a + b) / 2, (sa + sb) / 2, z + tray / 2]}
+            color="#ffffff"
+            {...boardCassetteMaps(kind, b - a, sb - sa, (sa + sb) / 2 - y0)}
+            roughness={0.62}
+            radius={0.003}
+          />,
+        )
+      })
       return
     }
 
