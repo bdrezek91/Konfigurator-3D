@@ -32,11 +32,18 @@ function signature(g: RunGeometry, flip: boolean) {
   const r = (x: number) => Math.round(x * 1e5)
   const sec = g.section.map((p, i) => r(p[0] - du) + ',' + r(dvRaw[i] - dv)).join(';')
   const holes = (g.holes ?? []).map((h) => h.map((p) => r(p[0] - du) + ',' + r((flip ? -p[1] : p[1]) - dv)).join(';')).join('|')
-  return { key: [sec, holes, r(g.length), g.mitre?.join(',') ?? '', flip].join('#'), du, dv }
+  // cień i UV zależą od położenia przekroju — wchodzą do sygnatury (inne UV = inna geometria)
+  const extras = JSON.stringify([g.shade ?? null, g.uvTransform ?? null])
+  return { key: [sec, holes, r(g.length), g.mitre?.join(',') ?? '', flip, extras].join('#'), du, dv }
 }
 
-/** Minimalna liczba powtórzeń, od której grupa idzie do InstancedMesh (poniżej — scalenie). */
-const INSTANCE_MIN = 4
+/**
+ * Minimalna liczba powtórzeń, od której bryła idzie do InstancedMesh (poniżej — scalenie z resztą grupy).
+ * Scalenie = 1 wywołanie rysowania na grupę; każda sygnatura instancji to osobne wywołanie — instancje opłacają się
+ * dopiero przy licznych powtórzeniach (wkręty, żebra), nie przy kilku–kilkunastu kasetonach jednego rozmiaru
+ * (galeria-207: próg 4 → 48 siatek elewacji, scalenie → kilka).
+ */
+const INSTANCE_MIN = 24
 
 export type Batch =
   | { kind: 'merged'; key: string; layer: RenderLayer; geometry: BufferGeometry; look: PartLook; parts: string[] }
@@ -50,7 +57,8 @@ export function buildBatches(parts: Part[], lookOf: (p: Part) => PartLook): Batc
     const { matrix, flip } = runBasis(part.geometry)
     const sig = signature(part.geometry, flip)
     const layer = renderLayerOf(part)
-    const key = layer + '|' + look.material.uuid + '|' + look.castShadow + '|' + (look.receiveShadow ?? true)
+    // części z kolorem wierzchołków (cień w zagłębieniu) nie scalają się z częściami bez niego (inne atrybuty)
+    const key = layer + '|' + look.material.uuid + '|' + look.castShadow + '|' + (look.receiveShadow ?? true) + '|' + (part.geometry.shade ? 'c' : '')
     const list = groups.get(key) ?? []
     list.push({ part, look, flip, matrix, sig })
     groups.set(key, list)

@@ -8,6 +8,9 @@ import { Box, RoundedPiece } from '../materials/primitives'
 import { boardCassetteMaps, renderMetalColor, woodMaps, woodTexture } from '../materials/textures'
 import { type ReactNode, useMemo } from 'react'
 import { m, PHYS, RENDER } from '../../physical/spec'
+import { isTrayCassette } from '../../construction/facade/tray'
+import { isTrayPoc } from '../../render/poc'
+import { CassetteTrays } from './CassetteTrays'
 
 /** Przyciemnienie koloru (mnożnik jasności) — parametr renderingu, nie fizyczny kolor. */
 function shade(hex: string, k: number) {
@@ -60,10 +63,11 @@ export function PanelProfileLocal({
 
 export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) {
   const model = useMemo(() => buildComponentModel(config), [config])
-  const pieces = model.components.filter((item) =>
+  // memo: lista części jest wejściem renderera tac (przebudowa geometrii tylko przy zmianie modelu)
+  const pieces = useMemo(() => model.components.filter((item) =>
     item.category === 'decor' &&
     (item.id.startsWith('facade-cassette-') || item.id.startsWith('corner-cassette-') || item.id.startsWith('facade-ribbed-') || item.id.startsWith('facade-canopy-'))
-  )
+  ), [model])
 
   // narożnik z kasetonami poziomymi po obu stronach: ciemna wnęka za fugami na rogu (pasy przodu wydłużone przez narożnik)
   const geometry = geometryOf(config)
@@ -73,6 +77,8 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
   const corners = ([['front', 'left', -1, 1], ['front', 'right', 1, 1], ['back', 'left', -1, -1], ['back', 'right', 1, -1]] as const)
     .filter(([a, b]) => isCH(a) && isCH(b))
   const hCorner = envelope(config).outerFront
+  const trays = isTrayPoc(config)
+  const trayPieces = useMemo(() => pieces.filter(isTrayCassette), [pieces])
 
   return (
     <>
@@ -92,7 +98,9 @@ export function FacadeCladdingFromModel({ config }: { config: PavilionConfig }) 
           <Box key={'cavity-f-' + a + b} size={[frontLen, hCorner, 0.0015]} position={[sx * (config.length / 2 + reach - frontLen / 2), hCorner / 2, zPlane]} color={cav} metalness={0} roughness={0.9} />,
         ]
       })}
-      {pieces.map((item) => {
+      {/* E2 (PoC galeria-207): kasetony jako tace z przekroju, przez renderer warstw */}
+      {trays && <CassetteTrays config={config} cassettes={trayPieces} />}
+      {pieces.filter((item) => !(trays && isTrayCassette(item))).map((item) => {
         const h = item.dimensions.lengthMm / 1000
         const w = item.dimensions.widthMm / 1000
         const depth = item.dimensions.thicknessMm / 1000

@@ -166,6 +166,25 @@ export function thickenPath(path: Poly, th: number): Poly {
   return [...left, ...right.reverse()]
 }
 
+/**
+ * Bok tacy kasetonu: obrzeże (do środka albo w fugę) → bok → gięcie R → lico na szerokość R (dalej lico tacy osobno).
+ * Punkt bazowy 'outer-edge': u = 0 na zewnętrznej powierzchni boku, v = 0 na licu płyty.
+ */
+export function cassetteReturn(p: { depth: number; sheet: number; bendRadius: number; bendSegments: number; flange: number }, flangeOut: boolean): Section {
+  const { depth: D, sheet: t, bendRadius: R, bendSegments: n, flange: fl } = p
+  const path: Poly = [[flangeOut ? -fl : fl, t / 2], [t / 2, t / 2], [t / 2, D - R]]
+  // łuk gięcia: środek (R, D − R), promień linii środkowej R − t/2
+  for (let i = 1; i <= n; i++) {
+    const a = Math.PI - (Math.PI / 2) * (i / n)
+    path.push([R + (R - t / 2) * Math.cos(a), D - R + (R - t / 2) * Math.sin(a)])
+  }
+  return {
+    id: 'cassetteReturn', material: 'flashing', anchor: 'outer-edge', orientation: 'u: od krawędzi tacy do środka; v: płyta → lico [mm]',
+    confidence: 'LOW', assumption: true, params: { depth: D, sheet: t, bendRadius: R, flange: fl, flangeOut: flangeOut ? 1 : 0 },
+    poly: thickenPath(path, t),
+  }
+}
+
 /** Przekrój [mm] → [m]; opcjonalne przesunięcie w u (np. przekrój „sightline” w układzie profilu). */
 export function toMeters(poly: Poly, du = 0, dv = 0): Poly {
   return poly.map(([u, v]) => [(u + du) / 1000, (v + dv) / 1000])

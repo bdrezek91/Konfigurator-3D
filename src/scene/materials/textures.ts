@@ -1,4 +1,4 @@
-import { CanvasTexture, RepeatWrapping, SRGBColorSpace, TextureLoader, type Texture } from 'three'
+import { CanvasTexture, Matrix3, RepeatWrapping, SRGBColorSpace, TextureLoader, type Texture } from 'three'
 
 export const textureCache = new Map<string, CanvasTexture>()
 
@@ -153,20 +153,26 @@ function woodFile(kind: WoodKind, channel: 'diff' | 'nor' | 'rough') {
  * Włókna biegną wzdłuż dłuższego boku (deska pozioma — wzdłuż x, lamela — wzdłuż y);
  * przesunięcie zależne od wymiarów, żeby sąsiednie elementy nie miały identycznego rysunku.
  */
-export function woodMaps(kind: WoodKind, w: number, h: number): WoodMaps {
+/** Parametry rysunku drewna dla elementu w × h (jak klon tekstury w woodMaps): powtórzenie, przesunięcie, obrót. */
+function woodUvParams(kind: WoodKind, w: number, h: number) {
   const tile = WOOD_TILE_M[kind]
   const horizontal = w > h
   const key = kind + '|' + horizontal + '|' + Math.round(w * 1000) + '|' + Math.round(h * 1000)
-  const hit = woodClones.get(key)
-  if (hit) return hit
   let hsh = 0
   for (const ch of key) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0
+  return { key, repeat: 1 / tile, offset: [(hsh % 97) / 97, (hsh % 89) / 89] as const, horizontal }
+}
+
+export function woodMaps(kind: WoodKind, w: number, h: number): WoodMaps {
+  const pr = woodUvParams(kind, w, h)
+  const hit = woodClones.get(pr.key)
+  if (hit) return hit
   const make = (channel: 'diff' | 'nor' | 'rough') => {
     const t = woodFile(kind, channel).clone()
     woodPending.get(kind + '-' + channel)?.push(t)
-    t.repeat.set(1 / tile, 1 / tile)
-    t.offset.set((hsh % 97) / 97, (hsh % 89) / 89)
-    if (horizontal) {
+    t.repeat.set(pr.repeat, pr.repeat)
+    t.offset.set(pr.offset[0], pr.offset[1])
+    if (pr.horizontal) {
       t.center.set(0.5, 0.5)
       t.rotation = Math.PI / 2
     }
@@ -174,8 +180,24 @@ export function woodMaps(kind: WoodKind, w: number, h: number): WoodMaps {
     return t
   }
   const maps = { map: make('diff'), normalMap: make('nor'), roughnessMap: make('rough') }
-  woodClones.set(key, maps)
+  woodClones.set(pr.key, maps)
   return maps
+}
+
+/** Wspólne tekstury drewna bez przekształcenia — rysunek elementu wypalony w UV geometrii (scalanie siatek, E2). */
+export function woodSharedMaps(kind: WoodKind): WoodMaps {
+  return { map: woodFile(kind, 'diff'), normalMap: woodFile(kind, 'nor'), roughnessMap: woodFile(kind, 'rough') }
+}
+
+/**
+ * Przekształcenie UV [m] lica elementu w × h (s, y od lewego dolnego narożnika) → UV tekstury, identyczne z woodMaps
+ * na licu boxa (UV lica 0..1 = s / w, y / h). Wynik: [a, b, c, d, e, f] dla RunGeometry.uvTransform.
+ */
+export function woodUvTransform(kind: WoodKind, w: number, h: number): [number, number, number, number, number, number] {
+  const pr = woodUvParams(kind, w, h)
+  const m = new Matrix3().setUvTransform(pr.offset[0], pr.offset[1], pr.repeat, pr.repeat, pr.horizontal ? Math.PI / 2 : 0, pr.horizontal ? 0.5 : 0, pr.horizontal ? 0.5 : 0)
+  const e = m.elements // kolumnowo: [m00, m10, 0, m01, m11, 0, m02, m12, 1]
+  return [e[0] / w, e[3] / h, e[6], e[1] / w, e[4] / h, e[7]]
 }
 
 /**
