@@ -46,8 +46,8 @@ function signature(g: RunGeometry, flip: boolean) {
 const INSTANCE_MIN = 24
 
 export type Batch =
-  | { kind: 'merged'; key: string; layer: RenderLayer; geometry: BufferGeometry; look: PartLook; parts: string[] }
-  | { kind: 'instanced'; key: string; layer: RenderLayer; geometry: BufferGeometry; matrices: Matrix4[]; look: PartLook; parts: string[] }
+  | { kind: 'merged'; key: string; layer: RenderLayer; lod: 0 | 1 | 2; geometry: BufferGeometry; look: PartLook; parts: string[] }
+  | { kind: 'instanced'; key: string; layer: RenderLayer; lod: 0 | 1 | 2; geometry: BufferGeometry; matrices: Matrix4[]; look: PartLook; parts: string[] }
 
 export function buildBatches(parts: Part[], lookOf: (p: Part) => PartLook): Batch[] {
   type Item = { part: Part; look: PartLook; flip: boolean; matrix: Matrix4; sig: ReturnType<typeof signature> }
@@ -58,7 +58,7 @@ export function buildBatches(parts: Part[], lookOf: (p: Part) => PartLook): Batc
     const sig = signature(part.geometry, flip)
     const layer = renderLayerOf(part)
     // części z kolorem wierzchołków (cień w zagłębieniu) nie scalają się z częściami bez niego (inne atrybuty)
-    const key = layer + '|' + look.material.uuid + '|' + look.castShadow + '|' + (look.receiveShadow ?? true) + '|' + (part.geometry.shade ? 'c' : '')
+    const key = layer + '|' + look.material.uuid + '|' + look.castShadow + '|' + (look.receiveShadow ?? true) + '|' + (part.geometry.shade ? 'c' : '') + '|lod' + (part.lod ?? 0)
     const list = groups.get(key) ?? []
     list.push({ part, look, flip, matrix, sig })
     groups.set(key, list)
@@ -67,6 +67,7 @@ export function buildBatches(parts: Part[], lookOf: (p: Part) => PartLook): Batc
   for (const [key, items] of groups) {
     const layer = renderLayerOf(items[0].part)
     const look = items[0].look
+    const lod = items[0].part.lod ?? 0
     // powtarzalne bryły w grupie → instancje; reszta → jedna scalona geometria
     const bySig = new Map<string, Item[]>()
     for (const it of items) bySig.set(it.sig.key, [...(bySig.get(it.sig.key) ?? []), it])
@@ -79,7 +80,7 @@ export function buildBatches(parts: Part[], lookOf: (p: Part) => PartLook): Batc
       const first = same[0]
       const geometry = runLocalGeometry(first.part.geometry, first.flip, first.sig.du, first.sig.dv)
       const matrices = same.map((it) => it.matrix.clone().multiply(new Matrix4().makeTranslation(it.sig.du, it.sig.dv, 0)))
-      out.push({ kind: 'instanced', key: key + '|' + sk.length + '|' + out.length, layer, geometry, matrices, look, parts: same.map((s) => s.part.id) })
+      out.push({ kind: 'instanced', key: key + '|' + sk.length + '|' + out.length, layer, lod, geometry, matrices, look, parts: same.map((s) => s.part.id) })
     }
     if (rest.length) {
       const geos = rest.map((it) => {
@@ -90,7 +91,7 @@ export function buildBatches(parts: Part[], lookOf: (p: Part) => PartLook): Batc
       })
       const geometry = geos.length === 1 ? geos[0] : mergeGeometries(geos, false)
       if (geos.length > 1) geos.forEach((g) => g.dispose())
-      out.push({ kind: 'merged', key, layer, geometry, look, parts: rest.map((r) => r.part.id) })
+      out.push({ kind: 'merged', key, layer, lod, geometry, look, parts: rest.map((r) => r.part.id) })
     }
   }
   return out

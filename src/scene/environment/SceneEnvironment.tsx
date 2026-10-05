@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react'
 import { ACESFilmicToneMapping, AgXToneMapping, NeutralToneMapping, Object3D } from 'three'
 import type { PavilionConfig } from '../../types'
 import type { LightingPreset } from './lighting'
+import { useQuality } from '../../render/quality'
 
 /**
  * Wspólne środowisko renderu: HDRI jako tło i odbicia, jedno słońce z cieniem 4096 dopasowanym
@@ -12,6 +13,7 @@ import type { LightingPreset } from './lighting'
  */
 export function SceneEnvironment({ config, lighting }: { config: PavilionConfig; lighting: LightingPreset }) {
   const get = useThree((state) => state.get)
+  const shadowMap = useQuality().shadowMap
   const half = Math.max(config.length, config.width) / 2 + 1.5
   const distance = 14
   const [dx, dy, dz] = lighting.sunDirection
@@ -42,13 +44,15 @@ export function SceneEnvironment({ config, lighting }: { config: PavilionConfig;
       />
       <primitive object={target} />
       <directionalLight
+        // rozmiar mapy cienia z trybu jakości; zmiana = nowe światło (mapa cienia tworzona od nowa)
+        key={'sun-' + shadowMap}
         position={sunPosition}
         target={target}
         intensity={lighting.sunIntensity}
         color={lighting.sunColor}
         castShadow
-        shadow-mapSize-width={4096}
-        shadow-mapSize-height={4096}
+        shadow-mapSize-width={shadowMap}
+        shadow-mapSize-height={shadowMap}
         shadow-camera-left={-half}
         shadow-camera-right={half}
         shadow-camera-top={half}

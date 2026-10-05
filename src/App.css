@@ -151,6 +151,13 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 .dock-group button:hover:not(:disabled) { background: var(--surface-3); color: var(--text); }
 .dock-group button.on { background: var(--ink); color: #fff; }
 .dock-sep { width: 1px; height: 22px; background: var(--line); }
+.viewer-quality {
+  position: absolute; top: 18px; right: 18px; z-index: 3;
+  height: 32px; padding: 0 8px; border: 0; border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(14px); box-shadow: var(--shadow);
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-2); cursor: pointer;
+}
+.viewer-quality:hover { color: var(--text); }
 .dock-cta {
   height: 34px; padding: 0 14px; border: 0; border-radius: 9px;
   display: inline-flex; align-items: center; gap: 7px;

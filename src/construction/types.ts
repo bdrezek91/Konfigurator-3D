@@ -64,6 +64,8 @@ export type Part = {
   /** kierunek rozsunięcia w exploded view (jednostkowy × odległość) */
   explode: Vec3
   confidence: Confidence
+  /** poziom detalu (E5): 0 — zawsze, 1 — okucia (normalny kadr), 2 — uszczelki, listwy, wkręty (zbliżenie / HIGH+) */
+  lod?: 0 | 1 | 2
 }
 
 /** Wymiar wyliczony z konstrukcji (nie wpisany ręcznie). */

@@ -1,3 +1,4 @@
+import { initialQualityMode, saveQualityMode, TIERS, type QualityMode, type QualityTier } from '../render/quality'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import Pavilion3D, { type CameraApi, type CameraPose, type LightingMode, type PavilionView } from '../scene/Pavilion3D'
 import { cameraPose, GALLERY03_PHOTO_POSE } from '../scene/camera/presets'
@@ -28,6 +29,8 @@ function readSaved(config: PavilionConfig): CameraPose | null {
   }
 }
 
+const TIER_LABEL: Record<QualityTier, string> = { low: 'Niska', medium: 'Średnia', high: 'Wysoka', ultra: 'Ultra' }
+
 export function Viewer({
   config, lighting, onLighting, view, onView,
 }: {
@@ -46,6 +49,9 @@ export function Viewer({
   const [toast, setToast] = useState<string>()
   const gallery03 = config.project === 'GALERIA/03'
   const [compare, setCompare] = useState(gallery03)
+  // tryb jakości (E5): wybór widza zapisany w przeglądarce; w trybie auto pokazujemy aktualny poziom
+  const [quality, setQuality] = useState<QualityMode>(initialQualityMode)
+  const [tier, setTier] = useState<QualityTier>('high')
 
   useEffect(() => {
     setSaved(readSaved(config))
@@ -94,7 +100,7 @@ export function Viewer({
             <figcaption>Zdjęcie</figcaption>
           </figure>
           <div className="compare-pane">
-            <Pavilion3D config={config} view="perspective" lighting={lighting} resetNonce={resetNonce} cameraApiRef={cameraApi} />
+            <Pavilion3D config={config} view="perspective" lighting={lighting} resetNonce={resetNonce} cameraApiRef={cameraApi} quality={quality} onTier={setTier} />
             <figcaption>Render interaktywny</figcaption>
           </div>
           <div className="compare-pane">
@@ -119,7 +125,7 @@ export function Viewer({
         </div>
       ) : (
         <div className="viewer-canvas">
-          <Pavilion3D config={config} view={view} lighting={lighting} resetNonce={resetNonce} cameraApiRef={cameraApi} />
+          <Pavilion3D config={config} view={view} lighting={lighting} resetNonce={resetNonce} cameraApiRef={cameraApi} quality={quality} onTier={setTier} />
         </div>
       )}
 
@@ -130,6 +136,18 @@ export function Viewer({
           </Suspense>
         </div>
       )}
+
+      {/* tryb jakości (E5) — w rogu widoku, żeby nie przeładować paska */}
+      <select
+        className="viewer-quality"
+        aria-label="Jakość renderu"
+        title={'Jakość renderu' + (quality === 'auto' ? ' — auto: ' + TIER_LABEL[tier] : '')}
+        value={quality}
+        onChange={(e) => { const v = e.target.value as QualityMode; setQuality(v); saveQualityMode(v) }}
+      >
+        <option value="auto">Jakość: auto</option>
+        {TIERS.map((t) => <option key={t} value={t}>Jakość: {TIER_LABEL[t].toLowerCase()}</option>)}
+      </select>
 
       <div className="viewer-dock">
         <div className="dock-group">

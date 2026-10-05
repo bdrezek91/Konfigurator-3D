@@ -10,6 +10,7 @@ import type { Part } from './types'
 import { isE3Poc, isLayerPoc } from '../render/poc'
 import { useEnvironment } from '@react-three/drei'
 import { useLighting } from '../scene/environment/lighting'
+import { CHEAP_GLASS, useQuality } from '../render/quality'
 import { LayerRenderer } from '../render/LayerRenderer'
 import type { PartLook } from '../render/layers'
 
@@ -83,6 +84,7 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
   // envMapIntensity materiału, a IBL nie zna zasłonięcia (wnętrze oświetlone jak plener → szyba „mleczna”).
   // Natężenie ≈ udział światła dziennego przy dużym przeszkleniu (ASSUMPTION, kalibracja: łata szyby na zdjęciu 163).
   const e3 = isE3Poc(config)
+  const transmission = useQuality().glassTransmission
   const lighting = useLighting()
   const env = useEnvironment({ files: lighting.hdri })
   useEffect(() => {
@@ -112,6 +114,8 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
       hardware: (color: string) => get('hw' + color, () => new MeshStandardMaterial({ color, metalness: color === '#2a2d2f' ? 0.6 : 0.85, roughness: color === '#2a2d2f' ? 0.35 : 0.28 })),
       // szyba zespolona 4/16/4 low-E — jak GlassPane (OpeningFrame.tsx); pakiet ma tu rzeczywistą grubość 24 mm
       glass: () => get('glass', () => {
+        // LOW (E5): bez transmisji — transmisja to dodatkowy przebieg renderu całej sceny
+        if (!transmission) return new MeshPhysicalMaterial({ ...CHEAP_GLASS })
         if (!e3) {
           return new MeshPhysicalMaterial({
             color: '#ffffff', metalness: 0, roughness: 0, transmission: 1, thickness: 0.024, ior: 1.52, specularIntensity: 3.4,
@@ -128,7 +132,7 @@ export function System1Body({ config, opacity = 1 }: { config: PavilionConfig; o
         })
       }),
     }
-  }, [e3])
+  }, [e3, transmission])
   useEffect(() => () => joineryMats.cache.forEach((mat) => mat.dispose()), [joineryMats])
 
   const materialOf = useCallback((p: Part): Material => {

@@ -5,6 +5,7 @@ import { openingSill } from '../geometry'
 import { Box, RoundedPiece } from '../materials/primitives'
 import { m, PHYS } from '../../physical/spec'
 import { DEFAULT_FRAME_COLOR } from '../../components'
+import { CHEAP_GLASS, useQuality } from '../../render/quality'
 
 /** Widoczna szerokość ramy [m] dla systemu profili. */
 const PROFILE_FACE: Record<OpeningProfile, number> = {
@@ -27,11 +28,13 @@ const STEEL = { color: '#aeb3b5', metalness: 0.85, roughness: 0.28 }
  * względem elewacji ze zdjęć (strojenie wizualne, nie wielkość fizyczna szkła).
  */
 function GlassPane({ width, height }: { width: number; height: number }) {
+  const transmission = useQuality().glassTransmission
   return (
     <>
       <mesh position={[0, 0, -0.012]}>
         <boxGeometry args={[width, height, 0.006]} />
-        <meshPhysicalMaterial
+        {/* LOW (E5): bez transmisji (dodatkowy przebieg renderu sceny) */}
+        {!transmission ? <meshPhysicalMaterial {...CHEAP_GLASS} /> : <meshPhysicalMaterial
           color="#ffffff"
           metalness={0}
           roughness={0}
@@ -42,7 +45,7 @@ function GlassPane({ width, height }: { width: number; height: number }) {
           // lekko zielonkawy jak szkło float (krawędź tafli), tłumienie = attenuationColor^(grubość / dystans)
           attenuationColor="#9fb0a8"
           attenuationDistance={0.024}
-        />
+        />}
       </mesh>
       {/* ramka dystansowa pakietu (ciemna, widoczna na obwodzie szyby) */}
       <Box size={[width, 0.012, 0.016]} position={[0, height / 2 - 0.006, -0.016]} color="#1b1d1f" metalness={0.4} roughness={0.5} />

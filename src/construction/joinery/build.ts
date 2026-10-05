@@ -39,6 +39,9 @@ class Builder extends ProfileAssembler {
     super(w, (id, name, material, color, geometry) => ({
       id: 'joinery-' + spec.id + '-' + id, name: name + ' ' + spec.id, layer: 'joinery', stage: w.stage,
       material, color, explode: w.explode, confidence: 'LOW', geometry,
+      // LOD: uszczelki, listwy i przylga — tylko z bliska
+      // klamka zawsze (drzwi bez klamki wyglądają na błąd), zawiasy od normalnego kadru
+      lod: material === 'gasket' || /^(glazingBead|doorStop)/.test(name) ? 2 : name === 'Zawias' ? 1 : 0,
     }))
     this.spec = spec
   }

@@ -1,7 +1,9 @@
 import { Canvas, useThree } from '@react-three/fiber'
 import { EffectComposer, N8AO, SMAA, ToneMapping } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
-import { Suspense, useEffect, type RefObject } from 'react'
+import { Suspense, useEffect, useState, type RefObject } from 'react'
+import { PerformanceMonitor } from '@react-three/drei'
+import { autoTier, QUALITY, QualityContext, TIERS, type QualityMode, type QualityTier } from '../render/quality'
 import { ACESFilmicToneMapping, PCFSoftShadowMap, PerspectiveCamera, SRGBColorSpace } from 'three'
 import type { PavilionConfig } from '../types'
 import { CameraRig, type CameraApi } from './camera/CameraRig'
@@ -104,17 +106,26 @@ type Props = {
   cameraApiRef?: RefObject<CameraApi | null>
   /** Tryb HQ: path tracer z ustalonego kadru. */
   hq?: { pose: CameraPose; state: HQState; onProgress?: (samples: number, done: boolean) => void }
+  /** Tryb jakości (E5); 'auto' — start z parametrów urządzenia, obniżany przy spadku FPS. */
+  quality?: QualityMode
+  /** aktualny tryb po automatycznym obniżeniu (do UI) */
+  onTier?: (tier: QualityTier) => void
 }
 
-export default function Pavilion3D({ config, view = 'perspective', lighting = 'day', resetNonce = 0, cameraApiRef, hq }: Props) {
+export default function Pavilion3D({ config, view = 'perspective', lighting = 'day', resetNonce = 0, cameraApiRef, hq, quality = 'auto', onTier }: Props) {
   const preset = resolveLighting(lighting, isE3Poc(config))
   const pose = hq?.pose ?? cameraPose(config, view)
+  // tryb auto: start z parametrów urządzenia, PerformanceMonitor obniża o jeden poziom przy spadku FPS
+  const [autoT, setAutoT] = useState<QualityTier>(autoTier)
+  const tier: QualityTier = hq ? 'ultra' : quality === 'auto' ? autoT : quality
+  const q = QUALITY[tier]
+  useEffect(() => { onTier?.(tier) }, [tier, onTier])
 
   return (
     <Canvas
       shadows
       frameloop={hq ? 'never' : 'always'}
-      dpr={hq ? 1 : [1, 1.75]}
+      dpr={hq ? 1 : q.dpr}
       gl={{ preserveDrawingBuffer: !!hq, antialias: !hq }}
       camera={{ position: pose.position, fov: pose.fov, near: 0.1, far: 400 }}
       onCreated={({ gl }) => {
@@ -125,7 +136,11 @@ export default function Pavilion3D({ config, view = 'perspective', lighting = 'd
         gl.shadowMap.type = PCFSoftShadowMap
       }}
     >
+      <QualityContext.Provider value={q}>
       <LightingContext.Provider value={preset}>
+        {!hq && quality === 'auto' && (
+          <PerformanceMonitor flipflops={2} onDecline={() => setAutoT((t) => TIERS[Math.max(0, TIERS.indexOf(t) - 1)])} />
+        )}
         <Suspense fallback={null}>
           <SceneEnvironment config={config} lighting={preset} />
           <Ground config={config} />
@@ -138,26 +153,29 @@ export default function Pavilion3D({ config, view = 'perspective', lighting = 'd
           ) : (
             <>
               <RealExportBridge />
-              <EffectComposer multisampling={4}>
+              <EffectComposer multisampling={q.msaa} key={'fx-' + tier}>
                 {/* mapowanie tonów musi być efektem: EffectComposer wymusza NoToneMapping na rendererze */}
-                <N8AO
-                  aoRadius={0.3}
-                  distanceFalloff={0.6}
-                  intensity={3}
-                  quality="high"
-                  halfRes={false}
-                  screenSpaceRadius={false}
-                  color="#000000"
-                />
+                {q.ao !== 'off' ? (
+                  <N8AO
+                    aoRadius={0.3}
+                    distanceFalloff={0.6}
+                    intensity={3}
+                    quality={q.aoQuality}
+                    halfRes={q.ao === 'half'}
+                    screenSpaceRadius={false}
+                    color="#000000"
+                  />
+                ) : <></>}
                 {/* ToneMapping po AO, przed SMAA (antyaliasing na obrazie LDR); bez presetu.toneMapping — bez efektu, jak dotąd */}
                 {preset.toneMapping ? <ToneMapping mode={TONE_MODE[preset.toneMapping]} /> : <></>}
-                <SMAA />
+                {q.smaa ? <SMAA /> : <></>}
               </EffectComposer>
             </>
           )}
         </Suspense>
         {!hq && <CameraRig pose={pose} poseKey={config.project + '|' + view + '|' + resetNonce} apiRef={cameraApiRef} />}
       </LightingContext.Provider>
+      </QualityContext.Provider>
     </Canvas>
   )
 }

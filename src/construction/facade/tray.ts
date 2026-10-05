@@ -36,6 +36,7 @@ export function trayParts(cassettes: ModelComponent[], halfSpan: (wall: string) 
     const plane: WallPlane = { origin, u, up: [0, 1, 0], out: outN, stage: 10, explode: c.explodeDirection }
     const asm = new ProfileAssembler(plane, (id, name, material, color, geometry) => ({
       id: c.id + '-' + id, name, layer: 'decor', stage: 10, material, color, explode: c.explodeDirection, confidence: 'LOW', geometry,
+      lod: material === 'screw' ? 2 : 0,
     }))
     // obrzeże w fugę tylko poza narożnikiem (kaseton zawinięty przez narożnik — obrzeże sterczałoby poza róg)
     const along = u[0] * px + u[2] * pz
