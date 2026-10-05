@@ -42,6 +42,13 @@ export type RunGeometry = {
    * (cięcie przez narożnik zewnętrzny i wewnętrzny). 0 / brak = cięcie proste.
    */
   mitre?: [number, number]
+  /**
+   * Zacienienie w zagłębieniu (np. bok tacy kasetonu w fudze): kolor wierzchołka od `min` przy v = v0 do 1 przy v = v1
+   * (v — współrzędna przekroju). Cień geometryczny zamiast przyciemniania materiału.
+   */
+  shade?: { v0: number; v1: number; min: number }
+  /** UV [m] → UV' = (a·u + b·v + c, d·u + e·v + f): skala, obrót włókien i przesunięcie rysunku drewna wypalone w geometrii. */
+  uvTransform?: [number, number, number, number, number, number]
 }
 
 export type MaterialKind = 'steel' | 'sheetOuter' | 'sheetInner' | 'pirCore' | 'flashing' | 'cassette' | 'glass' | 'frame' | 'gasket' | 'hardware' | 'screw' | 'floorFinish'

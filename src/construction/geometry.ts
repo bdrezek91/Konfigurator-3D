@@ -1,4 +1,4 @@
-import { ExtrudeGeometry, Matrix4, Path, Shape, Vector3 } from 'three'
+import { BufferAttribute, ExtrudeGeometry, Matrix4, Path, Shape, Vector3 } from 'three'
 import { geometryOf } from '../components'
 import { facadeKindForWall } from '../scene/facade/facadeKind'
 import type { PavilionConfig, WallSide } from '../types'
@@ -31,6 +31,28 @@ export function runLocalGeometry(g: RunGeometry, flip: boolean, du = 0, dv = 0) 
       pos.setZ(i, z < g.length / 2 ? k0 * u : g.length - k1 * u)
     }
     geo.computeVertexNormals()
+  }
+  if (g.shade) {
+    // v przekroju z lokalnego y (przed odbiciem bazy i przesunięciem instancji)
+    const { v0, v1, min } = g.shade
+    const pos = geo.attributes.position
+    const col = new Float32Array(pos.count * 3)
+    for (let i = 0; i < pos.count; i++) {
+      const v = flip ? -(pos.getY(i) + dv) : pos.getY(i) + dv
+      const t = Math.min(1, Math.max(0, (v - v0) / (v1 - v0)))
+      const k = min + (1 - min) * t * t * (3 - 2 * t)
+      col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = k
+    }
+    geo.setAttribute('color', new BufferAttribute(col, 3))
+  }
+  if (g.uvTransform) {
+    const [a, b, c, d, e, f] = g.uvTransform
+    const uv = geo.attributes.uv
+    for (let i = 0; i < uv.count; i++) {
+      const x = uv.getX(i)
+      const y = uv.getY(i)
+      uv.setXY(i, a * x + b * y + c, d * x + e * y + f)
+    }
   }
   return geo
 }
