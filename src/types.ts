@@ -200,6 +200,8 @@ export type PavilionConfig = {
   facadeBandHeight?: number
   /** Szerokość fugi między kasetonami [m]. Domyślnie 0,020 (produkcja Dampol). */
   facadeGap?: number
+  /** Kasetony z obrzeżem wysuniętym w fugę i widocznymi wkrętami (wariant montażu; domyślnie obrzeże schowane). */
+  cassetteFlange?: boolean
   /** Ręczne dopasowanie kasetonów (przeciąganie fug i pól w widoku 3D) — tylko „Własna konfiguracja”. */
   cassetteEdits?: CassetteEdits
   showStructure: boolean

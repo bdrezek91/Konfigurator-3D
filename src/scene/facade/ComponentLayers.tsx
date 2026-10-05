@@ -7,7 +7,7 @@ import type { Part } from '../../construction/types'
 import { arch } from '../../render/architecture'
 import { LayerRenderer } from '../../render/LayerRenderer'
 import type { PartLook } from '../../render/layers'
-import { cassetteSteelMaterial, concreteBlockMaterial, cornerCavityMaterial, lamellaMaterial, trayWoodMaterial } from '../../render/materials'
+import { cassetteSteelMaterial, concreteBlockMaterial, cornerCavityMaterial, hardwareMaterial, lamellaMaterial, trayWoodMaterial } from '../../render/materials'
 import { lamellaParts } from '../../construction/facade/lamellas'
 import { PANEL_THICKNESS_M, type PavilionConfig, type ProjectGeometry } from '../../types'
 import { envelope } from '../geometry'
@@ -24,7 +24,7 @@ export function ComponentLayers({ config, geometry, components }: { config: Pavi
     const sources: TraySource[] = []
     if (features.cassetteTrays) sources.push(...components.filter(isTrayCassette).map(traySourceFromComponent))
     if (features.boardTrays) sources.push(...boardTraySources(config, geometry, envelope(config).floorT, PANEL_THICKNESS_M[config.wallPanel]))
-    const out: Part[] = trayParts(sources, (wall) => (wall === 'front' || wall === 'back' ? config.length / 2 : config.width / 2))
+    const out: Part[] = trayParts(sources, (wall) => (wall === 'front' || wall === 'back' ? config.length / 2 : config.width / 2), { flangeOut: config.cassetteFlange })
     if (features.cassetteTrays) {
       const isCH = (side: Parameters<typeof facadeKindForWall>[0]) => facadeKindForWall(side, config, geometry) === 'cassette-horizontal'
       for (const c of cornerCavitySheets(config, isCH)) {
@@ -44,6 +44,7 @@ export function ComponentLayers({ config, geometry, components }: { config: Pavi
 
   const woodTint = useLighting().woodTint
   const lookOf = useCallback((p: Part): PartLook => {
+    if (p.material === 'screw') return { material: hardwareMaterial('#9ea3a6'), castShadow: false }
     if (p.id.startsWith('lamella-')) return { material: lamellaMaterial(p.color, p.id.startsWith('lamella-base-')), castShadow: true }
     if (p.material === 'concrete') return { material: concreteBlockMaterial(), castShadow: true }
     if (p.material === 'flashing') return { material: cornerCavityMaterial(p.color), castShadow: true }

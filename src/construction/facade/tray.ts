@@ -47,7 +47,7 @@ export function traySourceFromComponent(c: ModelComponent): TraySource {
   }
 }
 
-export function trayParts(cassettes: TraySource[], halfSpan: (wall: string) => number): Part[] {
+export function trayParts(cassettes: TraySource[], halfSpan: (wall: string) => number, opts: { flangeOut?: boolean } = {}): Part[] {
   const out: Part[] = []
   const D = mm(T.depth)
   const t = mm(T.sheet)
@@ -67,7 +67,7 @@ export function trayParts(cassettes: TraySource[], halfSpan: (wall: string) => n
     // obrzeże w fugę tylko poza narożnikiem (kaseton zawinięty przez narożnik — obrzeże sterczałoby poza róg)
     const along = u[0] * px + u[2] * pz
     const cornerEnd = c.wall ? Math.abs(along) + w / 2 > halfSpan(c.wall) - 0.03 : true
-    const flangeOut = T.flangeOut && !cornerEnd
+    const flangeOut = (opts.flangeOut ?? T.flangeOut) && !cornerEnd
     const uv = c.uvTransform
     const sec = cassetteReturn(T, flangeOut)
     const profile = { name: 'Bok tacy kasetonu', poly: toMeters(sec.poly), material: 'cassette' as const, color: c.color }

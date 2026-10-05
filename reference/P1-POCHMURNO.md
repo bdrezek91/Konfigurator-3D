@@ -20,3 +20,14 @@ Deska: kanał niebieski niższy niż na zdjęciu (dekor 207 to ciemniejszy „z�
 osobnej tekstury dekoru.
 
 Rozmiar: +7,2 MB (HDRI 2k) w `public/hdri`.
+
+## P4 — podgląd vs HQ (galeria-207, światło pochmurne, HQ 12 próbek)
+
+| łata | podgląd | HQ | śr. \|Δ\| |
+|---|---|---|---|
+| szyba | 43 / 43 / 35 | 46 / 51 / 40 | **5,6** (przed: 49 przy świetle słonecznym 163) |
+| kaseton | 39 / 47 / 56 | 32 / 43 / 53 | 4,8 |
+| deska | 155 / 95 / 26 | 136 / 85 / 23 | 10,8 |
+
+Rozproszone światło pochmurne (bez słońca) zbliża IBL podglądu do GI path tracera — szkło bez zmian parametrów.
+Obrzeże kasetonu z wkrętami: przełącznik w panelu Elewacja → Kasetony (`config.cassetteFlange`, domyślnie wyłączony).

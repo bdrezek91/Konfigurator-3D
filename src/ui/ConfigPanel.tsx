@@ -137,6 +137,7 @@ export function ConfigPanel({
                   onChange={(v) => setConfig({ ...config, facadeGap: v / 1000 })} />
               </div>
               <Switch label="Attyka" note="2 rzędy kasetonów po 330 mm, moduły ≈ 1,1 m bez mijanki (zdjęcia 03, 11)" checked={config.attic} onChange={(v) => update('attic', v)} />
+              <Switch label="Obrzeże z wkrętami w fudze" note="wariant montażu: obrzeże kasetonu wysunięte w fugę, wkręty co 400 mm (widoczne z bliska)" checked={!!config.cassetteFlange} onChange={(v) => setConfig({ ...config, cassetteFlange: v })} />
             </Group>
           )}
           <Group title="Kolory">
